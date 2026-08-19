@@ -1,0 +1,48 @@
+/* ========================================
+   HEADER STYLES
+   ======================================== */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.header .page-title {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.4;
+    letter-spacing: 0.3px;
+    color: rgba(255, 255, 255, 0.6);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header .page-title .icon {
+    margin-right: 6px;
+    font-size: 12px;
+}
+
+/* Убираем навигацию из хедера, теперь она в стрелках */
+.header .page-nav {
+    display: none;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+    .header {
+        padding: 6px 10px;
+    }
+
+    .header .page-title {
+        font-size: 12px;
+    }
+}

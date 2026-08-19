@@ -1,0 +1,480 @@
+/* ========================================
+   WALLPAPER STYLES - ПОЛНОСТЬЮ ВЫДЕЛЕННЫЙ ФАЙЛ
+   ======================================== */
+
+/* ===== ОБЩИЕ СТИЛИ ДЛЯ ОБОЕВ ===== */
+.wallpaper-section {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.wallpaper-section .settings-section-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* ===== РЕЖИМЫ ОТОБРАЖЕНИЯ ===== */
+.wallpaper-mode-group {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wallpaper-mode-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.wallpaper-mode-group label:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.wallpaper-mode-group input[type="radio"] {
+    accent-color: #4CAF50;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* ===== АВТОМАТИЧЕСКАЯ СМЕНА ===== */
+.wallpaper-auto-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wallpaper-auto-group .auto-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.wallpaper-auto-group .auto-toggle input[type="checkbox"] {
+    accent-color: #4CAF50;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.wallpaper-auto-group .auto-toggle span {
+    font-size: 14px;
+}
+
+.wallpaper-auto-settings {
+    display: none;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wallpaper-auto-settings.active {
+    display: flex;
+}
+
+.wallpaper-auto-settings label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.wallpaper-auto-settings input[type="number"] {
+    width: 80px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-size: 13px;
+    transition: all 0.3s ease;
+}
+
+.wallpaper-auto-settings input[type="number"]:focus {
+    outline: none;
+    border-color: rgba(76, 175, 80, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.wallpaper-auto-settings select {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.wallpaper-auto-settings select:focus {
+    outline: none;
+    border-color: rgba(76, 175, 80, 0.4);
+}
+
+.wallpaper-auto-settings select option {
+    background: #1a1a2e;
+    color: #ffffff;
+}
+
+/* ===== КНОПКА ПРИНУДИТЕЛЬНОЙ СМЕНЫ ===== */
+.wallpaper-force-change-btn {
+    padding: 6px 18px;
+    font-size: 13px;
+    background: rgba(76, 175, 80, 0.2);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    color: #ffffff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wallpaper-force-change-btn:hover {
+    background: rgba(76, 175, 80, 0.35);
+    border-color: rgba(76, 175, 80, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+}
+
+/* ===== СПИСОК ОБОЕВ ===== */
+.wallpaper-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+    min-height: 120px;
+}
+
+.wallpaper-grid .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    opacity: 0.5;
+    border: 2px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.wallpaper-grid .empty-state .icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.wallpaper-grid .empty-state .title {
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.wallpaper-grid .empty-state .subtitle {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+/* ===== КАРТОЧКА ОБОЕВ ===== */
+.wallpaper-card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.wallpaper-card:hover {
+    transform: scale(1.03);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.wallpaper-card.active {
+    border-color: #4CAF50;
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.2);
+}
+
+.wallpaper-card .check-mark {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #4CAF50;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: white;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.wallpaper-card.active .check-mark {
+    display: flex;
+}
+
+.wallpaper-card .card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 6px 10px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.wallpaper-card:hover .card-overlay {
+    opacity: 1;
+}
+
+.wallpaper-card .card-overlay .file-name {
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+}
+
+.wallpaper-card .card-overlay .actions {
+    display: flex;
+    gap: 4px;
+}
+
+.wallpaper-card .card-overlay .actions button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.2s ease;
+}
+
+.wallpaper-card .card-overlay .actions .select-btn {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+.wallpaper-card .card-overlay .actions .select-btn:hover {
+    background: rgba(76, 175, 80, 0.5);
+}
+
+.wallpaper-card .card-overlay .actions .delete-btn {
+    background: rgba(244, 67, 54, 0.3);
+}
+
+.wallpaper-card .card-overlay .actions .delete-btn:hover {
+    background: rgba(244, 67, 54, 0.5);
+}
+
+/* ===== СЧЕТЧИК ОБОЕВ ===== */
+.wallpaper-counter {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.5;
+    padding: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 4px;
+}
+
+/* ===== ЗАГРУЗКА ОБОЕВ ===== */
+.wallpaper-upload-area {
+    margin-top: 15px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.wallpaper-upload-area .upload-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wallpaper-upload-area .upload-label:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.wallpaper-upload-area .upload-label .icon {
+    font-size: 18px;
+}
+
+.wallpaper-upload-area input[type="file"] {
+    display: none;
+}
+
+.wallpaper-upload-area .upload-hint {
+    font-size: 12px;
+    opacity: 0.4;
+}
+
+.wallpaper-upload-area .upload-progress {
+    display: none;
+    flex: 1;
+    min-width: 150px;
+}
+
+.wallpaper-upload-area .upload-progress.active {
+    display: block;
+}
+
+.wallpaper-upload-area .upload-progress .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.wallpaper-upload-area .upload-progress .progress-bar .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+    .wallpaper-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .wallpaper-mode-group {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .wallpaper-mode-group label {
+        font-size: 13px;
+        padding: 4px 10px;
+    }
+
+    .wallpaper-auto-settings {
+        gap: 10px;
+    }
+
+    .wallpaper-auto-settings label {
+        font-size: 12px;
+    }
+
+    .wallpaper-auto-settings input[type="number"] {
+        width: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .wallpaper-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 8px;
+    }
+
+    .wallpaper-card {
+        aspect-ratio: 16 / 10;
+    }
+
+    .wallpaper-upload-area {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .wallpaper-upload-area .upload-label {
+        justify-content: center;
+    }
+}
+
+/* ===== АНИМАЦИЯ ЗАГРУЗКИ ===== */
+@keyframes wallpaperPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.wallpaper-card.loading {
+    animation: wallpaperPulse 1.5s ease-in-out infinite;
+}
+
+/* ===== TOAST ДЛЯ ОБОЕВ ===== */
+.wallpaper-toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 12px 24px;
+    border-radius: 12px;
+    color: white;
+    font-size: 14px;
+    z-index: 10000;
+    animation: slideUp 0.3s ease;
+    display: none;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.wallpaper-toast.show {
+    display: block;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateX(-50%) translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}

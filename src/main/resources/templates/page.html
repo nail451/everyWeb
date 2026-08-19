@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${page.name} + ' - Dashboard'"></title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/links.css}">
+    <link rel="stylesheet" th:href="@{/css/modules.css}">
+    <link rel="stylesheet" th:href="@{/css/settings.css}">
+    <link rel="stylesheet" th:href="@{/css/wallpaper.css}">
+    <link rel="stylesheet" th:href="@{/css/links-modal.css}">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+</head>
+<body id="mainBody">
+
+<!-- ID страницы для JavaScript -->
+<div id="pageContainer" style="display:none;"
+     th:data-page-id="${page.id}">
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- ===== НАВИГАЦИЯ СТРЕЛКАМИ ===== -->
+<a class="page-navigation prev" onclick="navigatePage('prev')" title="Предыдущая страница">
+    ‹
+</a>
+<a class="page-navigation next" onclick="navigatePage('next')" title="Следующая страница">
+    ›
+</a>
+
+<!-- ===== НИЖНИЕ КНОПКИ ===== -->
+<div class="bottom-controls">
+    <!-- Кнопка смены обоев -->
+    <button class="control-btn wallpaper-btn" onclick="forceChangeWallpaper()" title="Сменить обои">
+        🎨
+    </button>
+    <!-- Кнопка настроек -->
+    <button class="control-btn settings-btn" onclick="toggleSettings()" title="Настройки">
+        ⚙️
+    </button>
+</div>
+
+<!-- ===== ПАНЕЛЬ НАСТРОЕК ===== -->
+<div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-panel">
+        <div class="settings-header">
+            <h2>⚙️ Настройки <span th:text="${page.name}"></span></h2>
+            <button class="settings-close" onclick="toggleSettings()">✕</button>
+        </div>
+
+        <!-- Обои -->
+        <div class="settings-section wallpaper-section">
+            <div class="settings-section-title">🖼️ Обои</div>
+
+            <div class="wallpaper-mode-group">
+                <label>
+                    <input type="radio" name="wallpaperMode" value="STATIC" onchange="WallpaperModule.updateMode(this.value)">
+                    <span>📌 Статичное</span>
+                </label>
+                <label>
+                    <input type="radio" name="wallpaperMode" value="RANDOM" onchange="WallpaperModule.updateMode(this.value)">
+                    <span>🎲 Случайное</span>
+                </label>
+                <label>
+                    <input type="radio" name="wallpaperMode" value="SEQUENTIAL" onchange="WallpaperModule.updateMode(this.value)">
+                    <span>📋 Последовательное</span>
+                </label>
+            </div>
+
+            <div class="wallpaper-auto-group">
+                <label class="auto-toggle">
+                    <input type="checkbox" id="autoChangeCheckbox" onchange="WallpaperModule.updateAutoChange(this.checked)">
+                    <span>🔄 Автоматическая смена</span>
+                </label>
+
+                <div class="wallpaper-auto-settings" id="autoChangeSettings">
+                    <label>
+                        <span>⏱️ Интервал (сек):</span>
+                        <input type="number" id="changeInterval" value="30" min="5" max="3600"
+                               onchange="WallpaperModule.updateInterval(this.value)">
+                    </label>
+
+                    <label>
+                        <span>Режим смены:</span>
+                        <select id="changeMode" onchange="WallpaperModule.updateChangeMode(this.value)">
+                            <option value="RANDOM">🎲 Случайно</option>
+                            <option value="SEQUENTIAL">📋 Последовательно</option>
+                        </select>
+                    </label>
+
+                    <button class="wallpaper-force-change-btn" onclick="WallpaperModule.forceChange()">
+                        🔄 Сменить сейчас
+                    </button>
+                </div>
+            </div>
+
+            <div class="wallpaper-grid" id="wallpaperPreview">
+                <!-- Загружается через JavaScript -->
+            </div>
+
+            <div class="wallpaper-upload-area">
+                <label class="upload-label" for="wallpaperInput">
+                    <span class="icon">📤</span>
+                    Загрузить обои
+                </label>
+                <input type="file" id="wallpaperInput" accept="image/*" multiple
+                       onchange="WallpaperModule.uploadWallpapers(this)">
+                <span class="upload-hint">JPG, PNG, GIF, WEBP до 50MB</span>
+            </div>
+        </div>
+
+        <!-- Настройки ссылок -->
+        <div class="settings-section">
+            <div class="settings-section-title">🔗 Настройки ссылок</div>
+
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                <!-- Размер иконки -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:13px; opacity:0.7;">Размер иконки</label>
+                        <span id="iconSizeValue" style="font-size:13px; opacity:0.5;">28px</span>
+                    </div>
+                    <input type="range" id="linkIconSize" min="16" max="100" value="28" step="2"
+                           style="width:100%; accent-color:#4CAF50;"
+                           oninput="updateLinkSetting('iconSize', this.value)">
+                </div>
+
+                <!-- Размер текста -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:13px; opacity:0.7;">Размер текста</label>
+                        <span id="fontSizeValue" style="font-size:13px; opacity:0.5;">12px</span>
+                    </div>
+                    <input type="range" id="linkFontSize" min="8" max="24" value="12" step="1"
+                           style="width:100%; accent-color:#4CAF50;"
+                           oninput="updateLinkSetting('fontSize', this.value)">
+                </div>
+
+                <!-- Прозрачность фона -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:13px; opacity:0.7;">Прозрачность фона</label>
+                        <span id="bgOpacityValue" style="font-size:13px; opacity:0.5;">15%</span>
+                    </div>
+                    <input type="range" id="linkBgOpacity" min="0" max="100" value="15" step="1"
+                           style="width:100%; accent-color:#4CAF50;"
+                           oninput="updateLinkSetting('bgOpacity', this.value)">
+                    <div style="display:flex; justify-content:space-between; font-size:11px; opacity:0.3; margin-top:2px;">
+                        <span>Прозрачный</span>
+                        <span>Непрозрачный</span>
+                    </div>
+                </div>
+
+                <!-- Затемнение/осветление фона -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:13px; opacity:0.7;">Затемнение/осветление фона</label>
+                        <span id="bgDarknessValue" style="font-size:13px; opacity:0.5;">Нейтральный</span>
+                    </div>
+                    <input type="range" id="linkBgDarkness" min="-50" max="50" value="0" step="1"
+                           style="width:100%; accent-color:#4CAF50;"
+                           oninput="updateLinkSetting('bgDarkness', this.value)">
+                    <div style="display:flex; justify-content:space-between; font-size:11px; opacity:0.3; margin-top:2px;">
+                        <span>Темнее</span>
+                        <span>Светлее</span>
+                    </div>
+                </div>
+                <div class="settings-section-title">👁️ Отображение</div>
+
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                        <input type="checkbox" id="showAddLinkButton"
+                               onchange="updateShowAddButton(this.checked)">
+                        <span style="font-size:14px;">Показывать кнопку "Добавить" на главной странице</span>
+                    </label>
+                    <div style="font-size:12px; opacity:0.4; padding-left:28px;">
+                        Отключите, чтобы скрыть кнопку добавления ссылок на главной странице
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ссылки -->
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <span>🔗 Ссылки</span>
+                <button class="add-button" onclick="addLinkFromSettings()">+ Добавить</button>
+            </div>
+            <div class="links-list" id="linksList">
+                <!-- Загружается через JavaScript -->
+            </div>
+        </div>
+
+        <!-- Доступные модули -->
+        <div class="settings-section">
+            <div class="settings-section-title">📦 Добавить модуль</div>
+            <div class="modules-grid" id="availableModules">
+                <!-- Загружается через JavaScript -->
+            </div>
+        </div>
+
+        <!-- Модули -->
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <span>📊 Модули</span>
+                <span style="font-size: 11px; opacity: 0.4; font-weight: normal;">(перетащите для сортировки)</span>
+            </div>
+            <div class="modules-list" id="modulesList">
+                <!-- Загружается через JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ОСНОВНОЙ КОНТЕНТ ===== -->
+<div class="container">
+    <!-- Хедер -->
+    <div class="header">
+            <span class="page-title">
+                <span class="icon">🏠</span>
+                <span th:text="${page.name}"></span>
+            </span>
+        <!-- Скрытая навигация для JS -->
+        <div class="page-nav" style="display:none;">
+            <a th:each="p : ${pages}"
+               th:href="'/page/' + ${p.name}"
+               th:text="${p.name}"
+               th:classappend="${p.id == page.id} ? 'active' : ''"></a>
+        </div>
+    </div>
+
+    <!-- Три колонки -->
+    <div class="content">
+        <!-- Левая колонка - модули -->
+        <div class="modules-column modules-column-left" id="modulesLeft">
+            <!-- Загружается через JavaScript -->
+        </div>
+
+        <!-- Центральная колонка - ссылки -->
+        <div class="links-column">
+            <div class="section-label">Ссылки</div>
+            <div class="links-grid" id="linksContainer"
+                 th:attr="data-links=${linksJson}"
+                 data-icon-size="${linkIconSize}"
+                 data-font-size="${linkFontSize}"
+                 data-bg-opacity="${linkBgOpacity}"
+                 data-bg-darkness="${linkBgDarkness}"
+                 data-show-add-button="${showAddLinkButton}">
+                <!-- Ссылки рендерятся через JavaScript -->
+            </div>
+        </div>
+
+        <!-- Правая колонка - модули -->
+        <div class="modules-column modules-column-right" id="modulesRight">
+            <!-- Загружается через JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Скрытый контейнер для данных модулей -->
+<div id="modulesContainer" style="display:none;"
+     th:attr="data-modules=${modulesJson}">
+</div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script th:src="@{/js/core.js}"></script>
+<script th:src="@{/js/header.js}"></script>
+<script th:src="@{/js/links.js}"></script>
+<script th:src="@{/js/links-modal.js}"></script>
+<script th:src="@{/js/modules.js}"></script>
+<script th:src="@{/js/settings.js}"></script>
+<script th:src="@{/js/wallpaper.js}"></script>
+
+</body>
+</html>
