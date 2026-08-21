@@ -1,24 +1,15 @@
 package org.alex.everyWeb.page.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.alex.everyWeb.link.model.Link;
-import org.alex.everyWeb.module.model.Module;
 import org.alex.everyWeb.page.model.Page;
 import org.alex.everyWeb.page.service.PageService;
 import org.alex.everyWeb.wallpaper.service.WallpaperService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,7 +20,7 @@ public class PageController {
     private PageService pageService;
 
     @Autowired
-    private WallpaperService wallpaperService; // Добавляем WallpaperService
+    private WallpaperService wallpaperService;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -38,6 +29,7 @@ public class PageController {
             return preparePageModel(page, model);
         } catch (Exception e) {
             Page newPage = pageService.createPage("main");
+            addDefaultContent(newPage);
             return preparePageModel(newPage, model);
         }
     }
@@ -49,6 +41,7 @@ public class PageController {
             return preparePageModel(page, model);
         } catch (Exception e) {
             Page newPage = pageService.createPage(name);
+            addDefaultContent(newPage);
             return preparePageModel(newPage, model);
         }
     }
@@ -62,11 +55,7 @@ public class PageController {
         model.addAttribute("linkFontSize", page.getLinkFontSize() != null ? page.getLinkFontSize() : 12);
         model.addAttribute("linkBgOpacity", page.getLinkBgOpacity() != null ? page.getLinkBgOpacity() : 15);
         model.addAttribute("linkBgDarkness", page.getLinkBgDarkness() != null ? page.getLinkBgDarkness() : 0);
-
-        // ===== ВАЖНО: Проверяем значение showAddLinkButton =====
-        Boolean showAdd = page.getShowAddLinkButton();
-        model.addAttribute("showAddLinkButton", showAdd != null ? showAdd : true);
-        System.out.println("=== PageController: showAddLinkButton = " + (showAdd != null ? showAdd : true));
+        model.addAttribute("showAddLinkButton", page.getShowAddLinkButton() != null ? page.getShowAddLinkButton() : true);
 
         // Получаем текущие обои
         String currentWallpaper = null;
@@ -78,7 +67,7 @@ public class PageController {
         }
         model.addAttribute("currentWallpaper", currentWallpaper);
 
-        // Преобразуем ссылки с полными данными
+        // Преобразуем ссылки в JSON для JavaScript
         ObjectMapper mapper = new ObjectMapper();
         try {
             List<Map<String, Object>> linksData = page.getLinks().stream()
@@ -116,5 +105,16 @@ public class PageController {
 
         return "page";
     }
-}
 
+    private void addDefaultContent(Page page) {
+        try {
+            pageService.addLink(page.getId(), "Google", "https://google.com", "🔍");
+            pageService.addLink(page.getId(), "GitHub", "https://github.com", "🐙");
+            pageService.addLink(page.getId(), "YouTube", "https://youtube.com", "▶️");
+            pageService.addModule(page.getId(), "CLOCK", "Часы", "{}");
+            pageService.addModule(page.getId(), "WEATHER", "Погода", "{\"city\":\"Moscow\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}

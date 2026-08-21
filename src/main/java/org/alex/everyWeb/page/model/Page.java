@@ -2,7 +2,7 @@ package org.alex.everyWeb.page.model;
 
 import jakarta.persistence.*;
 import org.alex.everyWeb.link.model.Link;
-import org.alex.everyWeb.module.model.Module;
+import org.alex.everyWeb.modules.entity.ModuleEntity;
 import org.alex.everyWeb.wallpaper.model.WallpaperSettings;
 
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class Page {
 
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
-    private List<Module> modules = new ArrayList<>();
+    private List<ModuleEntity> modules = new ArrayList<>();
 
     @OneToOne(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     private WallpaperSettings wallpaperSettings;
@@ -71,8 +71,8 @@ public class Page {
     public List<Link> getLinks() { return links; }
     public void setLinks(List<Link> links) { this.links = links; }
 
-    public List<Module> getModules() { return modules; }
-    public void setModules(List<Module> modules) { this.modules = modules; }
+    public List<ModuleEntity> getModules() { return modules; }
+    public void setModules(List<ModuleEntity> modules) { this.modules = modules; }
 
     public WallpaperSettings getWallpaperSettings() { return wallpaperSettings; }
     public void setWallpaperSettings(WallpaperSettings wallpaperSettings) { this.wallpaperSettings = wallpaperSettings; }

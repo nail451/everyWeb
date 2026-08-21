@@ -1,8 +1,9 @@
 /**
- * MODULES.JS - Управление модулями
+ * MODULES.JS - Управление модулями (общая логика)
  */
 
 function initModules() {
+    console.log('Modules initialized');
     renderModules();
 }
 
@@ -13,14 +14,12 @@ function renderModules() {
     const modulesContainer = document.getElementById('modulesContainer');
 
     if (!leftColumn || !rightColumn) {
+        console.error('Module columns not found');
         return;
     }
 
-    // Очищаем колонки
     leftColumn.innerHTML = '';
     rightColumn.innerHTML = '';
-
-    // Добавляем лейблы
     leftColumn.innerHTML = `<div class="section-label">Модули</div>`;
     rightColumn.innerHTML = `<div class="section-label">Модули</div>`;
 
@@ -34,6 +33,7 @@ function renderModules() {
     }
 
     let modulesData = modulesContainer.getAttribute('data-modules');
+    console.log('Modules data:', modulesData);
 
     if (!modulesData || modulesData === 'null' || modulesData === 'undefined' || modulesData === '[]') {
         leftColumn.innerHTML += `
@@ -46,6 +46,7 @@ function renderModules() {
 
     try {
         const modules = JSON.parse(modulesData);
+        console.log('Parsed modules:', modules);
 
         if (!Array.isArray(modules) || modules.length === 0) {
             leftColumn.innerHTML += `
@@ -56,7 +57,6 @@ function renderModules() {
             return;
         }
 
-        // Распределяем модули между колонками (чередуем)
         modules.forEach((module, index) => {
             const moduleDiv = createModuleElement(module);
             if (index % 2 === 0) {
@@ -66,17 +66,17 @@ function renderModules() {
             }
         });
 
-        // Добавляем кнопку добавления в левую колонку
         const addButton = document.createElement('button');
         addButton.className = 'add-module-btn';
         addButton.textContent = '➕ Добавить модуль';
         addButton.onclick = addModule;
         leftColumn.appendChild(addButton);
 
-        // Инициализируем модули после рендеринга
+        // Инициализируем модули
         setTimeout(initializeModules, 100);
 
     } catch (error) {
+        console.error('Error rendering modules:', error);
         leftColumn.innerHTML += `
             <button class="add-module-btn" onclick="addModule()">
                 ➕ Добавить модуль
@@ -90,17 +90,27 @@ function createModuleElement(module) {
     const moduleDiv = document.createElement('div');
     moduleDiv.className = `module ${(module.type || '').toLowerCase()}-module`;
     moduleDiv.dataset.moduleId = module.id;
+    moduleDiv.dataset.moduleType = module.type || '';
 
-    // Получаем контент модуля
     const content = getModuleContent(module);
 
     moduleDiv.innerHTML = `
         <div class="module-title">
             <span>${escapeHtml(module.title || 'Модуль')}</span>
-            <button class="delete-btn" onclick="deleteModule(${module.id})">×</button>
+            <div style="display:flex; gap:6px;">
+                <button class="module-settings-toggle" onclick="toggleModuleSettings(${module.id})" 
+                        style="background:rgba(33,150,243,0.2); border:none; color:rgba(255,255,255,0.4); 
+                               border-radius:4px; padding:2px 8px; cursor:pointer; font-size:11px;">
+                    ⚙️
+                </button>
+                <button class="delete-btn" onclick="deleteModule(${module.id})">×</button>
+            </div>
         </div>
-        <div class="module-content" data-type="${module.type || ''}" data-settings='${module.settings || '{}'}">
+        <div class="module-content" data-type="${module.type || ''}" data-settings='${module.settings || '{}'}'>
             ${content}
+        </div>
+        <div class="module-settings" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
+            <!-- Специфичные настройки модуля загружаются отдельно -->
         </div>
     `;
 
@@ -115,9 +125,18 @@ function getModuleContent(module) {
     switch(type) {
         case 'WEATHER':
             return `
-                <div class="weather-display">
-                    <span class="weather-temp">--°C</span>
-                    <span class="weather-desc">Загрузка...</span>
+                <div class="weather-display" data-module-id="${module.id}">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <div class="weather-icon" style="font-size:48px;">🌤️</div>
+                        <div>
+                            <div class="weather-temp" style="font-size:32px; font-weight:300;">--°C</div>
+                            <div class="weather-desc" style="opacity:0.6;">Загрузка...</div>
+                        </div>
+                    </div>
+                    <div class="weather-details" style="margin-top:8px; font-size:13px; opacity:0.5;">
+                        <span class="weather-wind">Ветер: --</span>
+                        <span class="weather-humidity">Влажность: --</span>
+                    </div>
                 </div>
             `;
         case 'NOTES':
@@ -127,17 +146,12 @@ function getModuleContent(module) {
                          onchange="saveNotes(this)">${getSavedNotes(module.id)}</textarea>
             `;
         case 'CLOCK':
-            return `<div class="clock-display">--:--:--</div>`;
-        case 'CALENDAR':
-            return `<div class="calendar-display">📅 Календарь</div>`;
-        case 'TODO':
             return `
-                <div class="todo-module">
-                    <input type="text" placeholder="Добавить задачу..." 
-                           onkeypress="if(event.key==='Enter') addTodo(this, ${module.id})">
-                    <ul class="todo-list" data-module-id="${module.id}"></ul>
+                <div class="clock-display" data-module-id="${module.id}">
+                    <div style="text-align:center; opacity:0.5; padding:10px;">Загрузка...</div>
                 </div>
             `;
+        // ... остальные кейсы
         default:
             return `<div style="opacity:0.5;text-align:center;padding:20px;">Модуль: ${type}</div>`;
     }
@@ -145,33 +159,36 @@ function getModuleContent(module) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
 function initializeModules() {
+    console.log('Initializing modules...');
 
-    // Погода
-    document.querySelectorAll('.weather-module .weather-display').forEach(el => {
-        const content = el.closest('.module-content');
-        if (content) {
-            try {
-                const settings = JSON.parse(content.dataset.settings || '{}');
-                const city = settings.city || 'Moscow';
-                fetchWeather(city, el);
-            } catch (e) {
-            }
+    document.querySelectorAll('.module').forEach(moduleElement => {
+        const moduleId = moduleElement.dataset.moduleId;
+        const moduleType = moduleElement.dataset.moduleType;
+
+        console.log(`Initializing module: ${moduleType} (ID: ${moduleId})`);
+
+        if (moduleType === 'CLOCK' && typeof initClockModule === 'function') {
+            initClockModule(moduleElement, moduleId);
+        }
+
+        if (moduleType === 'WEATHER' && typeof initWeatherModule === 'function') {
+            initWeatherModule(moduleElement, moduleId);
         }
     });
 
-    // Часы
+    // Общие инициализации
     document.querySelectorAll('.clock-module .clock-display').forEach(clock => {
-        updateClock(clock);
+        if (typeof updateClockDisplay !== 'function') {
+            updateClock(clock);
+        }
     });
 
-    // Заметки
     document.querySelectorAll('.notes-module textarea').forEach(textarea => {
         const moduleId = textarea.dataset.moduleId;
         const saved = localStorage.getItem('notes_' + moduleId);
         if (saved) textarea.value = saved;
     });
 
-    // To-Do
     document.querySelectorAll('.todo-module').forEach(todo => {
         const list = todo.querySelector('.todo-list');
         if (list) {
@@ -181,68 +198,77 @@ function initializeModules() {
     });
 }
 
-// ===== ПОГОДА =====
-async function fetchWeather(city, element) {
-    try {
-        const geoResponse = await fetch(
-            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`
-        );
-        const geoData = await geoResponse.json();
+// ===== ПЕРЕКЛЮЧЕНИЕ НАСТРОЕК МОДУЛЯ =====
+function toggleModuleSettings(moduleId) {
+    const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+    if (!moduleElement) return;
 
-        if (geoData.results && geoData.results.length > 0) {
-            const lat = geoData.results[0].latitude;
-            const lon = geoData.results[0].longitude;
+    const settingsDiv = moduleElement.querySelector('.module-settings');
+    if (!settingsDiv) return;
 
-            const weatherResponse = await fetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
-            );
-            const weatherData = await weatherResponse.json();
-
-            if (weatherData && weatherData.current_weather) {
-                const temp = Math.round(weatherData.current_weather.temperature);
-                const weatherCode = weatherData.current_weather.weathercode;
-                const description = getWeatherDescription(weatherCode);
-
-                element.querySelector('.weather-temp').textContent = temp + '°C';
-                element.querySelector('.weather-desc').textContent = description;
-                return;
-            }
-        }
-        throw new Error('City not found');
-    } catch (error) {
-        element.querySelector('.weather-temp').textContent = '--°C';
-        element.querySelector('.weather-desc').textContent = 'Ошибка загрузки';
+    if (settingsDiv.style.display === 'none') {
+        settingsDiv.style.display = 'block';
+        // Загружаем настройки для конкретного модуля
+        loadModuleSettings(moduleElement);
+    } else {
+        settingsDiv.style.display = 'none';
     }
 }
 
-function getWeatherDescription(code) {
-    const descriptions = {
-        0: '☀️ Ясно',
-        1: '🌤️ Преимущественно ясно',
-        2: '⛅ Переменная облачность',
-        3: '☁️ Пасмурно',
-        45: '🌫️ Туман',
-        48: '🌫️ Туман',
-        51: '🌧️ Легкая морось',
-        53: '🌧️ Умеренная морось',
-        55: '🌧️ Сильная морось',
-        61: '🌧️ Легкий дождь',
-        63: '🌧️ Умеренный дождь',
-        65: '🌧️ Сильный дождь',
-        71: '🌨️ Легкий снег',
-        73: '🌨️ Умеренный снег',
-        75: '🌨️ Сильный снег',
-        80: '🌧️ Ливень',
-        81: '🌧️ Ливень',
-        82: '🌧️ Сильный ливень',
-        95: '⛈️ Гроза',
-        96: '⛈️ Гроза с градом',
-        99: '⛈️ Гроза с градом'
-    };
-    return descriptions[code] || '❓ Неизвестно';
+// ===== ЗАГРУЗКА НАСТРОЕК МОДУЛЯ =====
+async function loadModuleSettings(moduleElement) {
+    const moduleId = moduleElement.dataset.moduleId;
+    const moduleType = moduleElement.dataset.moduleType;
+    const settingsDiv = moduleElement.querySelector('.module-settings');
+
+    if (!settingsDiv) return;
+
+    try {
+        console.log(`Loading settings for module: ${moduleType} (ID: ${moduleId})`);
+
+        const response = await fetch(`/api/modules/${moduleId}/settings`);
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`Settings data for module ${moduleId}:`, data);
+
+            if (moduleType === 'CLOCK' && typeof renderClockSettings === 'function') {
+                settingsDiv.innerHTML = renderClockSettings(data);
+                if (typeof initClockSettingsEvents === 'function') {
+                    initClockSettingsEvents(moduleId, settingsDiv);
+                }
+            } else if (moduleType === 'WEATHER' && typeof renderWeatherSettings === 'function') {
+                settingsDiv.innerHTML = renderWeatherSettings(data);
+                if (typeof initWeatherSettingsEvents === 'function') {
+                    initWeatherSettingsEvents(moduleId, settingsDiv);
+                }
+            } else {
+                settingsDiv.innerHTML = `
+                    <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
+                        Настройки для модуля "${moduleType}" не найдены
+                    </div>
+                `;
+            }
+        } else {
+            console.error(`Failed to load settings for module ${moduleId}:`, response.status);
+            settingsDiv.innerHTML = `
+                <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
+                    ❌ Ошибка загрузки настроек (${response.status})
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading module settings:', error);
+        settingsDiv.innerHTML = `
+            <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
+                ❌ Ошибка загрузки настроек: ${error.message}
+            </div>
+        `;
+    }
 }
 
-// ===== ЧАСЫ =====
+// ===== ОБЩИЕ ФУНКЦИИ ДЛЯ МОДУЛЕЙ =====
+
+// ЧАСЫ (базовая реализация)
 function updateClock(element) {
     const now = new Date();
     const time = now.toLocaleTimeString('ru-RU', {
@@ -253,13 +279,7 @@ function updateClock(element) {
     element.textContent = time;
 }
 
-setInterval(() => {
-    document.querySelectorAll('.clock-module .clock-display').forEach(clock => {
-        updateClock(clock);
-    });
-}, 1000);
-
-// ===== ЗАМЕТКИ =====
+// ЗАМЕТКИ
 function getSavedNotes(moduleId) {
     return localStorage.getItem('notes_' + moduleId) || '';
 }
@@ -269,7 +289,7 @@ function saveNotes(textarea) {
     localStorage.setItem('notes_' + moduleId, textarea.value);
 }
 
-// ===== TO-DO =====
+// TO-DO
 function addTodo(input, moduleId) {
     const text = input.value.trim();
     if (!text) return;
@@ -321,63 +341,78 @@ function deleteTodo(moduleId, todoId) {
 }
 
 // ===== ДОБАВЛЕНИЕ МОДУЛЯ =====
-function addModule() {
-    const types = ['WEATHER', 'NOTES', 'CLOCK', 'CALENDAR', 'TODO'];
-    const typeNames = ['🌤️ Погода', '📝 Заметки', '🕐 Часы', '📅 Календарь', '✅ To-Do'];
+async function addModule() {
+    try {
+        // Получаем список доступных модулей из базы данных
+        const response = await fetch('/api/modules/available');
+        if (!response.ok) {
+            throw new Error('Failed to load available modules');
+        }
 
-    let typeIndex = prompt(
-        'Выберите тип модуля:\n' +
-        types.map((t, i) => `${i+1}. ${typeNames[i]}`).join('\n')
-    );
+        const modules = await response.json();
+        console.log('Available modules from DB:', modules);
 
-    if (typeIndex === null) return;
-    typeIndex = parseInt(typeIndex) - 1;
-    if (isNaN(typeIndex) || typeIndex < 0 || typeIndex >= types.length) {
-        showToast('❌ Неверный выбор');
-        return;
-    }
-
-    const type = types[typeIndex];
-    const defaultTitle = typeNames[typeIndex].replace(/^[^\s]+\s/, '');
-
-    const title = prompt('Введите заголовок модуля:', defaultTitle);
-    if (title === null || !title.trim()) return;
-
-    let settings = {};
-    if (type === 'WEATHER') {
-        const city = prompt('Введите город:', 'Moscow');
-        if (city !== null && city.trim()) {
-            settings.city = city.trim();
-        } else {
-            showToast('❌ Город не указан');
+        if (!modules || modules.length === 0) {
+            showToast('❌ Нет доступных модулей');
             return;
         }
-    }
 
-    fetch(`/api/pages/${currentPageId}/modules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            type: type,
-            title: title.trim(),
-            settings: JSON.stringify(settings)
-        })
-    })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                });
-            }
-            return response.json();
-        })
-        .then(() => {
-            showToast('✅ Модуль добавлен');
-            setTimeout(() => location.reload(), 500);
-        })
-        .catch(error => {
-            showToast('❌ Ошибка добавления модуля: ' + error.message);
+        // Строим сообщение для пользователя
+        let message = 'Выберите тип модуля:\n';
+        modules.forEach((module, index) => {
+            message += `${index + 1}. ${module.icon} ${module.name} - ${module.description}\n`;
         });
+
+        let typeIndex = prompt(message);
+        if (typeIndex === null) return;
+
+        typeIndex = parseInt(typeIndex) - 1;
+        if (isNaN(typeIndex) || typeIndex < 0 || typeIndex >= modules.length) {
+            showToast('❌ Неверный выбор');
+            return;
+        }
+
+        const selectedModule = modules[typeIndex];
+        const defaultTitle = selectedModule.name;
+
+        const title = prompt('Введите заголовок модуля:', defaultTitle);
+        if (title === null || !title.trim()) return;
+
+        // Специфичные настройки для некоторых модулей
+        let settings = {};
+        if (selectedModule.type === 'WEATHER') {
+            const city = prompt('Введите город:', 'Moscow');
+            if (city !== null && city.trim()) {
+                settings.city = city.trim();
+            } else {
+                showToast('❌ Город не указан');
+                return;
+            }
+        }
+
+        // Отправляем запрос на создание модуля
+        const addResponse = await fetch(`/api/pages/${currentPageId}/modules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pageId: currentPageId,
+                type: selectedModule.type,
+                title: title.trim(),
+                settings: JSON.stringify(settings)
+            })
+        });
+
+        if (addResponse.ok) {
+            showToast(`✅ Модуль "${title.trim()}" добавлен`);
+            setTimeout(() => location.reload(), 500);
+        } else {
+            const error = await addResponse.text();
+            showToast('❌ Ошибка добавления модуля: ' + error);
+        }
+    } catch (error) {
+        console.error('Error adding module:', error);
+        showToast('❌ Ошибка добавления модуля: ' + error.message);
+    }
 }
 
 // ===== УДАЛЕНИЕ МОДУЛЯ =====
