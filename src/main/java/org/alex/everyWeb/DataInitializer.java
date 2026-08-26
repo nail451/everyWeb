@@ -85,6 +85,8 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("🔄 Инициализация модулей...");
 
         List<AvailableModule> modules = Arrays.asList(
+                createModule("NEXTCLOUD", "Nextcloud", "Интеграция с Nextcloud - просмотр файлов и хранилища", "☁️",
+                        "nextcloud-module", true, true, "nextcloud-module.js"),
                 createModule("WEATHER", "Погода", "Показывает погоду в выбранном городе", "🌤️",
                         "weather-module", true, true, "weather-module.js"),
                 createModule("NOTES", "Заметки", "Быстрые заметки", "📝",

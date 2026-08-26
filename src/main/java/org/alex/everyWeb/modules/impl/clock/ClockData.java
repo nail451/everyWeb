@@ -14,15 +14,14 @@ public class ClockData {
     private String timezone;
     private List<ClockFace> faces;
 
-    // Конструктор по умолчанию для Jackson
     public ClockData() {
         this.format = "24h";
         this.showSeconds = false;
         this.timezone = ZoneId.systemDefault().getId();
         this.faces = new ArrayList<>();
+        // НЕ добавляем циферблат здесь - он будет добавлен в модуле при необходимости
     }
 
-    // Конструктор с параметрами
     @JsonCreator
     public ClockData(
             @JsonProperty("format") String format,
@@ -58,7 +57,7 @@ public class ClockData {
 
     @JsonIgnore
     public void removeFace(int index) {
-        if (faces != null && index > 0 && index < faces.size()) {
+        if (faces != null && index >= 0 && index < faces.size()) {
             faces.remove(index);
         }
     }
@@ -67,7 +66,6 @@ public class ClockData {
         private String name;
         private String timezone;
 
-        // Конструктор по умолчанию для Jackson
         public ClockFace() {
             this.name = "";
             this.timezone = "UTC";

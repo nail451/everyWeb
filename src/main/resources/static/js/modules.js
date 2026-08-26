@@ -18,6 +18,7 @@ function renderModules() {
         return;
     }
 
+    // Очищаем колонки, но сохраняем лейблы
     leftColumn.innerHTML = '';
     rightColumn.innerHTML = '';
     leftColumn.innerHTML = `<div class="section-label">Модули</div>`;
@@ -72,8 +73,10 @@ function renderModules() {
         addButton.onclick = addModule;
         leftColumn.appendChild(addButton);
 
-        // Инициализируем модули
-        setTimeout(initializeModules, 100);
+        // Инициализируем модули после рендеринга
+        setTimeout(() => {
+            initializeModules();
+        }, 100);
 
     } catch (error) {
         console.error('Error rendering modules:', error);
@@ -151,6 +154,14 @@ function getModuleContent(module) {
                     <div style="text-align:center; opacity:0.5; padding:10px;">Загрузка...</div>
                 </div>
             `;
+        case 'NEXTCLOUD':
+            return `
+                <div class="nextcloud-display" data-module-id="${module.id}">
+                    <div style="text-align:center; opacity:0.5; padding:10px;">
+                        ⏳ Загрузка Nextcloud...
+                    </div>
+                </div>
+            `;
         // ... остальные кейсы
         default:
             return `<div style="opacity:0.5;text-align:center;padding:20px;">Модуль: ${type}</div>`;
@@ -161,28 +172,31 @@ function getModuleContent(module) {
 function initializeModules() {
     console.log('Initializing modules...');
 
+    // Проходим по всем модулям и инициализируем их специфичную логику
     document.querySelectorAll('.module').forEach(moduleElement => {
         const moduleId = moduleElement.dataset.moduleId;
         const moduleType = moduleElement.dataset.moduleType;
 
         console.log(`Initializing module: ${moduleType} (ID: ${moduleId})`);
 
+        // Инициализация по типам (вызывается из файлов модулей)
         if (moduleType === 'CLOCK' && typeof initClockModule === 'function') {
+            console.log(`Calling initClockModule for ID: ${moduleId}`);
             initClockModule(moduleElement, moduleId);
         }
 
         if (moduleType === 'WEATHER' && typeof initWeatherModule === 'function') {
+            console.log(`Calling initWeatherModule for ID: ${moduleId}`);
             initWeatherModule(moduleElement, moduleId);
         }
-    });
 
-    // Общие инициализации
-    document.querySelectorAll('.clock-module .clock-display').forEach(clock => {
-        if (typeof updateClockDisplay !== 'function') {
-            updateClock(clock);
+        if (moduleType === 'NEXTCLOUD' && typeof initNextcloudModule === 'function') {
+            console.log(`Calling initNextcloudModule for ID: ${moduleId}`);
+            initNextcloudModule(moduleElement, moduleId);
         }
     });
 
+    // Общие инициализации для встроенных модулей
     document.querySelectorAll('.notes-module textarea').forEach(textarea => {
         const moduleId = textarea.dataset.moduleId;
         const saved = localStorage.getItem('notes_' + moduleId);
@@ -240,6 +254,12 @@ async function loadModuleSettings(moduleElement) {
                 settingsDiv.innerHTML = renderWeatherSettings(data);
                 if (typeof initWeatherSettingsEvents === 'function') {
                     initWeatherSettingsEvents(moduleId, settingsDiv);
+                }
+            } else if (moduleType === 'NEXTCLOUD' && typeof renderNextcloudSettings === 'function') {
+                // Передаем данные в функцию рендеринга
+                settingsDiv.innerHTML = renderNextcloudSettings(data);
+                if (typeof initNextcloudSettingsEvents === 'function') {
+                    initNextcloudSettingsEvents(moduleId, settingsDiv);
                 }
             } else {
                 settingsDiv.innerHTML = `
@@ -391,7 +411,7 @@ async function addModule() {
         }
 
         // Отправляем запрос на создание модуля
-        const addResponse = await fetch(`/api/pages/${currentPageId}/modules`, {
+        const addResponse = await fetch(`/api/modules`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -403,8 +423,13 @@ async function addModule() {
         });
 
         if (addResponse.ok) {
+            const newModule = await addResponse.json();
+            console.log('Module added:', newModule);
+
             showToast(`✅ Модуль "${title.trim()}" добавлен`);
-            setTimeout(() => location.reload(), 500);
+
+            // ===== ОБНОВЛЯЕМ СПИСОК МОДУЛЕЙ БЕЗ ПЕРЕЗАГРУЗКИ =====
+            await refreshModules();
         } else {
             const error = await addResponse.text();
             showToast('❌ Ошибка добавления модуля: ' + error);
@@ -415,18 +440,75 @@ async function addModule() {
     }
 }
 
+// ===== ОБНОВЛЕНИЕ МОДУЛЕЙ =====
+async function refreshModules() {
+    console.log('Refreshing modules...');
+
+    try {
+        // Сохраняем состояние открытых настроек
+        const openSettings = {};
+        document.querySelectorAll('.module-settings').forEach(div => {
+            const moduleElement = div.closest('.module');
+            if (moduleElement && div.style.display !== 'none') {
+                openSettings[moduleElement.dataset.moduleId] = true;
+            }
+        });
+
+        // Получаем обновленный список модулей
+        const response = await fetch(`/api/modules/page/${currentPageId}`);
+        if (!response.ok) {
+            throw new Error('Failed to load modules');
+        }
+
+        const modules = await response.json();
+        console.log('Updated modules:', modules);
+
+        // Обновляем data-атрибут
+        const modulesContainer = document.getElementById('modulesContainer');
+        if (modulesContainer) {
+            modulesContainer.setAttribute('data-modules', JSON.stringify(modules));
+        }
+
+        // Перерисовываем модули
+        renderModules();
+
+        // Восстанавливаем состояние настроек
+        setTimeout(() => {
+            document.querySelectorAll('.module').forEach(el => {
+                const id = el.dataset.moduleId;
+                if (openSettings[id]) {
+                    const settingsDiv = el.querySelector('.module-settings');
+                    if (settingsDiv) {
+                        settingsDiv.style.display = 'block';
+                        // Перезагружаем настройки
+                        loadModuleSettings(el);
+                    }
+                }
+            });
+        }, 200);
+
+    } catch (error) {
+        console.error('Error refreshing modules:', error);
+        showToast('❌ Ошибка обновления модулей');
+    }
+}
+
 // ===== УДАЛЕНИЕ МОДУЛЯ =====
-function deleteModule(moduleId) {
+async function deleteModule(moduleId) {
     if (!confirm('Удалить модуль?')) return;
 
-    fetch(`/api/modules/${moduleId}`, { method: 'DELETE' })
-        .then(response => {
-            if (response.ok) {
-                showToast('✅ Модуль удален');
-                setTimeout(() => location.reload(), 500);
-            } else {
-                showToast('❌ Ошибка удаления модуля');
-            }
-        })
-        .catch(() => showToast('❌ Ошибка удаления модуля'));
+    try {
+        const response = await fetch(`/api/modules/${moduleId}`, { method: 'DELETE' });
+        if (response.ok) {
+            showToast('✅ Модуль удален');
+
+            // ===== ОБНОВЛЯЕМ СПИСОК МОДУЛЕЙ БЕЗ ПЕРЕЗАГРУЗКИ =====
+            await refreshModules();
+        } else {
+            showToast('❌ Ошибка удаления модуля');
+        }
+    } catch (error) {
+        console.error('Error deleting module:', error);
+        showToast('❌ Ошибка удаления модуля');
+    }
 }

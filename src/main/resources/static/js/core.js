@@ -7,6 +7,9 @@ let currentPageId = null;
 let settingsData = null;
 let linkSettings = null;
 
+// ===== КЛЮЧ ДЛЯ ХРАНЕНИЯ ПОСЛЕДНЕЙ СТРАНИЦЫ =====
+const LAST_PAGE_KEY = 'everyweb_last_page';
+
 // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 function escapeHtml(text) {
     if (!text) return '';
@@ -16,6 +19,7 @@ function escapeHtml(text) {
 }
 
 function showToast(message) {
+    console.log('Toast:', message);
     const toast = document.getElementById('toast');
     if (!toast) return;
 
@@ -26,6 +30,18 @@ function showToast(message) {
     toast._timeout = setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+// ===== СОХРАНЕНИЕ ПОСЛЕДНЕЙ СТРАНИЦЫ =====
+function saveLastPage(pageName) {
+    if (pageName) {
+        localStorage.setItem(LAST_PAGE_KEY, pageName);
+        console.log('Saved last page:', pageName);
+    }
+}
+
+function getLastPage() {
+    return localStorage.getItem(LAST_PAGE_KEY);
 }
 
 // ===== ПРИМЕНЕНИЕ ОБОЕВ =====
@@ -48,8 +64,10 @@ function applyWallpaperWithOverlay(path) {
         body.style.backgroundPosition = 'center';
         body.style.backgroundAttachment = 'fixed';
         body.classList.add('wallpaper-applied');
+        console.log('✅ Wallpaper applied with overlay:', path);
     };
     img.onerror = function() {
+        console.warn('❌ Failed to load wallpaper:', path);
         body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
         body.classList.remove('wallpaper-applied');
     };
@@ -58,6 +76,7 @@ function applyWallpaperWithOverlay(path) {
 
 // ===== ПРИНУДИТЕЛЬНАЯ СМЕНА ОБОЕВ =====
 async function forceChangeWallpaper() {
+    console.log('Force change wallpaper called');
     try {
         showToast('⏳ Смена обоев...');
 
@@ -88,6 +107,7 @@ async function forceChangeWallpaper() {
             showToast('❌ Ошибка смены обоев: ' + error);
         }
     } catch (error) {
+        console.error('Error forcing wallpaper change:', error);
         showToast('❌ Ошибка смены обоев');
     }
 }
@@ -95,9 +115,11 @@ async function forceChangeWallpaper() {
 // ===== ЗАГРУЗКА НАСТРОЕК ССЫЛОК =====
 async function loadLinkSettingsFromServer() {
     try {
+        console.log('Loading link settings from server...');
         const response = await fetch(`/api/pages/${currentPageId}/links/settings`);
         if (response.ok) {
             const data = await response.json();
+            console.log('Raw data from server:', data);
 
             const settings = {
                 iconSize: data.linkIconSize || data.iconSize || 28,
@@ -107,25 +129,23 @@ async function loadLinkSettingsFromServer() {
                 showAddLinkButton: data.showAddLinkButton !== undefined ? data.showAddLinkButton : true
             };
 
-            linkSettings = settings;
+            console.log('Parsed settings:', settings);
 
+            linkSettings = settings;
             applyLinkStylesFromSettings(settings);
 
-            if (typeof renderLinks === 'function') {
-                renderLinks();
-            }
-
-            const overlay = document.getElementById('settingsOverlay');
-            if (overlay && overlay.classList.contains('active')) {
-                const checkbox = document.getElementById('showAddLinkButton');
-                if (checkbox) {
-                    checkbox.checked = settings.showAddLinkButton;
+            const showAddButton = settings.showAddLinkButton;
+            const container = document.getElementById('linksContainer');
+            if (container) {
+                if (typeof renderLinks === 'function') {
+                    renderLinks();
                 }
             }
 
             return settings;
         }
     } catch (error) {
+        console.error('Error loading link settings:', error);
     }
     return null;
 }
@@ -133,6 +153,7 @@ async function loadLinkSettingsFromServer() {
 // ===== ПРИМЕНЕНИЕ НАСТРОЕК ССЫЛОК =====
 function applyLinkStylesFromSettings(settings) {
     if (!settings) {
+        console.warn('No settings provided to applyLinkStylesFromSettings');
         return;
     }
 
@@ -140,6 +161,8 @@ function applyLinkStylesFromSettings(settings) {
     const fontSize = settings.fontSize || settings.linkFontSize || 12;
     const bgOpacity = settings.bgOpacity || settings.linkBgOpacity || 15;
     const bgDarkness = settings.bgDarkness || settings.linkBgDarkness || 0;
+
+    console.log('Applying link styles with values:', { iconSize, fontSize, bgOpacity, bgDarkness });
 
     const opacity = bgOpacity / 100;
     const baseColor = `rgba(255, 255, 255, ${opacity})`;
@@ -215,10 +238,12 @@ function applyLinkStylesFromSettings(settings) {
 // ===== ПЕРЕСОЗДАНИЕ ИКОНОК =====
 function recreateLinkIcons(settings) {
     if (!settings) {
+        console.warn('No settings provided to recreateLinkIcons');
         return;
     }
 
     const iconSize = settings.iconSize || settings.linkIconSize || 28;
+    console.log('Recreating link icons with size:', iconSize);
 
     const iconSizePx = Math.max(16, Math.min(100, iconSize)) + 'px';
     const containerSize = Math.max(40, Math.min(112, iconSize + 12)) + 'px';
@@ -250,9 +275,21 @@ function recreateLinkIcons(settings) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Core.js loaded');
+
     const pageContainer = document.getElementById('pageContainer');
     if (pageContainer) {
         currentPageId = parseInt(pageContainer.dataset.pageId);
+        console.log('Current page ID:', currentPageId);
+    }
+
+    // Получаем имя текущей страницы
+    const pageTitleElement = document.querySelector('.header .page-title span:last-child');
+    if (pageTitleElement) {
+        const currentPageName = pageTitleElement.textContent.trim();
+        // Сохраняем текущую страницу
+        saveLastPage(currentPageName);
+        console.log('Current page saved:', currentPageName);
     }
 
     if (typeof initHeader === 'function') initHeader();

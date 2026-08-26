@@ -24,14 +24,10 @@ public class PageController {
 
     @GetMapping("/")
     public String home(Model model) {
-        try {
-            Page page = pageService.getPageByName("main");
-            return preparePageModel(page, model);
-        } catch (Exception e) {
-            Page newPage = pageService.createPage("main");
-            addDefaultContent(newPage);
-            return preparePageModel(newPage, model);
-        }
+        // Пытаемся получить последнюю открытую страницу из сессии или куки
+        // Используем JavaScript для редиректа на последнюю страницу
+        // Возвращаем пустую страницу с редиректом через JavaScript
+        return "redirect";
     }
 
     @GetMapping("/page/{name}")

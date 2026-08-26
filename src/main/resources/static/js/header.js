@@ -4,6 +4,8 @@
 
 // ===== ПЕРЕХОД МЕЖДУ СТРАНИЦАМИ =====
 function navigatePage(direction) {
+    console.log('Navigate:', direction);
+
     const currentPageName = document.querySelector('.header .page-title span:last-child')?.textContent;
     if (!currentPageName) return;
 
@@ -32,6 +34,11 @@ function navigatePage(direction) {
     // Переходим на новую страницу
     const newPage = pageLinks[newIndex];
     if (newPage) {
+        const pageName = newPage.textContent.trim();
+        // Сохраняем страницу перед переходом
+        if (typeof saveLastPage === 'function') {
+            saveLastPage(pageName);
+        }
         window.location.href = newPage.href;
     }
 }
@@ -56,8 +63,8 @@ function updateNavigationArrows() {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Header initialized');
     updateNavigationArrows();
 
-    // Обновляем стрелки при изменении URL (для SPA)
     window.addEventListener('popstate', updateNavigationArrows);
 });

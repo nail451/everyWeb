@@ -53,7 +53,6 @@ public class ClockModule extends Module {
 
     @Override
     public ModuleData updateData(ModuleData data, ModuleConfig config) {
-        // ВАЖНО: всегда берем данные из конфига, а не из data
         ClockData clockData = getClockData(config);
 
         Map<String, Object> content = new HashMap<>();
@@ -84,9 +83,16 @@ public class ClockModule extends Module {
             case "removeFace":
                 Integer index = (Integer) params.get("index");
                 if (index != null) {
-                    clockData.removeFace(index);
-                    saveClockData(config, clockData);
-                    return buildModuleData(clockData, config);
+                    if (index >= 0 && index < clockData.getFaces().size()) {
+                        clockData.removeFace(index);
+                        saveClockData(config, clockData);
+                        // Возвращаем полные данные с сохранением всех настроек
+                        return buildModuleData(clockData, config);
+                    } else {
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("error", "Циферблат не найден");
+                        return error;
+                    }
                 }
                 break;
 
@@ -126,20 +132,25 @@ public class ClockModule extends Module {
         String settingsJson = config.getString("clockData");
         if (settingsJson != null && !settingsJson.isEmpty()) {
             try {
-                return objectMapper.readValue(settingsJson, ClockData.class);
+                ClockData data = objectMapper.readValue(settingsJson, ClockData.class);
+                // Если есть данные, возвращаем их
+                if (data != null && data.getFaces() != null && !data.getFaces().isEmpty()) {
+                    return data;
+                }
             } catch (Exception e) {
-                System.err.println("Error parsing clock data: " + e.getMessage());
                 e.printStackTrace();
             }
         }
-        return new ClockData();
+        // Создаем новые данные с одним дефолтным циферблатом
+        ClockData data = new ClockData();
+        // Не добавляем дополнительный циферблат - основной уже есть в ClockData
+        return data;
     }
 
     private void saveClockData(ModuleConfig config, ClockData clockData) {
         try {
             String json = objectMapper.writeValueAsString(clockData);
             config.put("clockData", json);
-            System.out.println("Saved clock data: " + json);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -149,14 +160,21 @@ public class ClockModule extends Module {
         List<Map<String, Object>> times = new ArrayList<>();
         Instant now = Instant.now();
 
-        // Основной циферблат - без имени
+        // Основной циферблат (всегда есть)
         ZoneId mainZone = ZoneId.of(clockData.getTimezone());
         times.add(createTimeInfo("", mainZone, now, clockData));
 
         // Дополнительные циферблаты
-        for (ClockData.ClockFace face : clockData.getFaces()) {
-            ZoneId zone = ZoneId.of(face.getTimezone());
-            times.add(createTimeInfo(face.getName(), zone, now, clockData));
+        if (clockData.getFaces() != null) {
+            for (ClockData.ClockFace face : clockData.getFaces()) {
+                try {
+                    ZoneId zone = ZoneId.of(face.getTimezone());
+                    times.add(createTimeInfo(face.getName(), zone, now, clockData));
+                } catch (Exception e) {
+                    // Если часовой пояс невалидный, пропускаем
+                    System.err.println("Invalid timezone: " + face.getTimezone());
+                }
+            }
         }
 
         return times;

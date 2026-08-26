@@ -3,6 +3,7 @@
  */
 
 console.log('Weather module loaded!');
+const weatherCache = {};
 
 function initWeatherModule(moduleElement, moduleId) {
     console.log('Initializing weather module:', moduleId);
@@ -11,14 +12,27 @@ function initWeatherModule(moduleElement, moduleId) {
 
 async function loadWeatherData(moduleElement, moduleId) {
     try {
+        console.log(`Loading weather data for module ${moduleId}`);
+
         const response = await fetch(`/api/modules/${moduleId}/data`);
         if (response.ok) {
             const data = await response.json();
             console.log('Weather data loaded:', data);
+            // Сохраняем в кэш
+            weatherCache[moduleId] = data;
             renderWeatherDisplay(moduleElement, data);
+        } else {
+            console.error(`Failed to load weather data for module ${moduleId}:`, response.status);
+            // Если есть кэш, используем его
+            if (weatherCache[moduleId]) {
+                renderWeatherDisplay(moduleElement, weatherCache[moduleId]);
+            }
         }
     } catch (error) {
         console.error('Error loading weather data:', error);
+        if (weatherCache[moduleId]) {
+            renderWeatherDisplay(moduleElement, weatherCache[moduleId]);
+        }
     }
 }
 
@@ -71,17 +85,13 @@ function renderWeatherDisplay(moduleElement, data) {
                 ` : ''}
             </div>
         </div>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap:8px; margin-top:12px; font-size:13px; opacity:0.6;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:8px; margin-top:12px; font-size:13px; opacity:0.6;">
             ${weatherInfo.feelsLike ? `<div>🌡️ Ощущается: ${weatherInfo.feelsLike}</div>` : ''}
             ${weatherInfo.windSpeed ? `<div>💨 Ветер: ${weatherInfo.windSpeed} ${weatherInfo.windDirection ? ' (' + weatherInfo.windDirection + ')' : ''}</div>` : ''}
             ${weatherInfo.humidity ? `<div>💧 Влажность: ${weatherInfo.humidity}</div>` : ''}
             ${weatherInfo.pressure ? `<div>📊 Давление: ${weatherInfo.pressure}</div>` : ''}
             ${weatherInfo.sunrise ? `<div>🌅 Восход: ${weatherInfo.sunrise}</div>` : ''}
             ${weatherInfo.sunset ? `<div>🌇 Закат: ${weatherInfo.sunset}</div>` : ''}
-        </div>
-        <div style="font-size:11px; opacity:0.3; margin-top:8px; text-align:right; display:flex; justify-content:space-between;">
-            <span>📡 ${weatherInfo.source || 'Open-Meteo'}</span>
-            <span>🔄 ${weatherInfo.updated || '--:--:--'}</span>
         </div>
     `;
 }
@@ -151,11 +161,10 @@ function renderWeatherSettings(data) {
                     ⚠️ ${weatherInfo.error}
                 </div>
             ` : `
-                <div style="padding:8px 12px; border-radius:6px; background:rgba(76,175,80,0.1); border:1px solid rgba(76,175,80,0.2); font-size:11px; color:#81C784; display:flex; justify-content:space-between; flex-wrap:wrap;">
+                <div style="padding:8px 12px; border-radius:6px; background:rgba(76,175,80,0.1); border:1px solid rgba(76,175,80,0.2); font-size:11px; color:#81C784; display:flex; justify-content:space-around; flex-wrap:wrap;">
                     <span>🌡️ ${weatherInfo.temperature || '--'}</span>
                     <span>💨 ${weatherInfo.windSpeed || '--'}</span>
                     <span>💧 ${weatherInfo.humidity || '--'}</span>
-                    <span>📡 Open-Meteo</span>
                 </div>
             `}
         </div>

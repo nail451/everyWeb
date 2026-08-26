@@ -68,8 +68,6 @@ public class WeatherService {
             if (response != null) {
                 JsonNode root = objectMapper.readTree(response);
                 result = parseWeatherResponse(root, city, units);
-                result.put("source", "Open-Meteo");
-                result.put("updated", LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
             } else {
                 result.put("error", "Не удалось получить данные о погоде");
                 result.put("city", city);
