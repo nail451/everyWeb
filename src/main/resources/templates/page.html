@@ -9,6 +9,7 @@
     <link rel="stylesheet" th:href="@{/css/base.css}">
     <link rel="stylesheet" th:href="@{/css/header.css}">
     <link rel="stylesheet" th:href="@{/css/grid.css}">
+    <link rel="stylesheet" th:href="@{/css/links-modal.css}">
     <link rel="stylesheet" th:href="@{/css/settings.css}">
     <link rel="stylesheet" th:href="@{/css/wallpaper.css}">
 
@@ -126,6 +127,8 @@
 <script th:src="@{/js/header.js}"></script>
 <script th:src="@{/js/grid.js}"></script>
 <script th:src="@{/js/modules.js}"></script>
+<script th:src="@{/js/links.js}"></script>
+<script th:src="@{/js/links-modal.js}"></script>
 <script th:src="@{/js/clock-module.js}"></script>
 <script th:src="@{/js/weather-module.js}"></script>
 <script th:src="@{/js/nextcloud-module.js}"></script>
@@ -160,6 +163,14 @@
 
         addWidget(types[index].type);
     }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Проверяем, что все модули загружены
+        console.log('All scripts loaded. LinksModal:', typeof LinksModal !== 'undefined' ? '✅' : '❌');
+        console.log('Grid:', typeof gridState !== 'undefined' ? '✅' : '❌');
+        console.log('Modules:', typeof window.loadModuleSettings !== 'undefined' ? '✅' : '❌');
+    });
 </script>
 </body>
 </html>

@@ -68,7 +68,12 @@ function getWidgetColor(type) {
 function getWidgetContent(widget) {
     switch (widget.type) {
         case 'LINK':
-            return `<div class="link-grid" data-widget-id="${widget.id}">Загрузка ссылок...</div>`;
+            const pageId = typeof currentPageId !== 'undefined' ? currentPageId : '';
+            return `<div class="link-grid" data-widget-id="${widget.id}" data-page-id="${pageId}" 
+                style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center; 
+                       gap:10px; width:100%; min-height:80px; padding:8px;">
+        <div style="text-align:center; opacity:0.5; padding:10px; width:100%;">⏳ Загрузка ссылок...</div>
+    </div>`;
         case 'CLOCK':
             return `<div class="clock-display" data-widget-id="${widget.id}">--:--:--</div>`;
         case 'WEATHER':

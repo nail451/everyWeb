@@ -1,5 +1,6 @@
 package org.alex.everyWeb.page.controller;
 
+import org.alex.everyWeb.link.repository.DTO.LinkDTO;
 import org.alex.everyWeb.link.repository.DTO.LinkRequestDTO;
 import org.alex.everyWeb.link.service.LinksService;
 import org.alex.everyWeb.modules.service.AvailableModuleService;
@@ -185,137 +186,6 @@ public class ApiController {
             Map<String, Boolean> response = new HashMap<>();
             response.put("show", page.getShowAddLinkButton() != null ? page.getShowAddLinkButton() : true);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
-        }
-    }
-
-    // ===== ССЫЛКИ =====
-    @PostMapping("/links/add")
-    public ResponseEntity<?> addLink(@RequestBody LinkRequestDTO request) {
-        try {
-            String title = request.getTitle();
-            String url = request.getUrl();
-            String icon = request.getIcon();
-            String iconType = request.getIconType();
-            String customImage = request.getCustomImage();
-            Long pageId = request.getPageId();
-
-            if (pageId == null) {
-                return ResponseEntity.badRequest().body("Page ID is required");
-            }
-            if (title == null || title.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Title is required");
-            }
-            if (url == null || url.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("URL is required");
-            }
-
-            url = url.trim();
-            if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                url = "https://" + url;
-            }
-
-            if (icon == null || icon.isEmpty() || icon.equals("🔗")) {
-                String favicon = linksService.getFavicon(url);
-                if (favicon != null) {
-                    icon = favicon;
-                    iconType = "favicon";
-                } else {
-                    icon = "🔗";
-                    iconType = "emoji";
-                }
-            }
-
-            if (iconType == null || iconType.isEmpty()) {
-                if (icon != null && (icon.startsWith("http://") || icon.startsWith("https://"))) {
-                    String ext = icon.substring(icon.lastIndexOf('.') + 1).toLowerCase();
-                    if (Arrays.asList("ico", "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp").contains(ext)) {
-                        iconType = "favicon";
-                    } else {
-                        iconType = "emoji";
-                    }
-                } else {
-                    iconType = "emoji";
-                }
-            }
-
-            var linkResponse = linksService.addLink(
-                    pageId,
-                    title.trim(),
-                    url,
-                    icon,
-                    iconType,
-                    customImage
-            );
-            return ResponseEntity.ok(linkResponse);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
-        }
-    }
-
-    @PutMapping("/links/{linkId}")
-    public ResponseEntity<?> updateLink(@PathVariable Long linkId, @RequestBody Map<String, String> request) {
-        try {
-            String title = request.get("title");
-            String url = request.get("url");
-            String icon = request.get("icon");
-            String iconType = request.get("iconType");
-            String customImage = request.get("customImage");
-
-            var linkResponse = linksService.updateLink(
-                    linkId,
-                    title,
-                    url,
-                    icon,
-                    iconType != null ? iconType : "emoji",
-                    customImage
-            );
-            return ResponseEntity.ok(linkResponse);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
-        }
-    }
-
-    @DeleteMapping("/links/{linkId}")
-    public ResponseEntity<?> deleteLink(@PathVariable Long linkId) {
-        try {
-            linksService.deleteLink(linkId);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/pages/{pageId}/links/reorder")
-    public ResponseEntity<?> reorderLinks(@PathVariable Long pageId, @RequestBody List<Long> linkIds) {
-        try {
-            linksService.reorderLinks(pageId, linkIds);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/links/favicon")
-    public ResponseEntity<?> getFavicon(@RequestParam String url) {
-        try {
-            String favicon = linksService.getFavicon(url);
-            if (favicon != null) {
-                return ResponseEntity.ok(favicon);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -513,6 +383,19 @@ public class ApiController {
         try {
             layoutService.toggleEditMode(pageId);
             return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    // ===== ПОЛУЧЕНИЕ ССЫЛОК ДЛЯ ВИДЖЕТА =====
+    @GetMapping("/pages/{pageId}/links")
+    public ResponseEntity<?> getPageLinks(@PathVariable Long pageId) {
+        try {
+            List<LinkDTO> links = linksService.getLinksByPageId(pageId);
+            return ResponseEntity.ok(links);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

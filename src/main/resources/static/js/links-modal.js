@@ -10,6 +10,8 @@ const LinksModal = {
     selectedIconType: 'emoji',
     customImageData: null,
     pageId: null,
+    _afterSubmitCallback: null,
+    _initialized: false,
 
     icons: [
         '🔗', '🌐', '📧', '📱', '💻', '🖥️', '📚', '📖', '🎮', '🎵',
@@ -19,9 +21,29 @@ const LinksModal = {
     ],
 
     init(pageId) {
+        console.log('LinksModal.init() called with pageId:', pageId);
         this.pageId = pageId;
+        this._initialized = true;
         this.createModal();
         this.bindEvents();
+        console.log('LinksModal initialized');
+    },
+
+    afterSubmit(callback) {
+        this._afterSubmitCallback = callback;
+        console.log('AfterSubmit callback set');
+    },
+
+    ensureInitialized() {
+        if (!this._initialized || !this.pageId) {
+            console.log('LinksModal not initialized, initializing...');
+            if (typeof currentPageId !== 'undefined' && currentPageId) {
+                this.init(currentPageId);
+                return true;
+            }
+            return false;
+        }
+        return true;
     },
 
     createModal() {
@@ -70,6 +92,7 @@ const LinksModal = {
                             </div>
                         </div>
                         
+                        <!-- Эмодзи -->
                         <div class="form-group" id="emojiPicker">
                             <label>Выберите эмодзи</label>
                             <div class="icon-picker" id="iconPicker">
@@ -86,6 +109,7 @@ const LinksModal = {
                             </div>
                         </div>
                         
+                        <!-- Favicon -->
                         <div class="form-group" id="faviconPicker" style="display:none;">
                             <label>Favicon</label>
                             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -99,6 +123,7 @@ const LinksModal = {
                             </div>
                         </div>
                         
+                        <!-- Custom image -->
                         <div class="form-group" id="customImagePicker" style="display:none;">
                             <label>Загрузить изображение</label>
                             <input type="file" id="customImageInput" accept="image/*" 
@@ -125,10 +150,37 @@ const LinksModal = {
         `;
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // После создания модального окна, устанавливаем правильное состояние
+        setTimeout(() => {
+            // По умолчанию показываем только эмодзи
+            const emojiPicker = document.getElementById('emojiPicker');
+            const faviconPicker = document.getElementById('faviconPicker');
+            const customImagePicker = document.getElementById('customImagePicker');
+
+            if (emojiPicker) emojiPicker.style.display = 'block';
+            if (faviconPicker) faviconPicker.style.display = 'none';
+            if (customImagePicker) customImagePicker.style.display = 'none';
+
+            // Убеждаемся, что радио кнопка эмодзи выбрана
+            const emojiRadio = document.querySelector('input[name="iconType"][value="emoji"]');
+            if (emojiRadio) emojiRadio.checked = true;
+
+            this.selectedIconType = 'emoji';
+            this.selectedIcon = '🔗';
+        }, 50);
     },
 
     // ===== ОТКРЫТИЕ ДЛЯ ДОБАВЛЕНИЯ =====
     open() {
+        console.log('LinksModal.open() called');
+
+        // Проверяем инициализацию
+        if (!this.ensureInitialized()) {
+            showToast('❌ Ошибка: система ссылок не инициализирована');
+            return;
+        }
+
         this.isEdit = false;
         this.editId = null;
         this.setModalTitle('➕ Добавить ссылку');
@@ -144,27 +196,33 @@ const LinksModal = {
             return;
         }
 
+        console.log('LinksModal.openEditWithData() called for link:', link.id);
         this.isEdit = true;
         this.editId = link.id;
-        this.setModalTitle('✏️ Редактировать ссылку');
-        this.setSubmitButtonText('💾 Сохранить');
 
-        // Заполняем форму данными
         this.fillForm(link);
-
-        // Показываем модальное окно
         this.showModal();
     },
 
     showModal() {
-        const overlay = document.getElementById('linksModalOverlay');
+        console.log('LinksModal.showModal() called');
+
+        // Сначала создаем оверлей если его нет
+        let overlay = document.getElementById('linksModalOverlay');
         if (!overlay) {
+            console.log('Creating modal overlay');
             this.createModal();
-            const newOverlay = document.getElementById('linksModalOverlay');
-            if (newOverlay) newOverlay.classList.add('active');
-        } else {
-            overlay.classList.add('active');
+            overlay = document.getElementById('linksModalOverlay');
         }
+
+        if (!overlay) {
+            console.error('Failed to create modal overlay');
+            return;
+        }
+
+        // Показываем оверлей
+        overlay.classList.add('active');
+        overlay.style.display = 'flex';
 
         this.isOpen = true;
         document.body.style.overflow = 'hidden';
@@ -187,39 +245,61 @@ const LinksModal = {
 
     // ===== ЗАПОЛНЕНИЕ ФОРМЫ =====
     fillForm(link) {
+        console.log('Filling form with link data:', link);
+
         document.getElementById('linkTitle').value = link.title || '';
         document.getElementById('linkUrl').value = link.url || '';
 
-        const iconType = link.iconType || 'emoji';
-        const icon = link.icon || '🔗';
-        const customImage = link.customImage || null;
+        let iconType = link.iconType || 'emoji';
+        let icon = link.icon || '🔗';
+        let customImage = link.customImage || null;
 
-        // Устанавливаем тип
+        console.log('Form data:', { iconType, icon, customImage: customImage ? 'present' : 'null' });
+
+        // Если иконка - это URL (favicon) и тип не указан
+        if (icon && (icon.startsWith('http://') || icon.startsWith('https://'))) {
+            const ext = icon.split('.').pop().toLowerCase();
+            if (['ico', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp'].includes(ext)) {
+                iconType = 'favicon';
+            }
+        }
+
         this.selectedIconType = iconType;
+        this.selectedIcon = icon;
+        this.customImageData = customImage;
+
+        // Устанавливаем радио кнопку
         document.querySelectorAll('input[name="iconType"]').forEach(el => {
             el.checked = (el.value === iconType);
         });
+
+        // Переключаем видимость
         this.switchIconType(iconType);
 
         if (iconType === 'custom' && customImage) {
-            this.customImageData = customImage;
-            this.selectedIcon = '🔗';
             const preview = document.getElementById('customImagePreview');
             const img = document.getElementById('customImagePreviewImg');
-            img.src = customImage;
-            preview.style.display = 'block';
+            if (preview && img) {
+                img.src = customImage;
+                preview.style.display = 'block';
+            }
             document.getElementById('customImageInput').value = '';
         } else if (iconType === 'favicon' && icon && icon.startsWith('http')) {
-            this.selectedIcon = icon;
             const preview = document.getElementById('faviconPreview');
             const img = document.getElementById('faviconImg');
-            img.src = icon;
-            preview.style.display = 'block';
-            document.getElementById('faviconStatus').textContent = '✅ Favicon загружен';
+            if (preview && img) {
+                img.src = icon;
+                preview.style.display = 'block';
+                document.getElementById('faviconStatus').textContent = '✅ Favicon загружен';
+            }
         } else {
+            // Эмодзи
             this.selectedIcon = icon;
             this.updateIconSelection();
             document.getElementById('customIcon').value = '';
+            // Скрываем превью
+            document.getElementById('customImagePreview').style.display = 'none';
+            document.getElementById('faviconPreview').style.display = 'none';
         }
     },
 
@@ -241,8 +321,14 @@ const LinksModal = {
 
         this.updateIconSelection();
 
-        document.querySelector('input[name="iconType"][value="emoji"]').checked = true;
-        this.switchIconType('emoji');
+        // Переключаем на эмодзи
+        const emojiRadio = document.querySelector('input[name="iconType"][value="emoji"]');
+        if (emojiRadio) emojiRadio.checked = true;
+
+        // Показываем только эмодзи
+        document.getElementById('emojiPicker').style.display = 'block';
+        document.getElementById('faviconPicker').style.display = 'none';
+        document.getElementById('customImagePicker').style.display = 'none';
     },
 
     // ===== ОСТАЛЬНЫЕ МЕТОДЫ =====
@@ -263,16 +349,31 @@ const LinksModal = {
         });
     },
 
+    // ===== ПЕРЕКЛЮЧЕНИЕ ТИПА ИКОНКИ =====
     switchIconType(type) {
+        console.log('Switching icon type to:', type);
         this.selectedIconType = type;
 
-        document.getElementById('emojiPicker').style.display = type === 'emoji' ? 'block' : 'none';
-        document.getElementById('faviconPicker').style.display = type === 'favicon' ? 'block' : 'none';
-        document.getElementById('customImagePicker').style.display = type === 'custom' ? 'block' : 'none';
+        const emojiPicker = document.getElementById('emojiPicker');
+        const faviconPicker = document.getElementById('faviconPicker');
+        const customImagePicker = document.getElementById('customImagePicker');
 
-        if (type === 'custom') {
-            document.getElementById('faviconStatus').textContent = 'Введите URL и нажмите кнопку';
-            document.getElementById('faviconPreview').style.display = 'none';
+        // Скрываем все
+        if (emojiPicker) emojiPicker.style.display = 'none';
+        if (faviconPicker) faviconPicker.style.display = 'none';
+        if (customImagePicker) customImagePicker.style.display = 'none';
+
+        // Показываем только выбранный
+        if (type === 'emoji' && emojiPicker) {
+            emojiPicker.style.display = 'block';
+        } else if (type === 'favicon' && faviconPicker) {
+            faviconPicker.style.display = 'block';
+            const status = document.getElementById('faviconStatus');
+            const preview = document.getElementById('faviconPreview');
+            if (status) status.textContent = 'Введите URL и нажмите кнопку';
+            if (preview) preview.style.display = 'none';
+        } else if (type === 'custom' && customImagePicker) {
+            customImagePicker.style.display = 'block';
         }
     },
 
@@ -374,8 +475,12 @@ const LinksModal = {
     },
 
     close() {
+        console.log('LinksModal.close() called');
         const overlay = document.getElementById('linksModalOverlay');
-        if (overlay) overlay.classList.remove('active');
+        if (overlay) {
+            overlay.classList.remove('active');
+            overlay.style.display = 'none';
+        }
         this.isOpen = false;
         this.isEdit = false;
         this.editId = null;
@@ -415,19 +520,25 @@ const LinksModal = {
         let iconType = this.selectedIconType;
         let customImage = null;
 
+        console.log('Submit with:', { icon, iconType, customImage: this.customImageData ? 'present' : 'null' });
+
         if (iconType === 'custom') {
             customImage = this.customImageData;
-            icon = '🔗';
+            icon = '🔗'; // Для custom используем дефолтную иконку
+            console.log('Custom image mode, icon set to default');
         } else if (iconType === 'favicon') {
             if (icon && icon.startsWith('http')) {
-                // OK
+                // Сохраняем URL favicon
+                console.log('Favicon mode, icon:', icon);
             } else {
                 icon = '🔗';
                 iconType = 'emoji';
+                console.log('Favicon not found, falling back to emoji');
             }
         } else {
             icon = icon || '🔗';
             iconType = 'emoji';
+            console.log('Emoji mode, icon:', icon);
         }
 
         const payload = {
@@ -439,39 +550,43 @@ const LinksModal = {
             customImage: customImage
         };
 
+        console.log('Final payload:', payload);
+
         const submitBtn = document.getElementById('linksModalSubmitBtn');
         const originalText = submitBtn.textContent;
         submitBtn.textContent = '⏳ Сохранение...';
         submitBtn.disabled = true;
 
         try {
-            let response;
-            if (this.isEdit && this.editId) {
-                response = await fetch(`/api/links/${this.editId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                response = await fetch(`/api/links/add`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            }
+            const response = await fetch('/api/links/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
             if (response.ok) {
                 const data = await response.json();
                 showToast(this.isEdit ? '✅ Ссылка обновлена' : '✅ Ссылка добавлена');
                 this.close();
-                setTimeout(() => location.reload(), 500);
+
+                if (typeof this._afterSubmitCallback === 'function') {
+                    const callback = this._afterSubmitCallback;
+                    this._afterSubmitCallback = null;
+                    callback(data);
+                }
+
+                if (typeof this._afterSubmitCallback !== 'function') {
+                    setTimeout(() => location.reload(), 500);
+                }
             } else {
                 const error = await response.text();
+                console.error('Server error:', error);
                 showToast('❌ Ошибка: ' + error);
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
             }
         } catch (error) {
+            console.error('Submit error:', error);
             showToast('❌ Ошибка сохранения');
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -481,15 +596,22 @@ const LinksModal = {
 
 // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
 function openAddLinkModal() {
+    console.log('openAddLinkModal() called');
     if (typeof LinksModal !== 'undefined') {
         LinksModal.open();
     } else {
+        console.error('LinksModal not defined');
+        showToast('❌ Система ссылок не загружена');
     }
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('links-modal.js loaded');
     if (typeof currentPageId !== 'undefined' && currentPageId) {
         LinksModal.init(currentPageId);
     }
 });
+
+// Добавляем проверку, что LinksModal доступен глобально
+console.log('✅ links-modal.js loaded. LinksModal available:', typeof LinksModal !== 'undefined');

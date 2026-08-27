@@ -218,6 +218,18 @@ public class ModulesController {
     @GetMapping("/{moduleId}/settings")
     public ResponseEntity<?> getModuleSettings(@PathVariable Long moduleId) {
         try {
+            // Проверяем, существует ли модуль
+            ModuleEntity moduleEntity = modulesService.getModuleById(moduleId);
+            if (moduleEntity == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Проверяем, что модуль имеет тип CLOCK, WEATHER или NEXTCLOUD
+            String type = moduleEntity.getType();
+            if (!"CLOCK".equals(type) && !"WEATHER".equals(type) && !"NEXTCLOUD".equals(type)) {
+                return ResponseEntity.ok().build();
+            }
+
             ModuleData data = moduleContext.getModuleData(moduleId);
             return ResponseEntity.ok(data);
         } catch (Exception e) {

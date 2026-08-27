@@ -11,6 +11,7 @@ public class WidgetDTO {
     private String data;
     private String settings;
     private Boolean isEditing;
+    private Boolean isLinkWidget;
 
     // Предопределенные размеры для типов виджетов
     public static final int[][] DEFAULT_SIZES = {
@@ -67,4 +68,7 @@ public class WidgetDTO {
 
     public Boolean getIsEditing() { return isEditing; }
     public void setIsEditing(Boolean isEditing) { this.isEditing = isEditing; }
+
+    public Boolean getIsLinkWidget() { return isLinkWidget; }
+    public void setIsLinkWidget(Boolean isLinkWidget) { this.isLinkWidget = isLinkWidget; }
 }

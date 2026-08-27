@@ -129,7 +129,7 @@
     border-radius: inherit;
 }
 
-/* ===== КОНТЕЙНЕР ИКОНКИ - РАЗМЕР ЗАДАЕТСЯ ЧЕРЕЗ JS ===== */
+/* ===== КОНТЕЙНЕР ИКОНКИ ===== */
 .link-card .icon-container {
     display: flex;
     align-items: center;
@@ -137,7 +137,6 @@
     flex-shrink: 0;
     position: relative;
     z-index: 1;
-    /* Размер задается через JS */
 }
 
 /* ===== ЭМОДЗИ ===== */
@@ -147,7 +146,6 @@
     justify-content: center;
     line-height: 1;
     flex-shrink: 0;
-    /* Размер задается через JS */
 }
 
 /* ===== FALLBACK ИКОНКА ===== */
@@ -157,7 +155,6 @@
     justify-content: center;
     line-height: 1;
     flex-shrink: 0;
-    /* Размер задается через JS */
 }
 
 .link-card .link-icon-fallback.active {
@@ -199,7 +196,6 @@
     position: relative;
     z-index: 1;
     margin-top: 4px;
-    /* Размер задается через JS */
 }
 
 /* ===== КНОПКИ УПРАВЛЕНИЯ ===== */
@@ -210,7 +206,6 @@
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    display: none;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
@@ -218,11 +213,9 @@
     font-size: 10px;
     width: 18px;
     height: 18px;
-}
-
-.link-card:hover .edit-btn,
-.link-card:hover .delete-btn {
-    display: flex;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    /* Убираем display: none !important */
 }
 
 .link-card .edit-btn {
@@ -243,6 +236,12 @@
 .link-card .delete-btn:hover {
     background: rgba(244, 67, 54, 0.5);
     color: #ffffff;
+}
+
+/* Показываем кнопки при наведении на карточку */
+.link-card:hover .edit-btn,
+.link-card:hover .delete-btn {
+    display: flex !important;
 }
 
 /* ===== КНОПКА ДОБАВЛЕНИЯ ССЫЛКИ ===== */
@@ -382,4 +381,31 @@
     .add-link-btn .label {
         font-size: 9px;
     }
+}
+
+/* ===== ССЫЛКИ В ВИДЖЕТЕ LINK ===== */
+.widget.link-widget .link-grid .link-item-link {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Подсветка при наведении в режиме редактирования */
+.page-grid.editing .widget.link-widget .link-grid .link-item-link {
+    border: 2px solid rgba(33, 150, 243, 0.3) !important;
+    transition: all 0.2s;
+}
+
+.page-grid.editing .widget.link-widget .link-grid .link-item-link:hover {
+    border-color: rgba(33, 150, 243, 0.8) !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.2);
+}
+
+/* Индикатор редактирования */
+.page-grid.editing .widget.link-widget .link-grid .link-item-link .edit-indicator {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    opacity: 0.4;
 }

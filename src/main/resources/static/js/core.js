@@ -288,6 +288,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentPageId) {
         loadLinkSettingsFromServer();
     }
+
+    // Проверяем, что LinksModal загружен
+    console.log('LinksModal available?', typeof LinksModal !== 'undefined');
+    console.log('LinksModal initialized?', typeof LinksModal !== 'undefined' && LinksModal._initialized);
 });
 
 // ===== НАВИГАЦИЯ ПО СТРЕЛКАМ =====

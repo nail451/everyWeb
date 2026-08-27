@@ -58,23 +58,6 @@ public class PageService {
         pageRepository.deleteById(pageId);
     }
 
-    // ===== ССЫЛКИ (для обратной совместимости, делегируем LinksService) =====
-    public Link addLink(Long pageId, String title, String url, String icon) {
-        Page page = getPageById(pageId);
-        Link link = new Link();
-        link.setTitle(title);
-        link.setUrl(url);
-        link.setIcon(icon != null ? icon : "🔗");
-        link.setIconType("emoji");
-        link.setCustomImage(null);
-        link.setPage(page);
-
-        Integer maxPosition = linksRepository.findMaxPositionByPageId(pageId);
-        link.setPosition(maxPosition != null ? maxPosition + 1 : 0);
-
-        return linksRepository.save(link);
-    }
-
     // ===== МОДУЛИ =====
     public ModuleEntity addModule(Long pageId, String type, String title, String settings) {
         Page page = getPageById(pageId);

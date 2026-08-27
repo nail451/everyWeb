@@ -1,6 +1,7 @@
 package org.alex.everyWeb.page.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.alex.everyWeb.link.service.LinksService;
 import org.alex.everyWeb.page.entity.Page;
 import org.alex.everyWeb.page.service.LayoutService;
 import org.alex.everyWeb.page.service.PageService;
@@ -25,6 +26,9 @@ public class PageController {
 
     @Autowired
     private LayoutService layoutService;  // ← Добавляем
+
+    @Autowired
+    private LinksService linksService;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -114,9 +118,9 @@ public class PageController {
 
     private void addDefaultContent(Page page) {
         try {
-            pageService.addLink(page.getId(), "Google", "https://google.com", "🔍");
-            pageService.addLink(page.getId(), "GitHub", "https://github.com", "🐙");
-            pageService.addLink(page.getId(), "YouTube", "https://youtube.com", "▶️");
+            linksService.addLink(page.getId(), "Google", "https://google.com", "🔍");
+            linksService.addLink(page.getId(), "GitHub", "https://github.com", "🐙");
+            linksService.addLink(page.getId(), "YouTube", "https://youtube.com", "▶️");
             pageService.addModule(page.getId(), "CLOCK", "Часы", "{}");
             pageService.addModule(page.getId(), "WEATHER", "Погода", "{\"city\":\"Moscow\"}");
         } catch (Exception e) {

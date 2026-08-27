@@ -34,12 +34,13 @@ public class LinksService {
             Pattern.CASE_INSENSITIVE
     );
 
+    // ===== ПОЛУЧЕНИЕ ССЫЛКИ ПО ID =====
     public Link getLinkById(Long linkId) {
         return linksRepository.findById(linkId)
                 .orElseThrow(() -> new RuntimeException("Link not found: " + linkId));
     }
 
-    // ===== ОСНОВНОЙ МЕТОД С ПОЛНЫМИ ПАРАМЕТРАМИ =====
+    // ===== ДОБАВЛЕНИЕ ССЫЛКИ =====
     public LinkResponseDTO addLink(Long pageId, String title, String url, String icon,
                                    String iconType, String customImage) {
         Page page = pageRepository.findById(pageId)
@@ -60,20 +61,19 @@ public class LinksService {
         return convertToResponseDTO(savedLink);
     }
 
-    // ===== ПЕРЕГРУЖЕННЫЙ МЕТОД ДЛЯ ПРОСТОГО ИСПОЛЬЗОВАНИЯ =====
+    // ===== ПЕРЕГРУЖЕННЫЕ МЕТОДЫ =====
     public LinkResponseDTO addLink(Long pageId, String title, String url, String icon) {
         return addLink(pageId, title, url, icon, "emoji", null);
     }
 
-    // ===== ПЕРЕГРУЖЕННЫЙ МЕТОД БЕЗ ИКОНКИ (автоматически подставит favicon) =====
     public LinkResponseDTO addLink(Long pageId, String title, String url) {
-        // Пробуем получить favicon
         String favicon = getFavicon(url);
         String icon = favicon != null ? favicon : "🔗";
         String iconType = favicon != null ? "favicon" : "emoji";
         return addLink(pageId, title, url, icon, iconType, null);
     }
 
+    // ===== ОБНОВЛЕНИЕ ССЫЛКИ =====
     public LinkResponseDTO updateLink(Long linkId, String title, String url, String icon,
                                       String iconType, String customImage) {
         Link link = linksRepository.findById(linkId)
@@ -99,10 +99,12 @@ public class LinksService {
         return convertToResponseDTO(updatedLink);
     }
 
+    // ===== УДАЛЕНИЕ ССЫЛКИ =====
     public void deleteLink(Long linkId) {
         linksRepository.deleteById(linkId);
     }
 
+    // ===== ПОЛУЧЕНИЕ ССЫЛОК =====
     public List<LinkDTO> getLinksByPageId(Long pageId) {
         return linksRepository.findByPageIdOrderByPositionAsc(pageId)
                 .stream()
@@ -110,6 +112,7 @@ public class LinksService {
                 .collect(Collectors.toList());
     }
 
+    // ===== ПЕРЕУПОРЯДОЧИВАНИЕ =====
     public void reorderLinks(Long pageId, List<Long> linkIds) {
         List<Link> links = linksRepository.findByPageIdOrderByPositionAsc(pageId);
         for (int i = 0; i < linkIds.size(); i++) {
@@ -126,23 +129,19 @@ public class LinksService {
     // ===== ПОЛУЧЕНИЕ FAVICON =====
     public String getFavicon(String domain) {
         try {
-            // Нормализуем URL
             String url = domain;
             if (!url.startsWith("http://") && !url.startsWith("https://")) {
                 url = "https://" + url;
             }
 
-            // Извлекаем домен
             java.net.URL parsedUrl = new java.net.URL(url);
             String baseUrl = parsedUrl.getProtocol() + "://" + parsedUrl.getHost();
 
-            // Пробуем получить favicon через стандартный путь
             String faviconUrl = baseUrl + "/favicon.ico";
             if (checkUrlExists(faviconUrl)) {
                 return faviconUrl;
             }
 
-            // Пробуем найти через HTML
             String html = fetchHtml(url);
             if (html != null) {
                 Matcher matcher = FAVICON_PATTERN.matcher(html);
@@ -160,7 +159,6 @@ public class LinksService {
                 }
             }
 
-            // Пробуем другие варианты
             String[] variants = {
                     baseUrl + "/favicon.png",
                     baseUrl + "/apple-touch-icon.png",
@@ -209,7 +207,7 @@ public class LinksService {
             String line;
             while ((line = reader.readLine()) != null) {
                 content.append(line);
-                if (content.length() > 50000) break; // Ограничиваем размер
+                if (content.length() > 50000) break;
             }
             reader.close();
             return content.toString();
@@ -218,14 +216,15 @@ public class LinksService {
         }
     }
 
+    // ===== КОНВЕРТЕРЫ =====
     private LinkDTO convertToDTO(Link link) {
         LinkDTO dto = new LinkDTO();
         dto.setId(link.getId());
         dto.setTitle(link.getTitle());
         dto.setUrl(link.getUrl());
         dto.setIcon(link.getIcon());
-        dto.setIconType(link.getIconType());      // ← ДОБАВИТЬ
-        dto.setCustomImage(link.getCustomImage()); // ← ДОБАВИТЬ
+        dto.setIconType(link.getIconType());
+        dto.setCustomImage(link.getCustomImage());
         dto.setPosition(link.getPosition());
         return dto;
     }
@@ -236,8 +235,8 @@ public class LinksService {
         dto.setTitle(link.getTitle());
         dto.setUrl(link.getUrl());
         dto.setIcon(link.getIcon());
-        dto.setIconType(link.getIconType());      // ← ДОБАВИТЬ
-        dto.setCustomImage(link.getCustomImage()); // ← ДОБАВИТЬ
+        dto.setIconType(link.getIconType());
+        dto.setCustomImage(link.getCustomImage());
         dto.setPosition(link.getPosition());
         dto.setPageId(link.getPage().getId());
         return dto;
