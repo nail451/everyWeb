@@ -1,4 +1,4 @@
-package org.alex.everyWeb.page.repository.DTO;
+package org.alex.everyWeb.page.dto;
 
 public class CreatePageRequestDTO {
     private String name;

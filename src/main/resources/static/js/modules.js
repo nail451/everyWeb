@@ -4,262 +4,101 @@
 
 function initModules() {
     console.log('Modules initialized');
-    renderModules();
+    // Модули теперь рендерятся через grid.js
 }
 
-// ===== РЕНДЕРИНГ МОДУЛЕЙ =====
-function renderModules() {
-    const leftColumn = document.getElementById('modulesLeft');
-    const rightColumn = document.getElementById('modulesRight');
-    const modulesContainer = document.getElementById('modulesContainer');
-
-    if (!leftColumn || !rightColumn) {
-        console.error('Module columns not found');
-        return;
-    }
-
-    // Очищаем колонки, но сохраняем лейблы
-    leftColumn.innerHTML = '';
-    rightColumn.innerHTML = '';
-    leftColumn.innerHTML = `<div class="section-label">Модули</div>`;
-    rightColumn.innerHTML = `<div class="section-label">Модули</div>`;
-
-    if (!modulesContainer) {
-        leftColumn.innerHTML += `
-            <button class="add-module-btn" onclick="addModule()">
-                ➕ Добавить модуль
-            </button>
-        `;
-        return;
-    }
-
-    let modulesData = modulesContainer.getAttribute('data-modules');
-    console.log('Modules data:', modulesData);
-
-    if (!modulesData || modulesData === 'null' || modulesData === 'undefined' || modulesData === '[]') {
-        leftColumn.innerHTML += `
-            <button class="add-module-btn" onclick="addModule()">
-                ➕ Добавить модуль
-            </button>
-        `;
-        return;
-    }
-
-    try {
-        const modules = JSON.parse(modulesData);
-        console.log('Parsed modules:', modules);
-
-        if (!Array.isArray(modules) || modules.length === 0) {
-            leftColumn.innerHTML += `
-                <button class="add-module-btn" onclick="addModule()">
-                    ➕ Добавить модуль
-                </button>
-            `;
-            return;
-        }
-
-        modules.forEach((module, index) => {
-            const moduleDiv = createModuleElement(module);
-            if (index % 2 === 0) {
-                leftColumn.appendChild(moduleDiv);
-            } else {
-                rightColumn.appendChild(moduleDiv);
-            }
-        });
-
-        const addButton = document.createElement('button');
-        addButton.className = 'add-module-btn';
-        addButton.textContent = '➕ Добавить модуль';
-        addButton.onclick = addModule;
-        leftColumn.appendChild(addButton);
-
-        // Инициализируем модули после рендеринга
-        setTimeout(() => {
-            initializeModules();
-        }, 100);
-
-    } catch (error) {
-        console.error('Error rendering modules:', error);
-        leftColumn.innerHTML += `
-            <button class="add-module-btn" onclick="addModule()">
-                ➕ Добавить модуль
-            </button>
-        `;
+// ===== ДОБАВЛЕНИЕ МОДУЛЯ =====
+async function addModule() {
+    // Используем диалог добавления виджета из grid.js
+    if (typeof addWidgetDialog === 'function') {
+        addWidgetDialog();
+    } else {
+        showToast('❌ Система виджетов не загружена');
     }
 }
 
-// ===== СОЗДАНИЕ ЭЛЕМЕНТА МОДУЛЯ =====
-function createModuleElement(module) {
-    const moduleDiv = document.createElement('div');
-    moduleDiv.className = `module ${(module.type || '').toLowerCase()}-module`;
-    moduleDiv.dataset.moduleId = module.id;
-    moduleDiv.dataset.moduleType = module.type || '';
-
-    const content = getModuleContent(module);
-
-    moduleDiv.innerHTML = `
-        <div class="module-title">
-            <span>${escapeHtml(module.title || 'Модуль')}</span>
-            <div style="display:flex; gap:6px;">
-                <button class="module-settings-toggle" onclick="toggleModuleSettings(${module.id})" 
-                        style="background:rgba(33,150,243,0.2); border:none; color:rgba(255,255,255,0.4); 
-                               border-radius:4px; padding:2px 8px; cursor:pointer; font-size:11px;">
-                    ⚙️
-                </button>
-                <button class="delete-btn" onclick="deleteModule(${module.id})">×</button>
-            </div>
-        </div>
-        <div class="module-content" data-type="${module.type || ''}" data-settings='${module.settings || '{}'}'>
-            ${content}
-        </div>
-        <div class="module-settings" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
-            <!-- Специфичные настройки модуля загружаются отдельно -->
-        </div>
-    `;
-
-    return moduleDiv;
-}
-
-// ===== ГЕНЕРАЦИЯ КОНТЕНТА МОДУЛЯ =====
-function getModuleContent(module) {
-    const type = module.type || '';
-    const settings = module.settings || '{}';
-
-    switch(type) {
-        case 'WEATHER':
-            return `
-                <div class="weather-display" data-module-id="${module.id}">
-                    <div style="display:flex; align-items:center; gap:16px;">
-                        <div class="weather-icon" style="font-size:48px;">🌤️</div>
-                        <div>
-                            <div class="weather-temp" style="font-size:32px; font-weight:300;">--°C</div>
-                            <div class="weather-desc" style="opacity:0.6;">Загрузка...</div>
-                        </div>
-                    </div>
-                    <div class="weather-details" style="margin-top:8px; font-size:13px; opacity:0.5;">
-                        <span class="weather-wind">Ветер: --</span>
-                        <span class="weather-humidity">Влажность: --</span>
-                    </div>
-                </div>
-            `;
-        case 'NOTES':
-            return `
-                <textarea placeholder="Ваши заметки..." 
-                         data-module-id="${module.id}"
-                         onchange="saveNotes(this)">${getSavedNotes(module.id)}</textarea>
-            `;
-        case 'CLOCK':
-            return `
-                <div class="clock-display" data-module-id="${module.id}">
-                    <div style="text-align:center; opacity:0.5; padding:10px;">Загрузка...</div>
-                </div>
-            `;
-        case 'NEXTCLOUD':
-            return `
-                <div class="nextcloud-display" data-module-id="${module.id}">
-                    <div style="text-align:center; opacity:0.5; padding:10px;">
-                        ⏳ Загрузка Nextcloud...
-                    </div>
-                </div>
-            `;
-        // ... остальные кейсы
-        default:
-            return `<div style="opacity:0.5;text-align:center;padding:20px;">Модуль: ${type}</div>`;
+// ===== УДАЛЕНИЕ МОДУЛЯ =====
+function deleteModule(moduleId) {
+    if (typeof removeWidget === 'function') {
+        removeWidget(moduleId);
+    } else {
+        showToast('❌ Система виджетов не загружена');
     }
-}
-
-// ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
-function initializeModules() {
-    console.log('Initializing modules...');
-
-    // Проходим по всем модулям и инициализируем их специфичную логику
-    document.querySelectorAll('.module').forEach(moduleElement => {
-        const moduleId = moduleElement.dataset.moduleId;
-        const moduleType = moduleElement.dataset.moduleType;
-
-        console.log(`Initializing module: ${moduleType} (ID: ${moduleId})`);
-
-        // Инициализация по типам (вызывается из файлов модулей)
-        if (moduleType === 'CLOCK' && typeof initClockModule === 'function') {
-            console.log(`Calling initClockModule for ID: ${moduleId}`);
-            initClockModule(moduleElement, moduleId);
-        }
-
-        if (moduleType === 'WEATHER' && typeof initWeatherModule === 'function') {
-            console.log(`Calling initWeatherModule for ID: ${moduleId}`);
-            initWeatherModule(moduleElement, moduleId);
-        }
-
-        if (moduleType === 'NEXTCLOUD' && typeof initNextcloudModule === 'function') {
-            console.log(`Calling initNextcloudModule for ID: ${moduleId}`);
-            initNextcloudModule(moduleElement, moduleId);
-        }
-    });
-
-    // Общие инициализации для встроенных модулей
-    document.querySelectorAll('.notes-module textarea').forEach(textarea => {
-        const moduleId = textarea.dataset.moduleId;
-        const saved = localStorage.getItem('notes_' + moduleId);
-        if (saved) textarea.value = saved;
-    });
-
-    document.querySelectorAll('.todo-module').forEach(todo => {
-        const list = todo.querySelector('.todo-list');
-        if (list) {
-            const moduleId = parseInt(list.dataset.moduleId);
-            loadTodos(moduleId);
-        }
-    });
 }
 
 // ===== ПЕРЕКЛЮЧЕНИЕ НАСТРОЕК МОДУЛЯ =====
 function toggleModuleSettings(moduleId) {
-    const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
-    if (!moduleElement) return;
+    console.log('toggleModuleSettings called for:', moduleId);
 
-    const settingsDiv = moduleElement.querySelector('.module-settings');
-    if (!settingsDiv) return;
+    const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
+    if (!widget) {
+        console.error('Widget not found:', moduleId);
+        showToast('❌ Виджет не найден');
+        return;
+    }
 
-    if (settingsDiv.style.display === 'none') {
+    // Проверяем, что мы в режиме редактирования
+    if (!gridState || !gridState.isEditing) {
+        showToast('✏️ Включите режим редактирования для доступа к настройкам');
+        return;
+    }
+
+    const settingsDiv = widget.querySelector('.module-settings');
+    if (!settingsDiv) {
+        console.error('Settings div not found for widget:', moduleId);
+        showToast('❌ Настройки не найдены');
+        return;
+    }
+
+    if (settingsDiv.style.display === 'none' || settingsDiv.style.display === '') {
         settingsDiv.style.display = 'block';
-        // Загружаем настройки для конкретного модуля
-        loadModuleSettings(moduleElement);
+        console.log('Loading settings for module:', moduleId);
+        loadModuleSettings(widget);
     } else {
         settingsDiv.style.display = 'none';
+        console.log('Settings closed for module:', moduleId);
     }
 }
 
 // ===== ЗАГРУЗКА НАСТРОЕК МОДУЛЯ =====
 async function loadModuleSettings(moduleElement) {
-    const moduleId = moduleElement.dataset.moduleId;
-    const moduleType = moduleElement.dataset.moduleType;
+    const moduleId = moduleElement.dataset.widgetId;
+    const moduleType = moduleElement.dataset.widgetType;
     const settingsDiv = moduleElement.querySelector('.module-settings');
 
     if (!settingsDiv) return;
 
     try {
-        console.log(`Loading settings for module: ${moduleType} (ID: ${moduleId})`);
+        // Преобразуем в число (теперь это числовой ID)
+        const numericId = parseInt(moduleId);
+        if (isNaN(numericId)) {
+            settingsDiv.innerHTML = `
+                <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
+                    ❌ Неверный ID модуля
+                </div>
+            `;
+            return;
+        }
 
-        const response = await fetch(`/api/modules/${moduleId}/settings`);
+        const response = await fetch(`/api/modules/${numericId}/settings`);
         if (response.ok) {
             const data = await response.json();
-            console.log(`Settings data for module ${moduleId}:`, data);
+            console.log('Settings data loaded:', data);
 
             if (moduleType === 'CLOCK' && typeof renderClockSettings === 'function') {
                 settingsDiv.innerHTML = renderClockSettings(data);
                 if (typeof initClockSettingsEvents === 'function') {
-                    initClockSettingsEvents(moduleId, settingsDiv);
+                    initClockSettingsEvents(numericId, settingsDiv);
                 }
             } else if (moduleType === 'WEATHER' && typeof renderWeatherSettings === 'function') {
                 settingsDiv.innerHTML = renderWeatherSettings(data);
                 if (typeof initWeatherSettingsEvents === 'function') {
-                    initWeatherSettingsEvents(moduleId, settingsDiv);
+                    initWeatherSettingsEvents(numericId, settingsDiv);
                 }
             } else if (moduleType === 'NEXTCLOUD' && typeof renderNextcloudSettings === 'function') {
-                // Передаем данные в функцию рендеринга
                 settingsDiv.innerHTML = renderNextcloudSettings(data);
                 if (typeof initNextcloudSettingsEvents === 'function') {
-                    initNextcloudSettingsEvents(moduleId, settingsDiv);
+                    initNextcloudSettingsEvents(numericId, settingsDiv);
                 }
             } else {
                 settingsDiv.innerHTML = `
@@ -268,8 +107,13 @@ async function loadModuleSettings(moduleElement) {
                     </div>
                 `;
             }
+        } else if (response.status === 404) {
+            settingsDiv.innerHTML = `
+                <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
+                    Настройки не найдены
+                </div>
+            `;
         } else {
-            console.error(`Failed to load settings for module ${moduleId}:`, response.status);
             settingsDiv.innerHTML = `
                 <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
                     ❌ Ошибка загрузки настроек (${response.status})
@@ -286,6 +130,56 @@ async function loadModuleSettings(moduleElement) {
     }
 }
 
+// ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
+function initializeModules() {
+    console.log('Initializing modules...');
+
+    document.querySelectorAll('.widget').forEach(widgetElement => {
+        const moduleId = widgetElement.dataset.widgetId;
+        const moduleType = widgetElement.dataset.widgetType;
+
+        console.log(`Initializing module: ${moduleType} (ID: ${moduleId})`);
+
+        if (moduleType === 'CLOCK' && typeof initClockModule === 'function') {
+            initClockModule(widgetElement, moduleId);
+        }
+
+        if (moduleType === 'WEATHER' && typeof initWeatherModule === 'function') {
+            initWeatherModule(widgetElement, moduleId);
+        }
+
+        if (moduleType === 'NEXTCLOUD' && typeof initNextcloudModule === 'function') {
+            initNextcloudModule(widgetElement, moduleId);
+        }
+    });
+
+    // Общие инициализации
+    document.querySelectorAll('.clock-display').forEach(clock => {
+        if (typeof updateClockDisplay !== 'function') {
+            updateClock(clock);
+        }
+    });
+
+    // Заметки
+    document.querySelectorAll('.note-text').forEach(textarea => {
+        const moduleId = textarea.dataset.widgetId;
+        const saved = localStorage.getItem('notes_' + moduleId);
+        if (saved) textarea.value = saved;
+        textarea.addEventListener('input', function() {
+            localStorage.setItem('notes_' + moduleId, this.value);
+        });
+    });
+
+    // TODO
+    document.querySelectorAll('.todo-widget').forEach(widget => {
+        const list = widget.querySelector('.todo-list');
+        if (list) {
+            const moduleId = widget.dataset.widgetId;
+            loadTodos(moduleId);
+        }
+    });
+}
+
 // ===== ОБЩИЕ ФУНКЦИИ ДЛЯ МОДУЛЕЙ =====
 
 // ЧАСЫ (базовая реализация)
@@ -300,12 +194,8 @@ function updateClock(element) {
 }
 
 // ЗАМЕТКИ
-function getSavedNotes(moduleId) {
-    return localStorage.getItem('notes_' + moduleId) || '';
-}
-
 function saveNotes(textarea) {
-    const moduleId = textarea.dataset.moduleId;
+    const moduleId = textarea.dataset.widgetId || textarea.dataset.moduleId;
     localStorage.setItem('notes_' + moduleId, textarea.value);
 }
 
@@ -323,7 +213,10 @@ function addTodo(input, moduleId) {
 }
 
 function loadTodos(moduleId) {
-    const list = document.querySelector(`.todo-list[data-module-id="${moduleId}"]`);
+    const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
+    if (!widget) return;
+
+    const list = widget.querySelector('.todo-list');
     if (!list) return;
 
     const todos = JSON.parse(localStorage.getItem('todos_' + moduleId) || '[]');
@@ -331,13 +224,18 @@ function loadTodos(moduleId) {
 
     todos.forEach(todo => {
         const li = document.createElement('li');
+        li.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);';
         li.innerHTML = `
             <input type="checkbox" ${todo.done ? 'checked' : ''} 
-                   onchange="toggleTodo(${moduleId}, ${todo.id})">
-            <span style="${todo.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                   onchange="toggleTodo(${moduleId}, ${todo.id})"
+                   style="accent-color:#4CAF50; cursor:pointer;">
+            <span style="${todo.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}; flex:1; font-size:13px;">
                 ${escapeHtml(todo.text)}
             </span>
-            <button class="delete-todo-btn" onclick="deleteTodo(${moduleId}, ${todo.id})">×</button>
+            <button class="delete-todo-btn" onclick="deleteTodo(${moduleId}, ${todo.id})" 
+                    style="background:none; border:none; color:rgba(244,67,54,0.3); cursor:pointer; font-size:14px;">
+                ×
+            </button>
         `;
         list.appendChild(li);
     });
@@ -360,155 +258,15 @@ function deleteTodo(moduleId, todoId) {
     loadTodos(moduleId);
 }
 
-// ===== ДОБАВЛЕНИЕ МОДУЛЯ =====
-async function addModule() {
-    try {
-        // Получаем список доступных модулей из базы данных
-        const response = await fetch('/api/modules/available');
-        if (!response.ok) {
-            throw new Error('Failed to load available modules');
-        }
+// ===== ГЛОБАЛЬНЫЕ ПРИВЯЗКИ ДЛЯ HTML =====
+window.toggleModuleSettings = toggleModuleSettings;
+window.loadModuleSettings = loadModuleSettings;
+window.addModule = addModule;
+window.deleteModule = deleteModule;
 
-        const modules = await response.json();
-        console.log('Available modules from DB:', modules);
-
-        if (!modules || modules.length === 0) {
-            showToast('❌ Нет доступных модулей');
-            return;
-        }
-
-        // Строим сообщение для пользователя
-        let message = 'Выберите тип модуля:\n';
-        modules.forEach((module, index) => {
-            message += `${index + 1}. ${module.icon} ${module.name} - ${module.description}\n`;
-        });
-
-        let typeIndex = prompt(message);
-        if (typeIndex === null) return;
-
-        typeIndex = parseInt(typeIndex) - 1;
-        if (isNaN(typeIndex) || typeIndex < 0 || typeIndex >= modules.length) {
-            showToast('❌ Неверный выбор');
-            return;
-        }
-
-        const selectedModule = modules[typeIndex];
-        const defaultTitle = selectedModule.name;
-
-        const title = prompt('Введите заголовок модуля:', defaultTitle);
-        if (title === null || !title.trim()) return;
-
-        // Специфичные настройки для некоторых модулей
-        let settings = {};
-        if (selectedModule.type === 'WEATHER') {
-            const city = prompt('Введите город:', 'Moscow');
-            if (city !== null && city.trim()) {
-                settings.city = city.trim();
-            } else {
-                showToast('❌ Город не указан');
-                return;
-            }
-        }
-
-        // Отправляем запрос на создание модуля
-        const addResponse = await fetch(`/api/modules`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pageId: currentPageId,
-                type: selectedModule.type,
-                title: title.trim(),
-                settings: JSON.stringify(settings)
-            })
-        });
-
-        if (addResponse.ok) {
-            const newModule = await addResponse.json();
-            console.log('Module added:', newModule);
-
-            showToast(`✅ Модуль "${title.trim()}" добавлен`);
-
-            // ===== ОБНОВЛЯЕМ СПИСОК МОДУЛЕЙ БЕЗ ПЕРЕЗАГРУЗКИ =====
-            await refreshModules();
-        } else {
-            const error = await addResponse.text();
-            showToast('❌ Ошибка добавления модуля: ' + error);
-        }
-    } catch (error) {
-        console.error('Error adding module:', error);
-        showToast('❌ Ошибка добавления модуля: ' + error.message);
-    }
-}
-
-// ===== ОБНОВЛЕНИЕ МОДУЛЕЙ =====
-async function refreshModules() {
-    console.log('Refreshing modules...');
-
-    try {
-        // Сохраняем состояние открытых настроек
-        const openSettings = {};
-        document.querySelectorAll('.module-settings').forEach(div => {
-            const moduleElement = div.closest('.module');
-            if (moduleElement && div.style.display !== 'none') {
-                openSettings[moduleElement.dataset.moduleId] = true;
-            }
-        });
-
-        // Получаем обновленный список модулей
-        const response = await fetch(`/api/modules/page/${currentPageId}`);
-        if (!response.ok) {
-            throw new Error('Failed to load modules');
-        }
-
-        const modules = await response.json();
-        console.log('Updated modules:', modules);
-
-        // Обновляем data-атрибут
-        const modulesContainer = document.getElementById('modulesContainer');
-        if (modulesContainer) {
-            modulesContainer.setAttribute('data-modules', JSON.stringify(modules));
-        }
-
-        // Перерисовываем модули
-        renderModules();
-
-        // Восстанавливаем состояние настроек
-        setTimeout(() => {
-            document.querySelectorAll('.module').forEach(el => {
-                const id = el.dataset.moduleId;
-                if (openSettings[id]) {
-                    const settingsDiv = el.querySelector('.module-settings');
-                    if (settingsDiv) {
-                        settingsDiv.style.display = 'block';
-                        // Перезагружаем настройки
-                        loadModuleSettings(el);
-                    }
-                }
-            });
-        }, 200);
-
-    } catch (error) {
-        console.error('Error refreshing modules:', error);
-        showToast('❌ Ошибка обновления модулей');
-    }
-}
-
-// ===== УДАЛЕНИЕ МОДУЛЯ =====
-async function deleteModule(moduleId) {
-    if (!confirm('Удалить модуль?')) return;
-
-    try {
-        const response = await fetch(`/api/modules/${moduleId}`, { method: 'DELETE' });
-        if (response.ok) {
-            showToast('✅ Модуль удален');
-
-            // ===== ОБНОВЛЯЕМ СПИСОК МОДУЛЕЙ БЕЗ ПЕРЕЗАГРУЗКИ =====
-            await refreshModules();
-        } else {
-            showToast('❌ Ошибка удаления модуля');
-        }
-    } catch (error) {
-        console.error('Error deleting module:', error);
-        showToast('❌ Ошибка удаления модуля');
-    }
-}
+console.log('✅ Modules.js loaded. Functions available:', {
+    toggleModuleSettings: typeof window.toggleModuleSettings,
+    loadModuleSettings: typeof window.loadModuleSettings,
+    addModule: typeof window.addModule,
+    deleteModule: typeof window.deleteModule
+});

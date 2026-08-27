@@ -4,7 +4,7 @@ package org.alex.everyWeb;
 import org.alex.everyWeb.link.service.LinksService;
 import org.alex.everyWeb.modules.entity.AvailableModule;
 import org.alex.everyWeb.modules.service.AvailableModuleService;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
 import org.alex.everyWeb.page.service.PageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;

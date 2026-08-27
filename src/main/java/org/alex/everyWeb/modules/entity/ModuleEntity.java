@@ -1,7 +1,7 @@
 package org.alex.everyWeb.modules.entity;
 
 import jakarta.persistence.*;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
 
 
 @Entity

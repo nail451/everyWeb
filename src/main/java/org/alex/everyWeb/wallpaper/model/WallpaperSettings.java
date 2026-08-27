@@ -1,7 +1,7 @@
 package org.alex.everyWeb.wallpaper.model;
 
 import jakarta.persistence.*;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
 
 import java.time.LocalDateTime;
 

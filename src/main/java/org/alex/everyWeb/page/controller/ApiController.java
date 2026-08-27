@@ -4,7 +4,10 @@ import org.alex.everyWeb.link.repository.DTO.LinkRequestDTO;
 import org.alex.everyWeb.link.service.LinksService;
 import org.alex.everyWeb.modules.service.AvailableModuleService;
 import org.alex.everyWeb.modules.service.ModulesService;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.dto.WidgetDTO;
+import org.alex.everyWeb.page.entity.Page;
+import org.alex.everyWeb.page.entity.PageLayout;
+import org.alex.everyWeb.page.service.LayoutService;
 import org.alex.everyWeb.page.service.PageService;
 import org.alex.everyWeb.wallpaper.service.WallpaperService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,9 @@ public class ApiController {
 
     @Autowired
     private AvailableModuleService availableModuleService;
+
+    @Autowired
+    private LayoutService layoutService;
 
     // ===== НАСТРОЙКИ =====
     @GetMapping("/settings/{pageId}")
@@ -368,6 +374,145 @@ public class ApiController {
                     true
             );
             return ResponseEntity.ok(module);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    // ===== LAYOUT ENDPOINTS =====
+
+    @GetMapping("/pages/{pageId}/layout")
+    public ResponseEntity<?> getLayout(@PathVariable Long pageId) {
+        try {
+            PageLayout layout = layoutService.getLayout(pageId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("gridRows", layout.getGridRows());
+            response.put("gridCols", layout.getGridCols());
+            response.put("isEditing", layout.getIsEditing());
+            response.put("widgets", layoutService.getWidgets(pageId));
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/pages/{pageId}/layout/widget")
+    public ResponseEntity<?> addWidget(@PathVariable Long pageId,
+                                       @RequestBody Map<String, Object> request) {
+        try {
+            String type = (String) request.get("type");
+            String title = (String) request.get("title");
+            Integer rowSpan = request.get("rowSpan") != null ?
+                    Integer.parseInt(request.get("rowSpan").toString()) : null;
+            Integer colSpan = request.get("colSpan") != null ?
+                    Integer.parseInt(request.get("colSpan").toString()) : null;
+
+            WidgetDTO widget = layoutService.addWidget(pageId, type, title, rowSpan, colSpan);
+            return ResponseEntity.ok(widget);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/pages/{pageId}/layout/widget/{widgetId}")
+    public ResponseEntity<?> removeWidget(@PathVariable Long pageId,
+                                          @PathVariable String widgetId) {
+        try {
+            layoutService.removeWidget(pageId, widgetId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/pages/{pageId}/layout/widget/position")
+    public ResponseEntity<?> updateWidgetPosition(@PathVariable Long pageId,
+                                                  @RequestBody Map<String, Object> request) {
+        try {
+            String widgetId = (String) request.get("widgetId");
+            Integer row = Integer.parseInt(request.get("row").toString());
+            Integer col = Integer.parseInt(request.get("col").toString());
+
+            layoutService.updateWidgetPosition(pageId, widgetId, row, col);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/pages/{pageId}/layout/widget/resize")
+    public ResponseEntity<?> resizeWidget(@PathVariable Long pageId,
+                                          @RequestBody Map<String, Object> request) {
+        try {
+            String widgetId = (String) request.get("widgetId");
+            Integer rowSpan = Integer.parseInt(request.get("rowSpan").toString());
+            Integer colSpan = Integer.parseInt(request.get("colSpan").toString());
+
+            List<WidgetDTO> widgets = layoutService.getWidgets(pageId);
+            for (WidgetDTO widget : widgets) {
+                if (widget.getId().equals(widgetId)) {
+                    widget.setRowSpan(rowSpan);
+                    widget.setColSpan(colSpan);
+                    break;
+                }
+            }
+            layoutService.saveWidgets(pageId, widgets);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/pages/{pageId}/layout/swap")
+    public ResponseEntity<?> swapWidgets(@PathVariable Long pageId,
+                                         @RequestBody Map<String, String> request) {
+        try {
+            String widgetId1 = request.get("widgetId1");
+            String widgetId2 = request.get("widgetId2");
+
+            List<WidgetDTO> widgets = layoutService.getWidgets(pageId);
+            WidgetDTO w1 = null, w2 = null;
+
+            for (WidgetDTO w : widgets) {
+                if (w.getId().equals(widgetId1)) w1 = w;
+                if (w.getId().equals(widgetId2)) w2 = w;
+            }
+
+            if (w1 != null && w2 != null) {
+                int tempRow = w1.getRow();
+                int tempCol = w1.getCol();
+                w1.setRow(w2.getRow());
+                w1.setCol(w2.getCol());
+                w2.setRow(tempRow);
+                w2.setCol(tempCol);
+                layoutService.saveWidgets(pageId, widgets);
+            }
+
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/pages/{pageId}/layout/toggle-edit")
+    public ResponseEntity<?> toggleEditMode(@PathVariable Long pageId) {
+        try {
+            layoutService.toggleEditMode(pageId);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

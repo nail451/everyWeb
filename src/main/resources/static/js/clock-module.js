@@ -8,44 +8,63 @@ console.log('Clock module loaded!');
 const clockCache = {};
 let clockSettingsCache = {};
 
+// ===== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ЧИСЛОВОГО ID =====
+function getNumericId(moduleId) {
+    if (typeof moduleId === 'number') return moduleId;
+    if (typeof moduleId === 'string') {
+        const num = parseInt(moduleId);
+        return isNaN(num) ? null : num;
+    }
+    return null;
+}
+
 // ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЯ ЧАСОВ =====
 function initClockModule(moduleElement, moduleId) {
     console.log('Initializing clock module:', moduleId);
 
-    if (window.clockIntervals && window.clockIntervals[moduleId]) {
-        clearInterval(window.clockIntervals[moduleId]);
-        delete window.clockIntervals[moduleId];
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) {
+        console.error('Invalid module ID:', moduleId);
+        return;
     }
 
-    loadClockData(moduleElement, moduleId);
-    startClockUpdater(moduleId);
+    if (window.clockIntervals && window.clockIntervals[numericId]) {
+        clearInterval(window.clockIntervals[numericId]);
+        delete window.clockIntervals[numericId];
+    }
+
+    loadClockData(moduleElement, numericId);
+    startClockUpdater(numericId);
 }
 
 // ===== ЗАГРУЗКА ДАННЫХ ЧАСОВ =====
 async function loadClockData(moduleElement, moduleId) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     try {
-        console.log(`Loading clock data for module ${moduleId}`);
-        const response = await fetch(`/api/modules/${moduleId}/data`);
+        console.log(`Loading clock data for module ${numericId}`);
+        const response = await fetch(`/api/modules/${numericId}/data`);
         if (response.ok) {
             const data = await response.json();
             console.log('Clock data loaded:', data);
-            clockCache[moduleId] = data;
+            clockCache[numericId] = data;
 
             if (data.content && data.content.clockData) {
-                clockSettingsCache[moduleId] = data.content.clockData;
+                clockSettingsCache[numericId] = data.content.clockData;
             }
 
             renderClockDisplay(moduleElement, data);
         } else {
-            console.error(`Failed to load clock data for module ${moduleId}:`, response.status);
-            if (clockCache[moduleId]) {
-                renderClockDisplay(moduleElement, clockCache[moduleId]);
+            console.error(`Failed to load clock data for module ${numericId}:`, response.status);
+            if (clockCache[numericId]) {
+                renderClockDisplay(moduleElement, clockCache[numericId]);
             }
         }
     } catch (error) {
         console.error('Error loading clock data:', error);
-        if (clockCache[moduleId]) {
-            renderClockDisplay(moduleElement, clockCache[moduleId]);
+        if (clockCache[numericId]) {
+            renderClockDisplay(moduleElement, clockCache[numericId]);
         }
     }
 }
@@ -86,32 +105,38 @@ function renderClockDisplay(moduleElement, data) {
 
 // ===== ЗАПУСК ОБНОВЛЕНИЯ ВРЕМЕНИ =====
 function startClockUpdater(moduleId) {
-    if (window.clockIntervals && window.clockIntervals[moduleId]) {
-        clearInterval(window.clockIntervals[moduleId]);
-        delete window.clockIntervals[moduleId];
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
+    if (window.clockIntervals && window.clockIntervals[numericId]) {
+        clearInterval(window.clockIntervals[numericId]);
+        delete window.clockIntervals[numericId];
     }
 
     if (!window.clockIntervals) {
         window.clockIntervals = {};
     }
 
-    console.log(`Starting clock updater for module ${moduleId}`);
+    console.log(`Starting clock updater for module ${numericId}`);
 
-    window.clockIntervals[moduleId] = setInterval(() => {
-        updateClockTime(moduleId);
+    window.clockIntervals[numericId] = setInterval(() => {
+        updateClockTime(numericId);
     }, 1000);
 }
 
 // ===== ОБНОВЛЕНИЕ ВРЕМЕНИ =====
 async function updateClockTime(moduleId) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     try {
-        const settings = clockSettingsCache[moduleId];
+        const settings = clockSettingsCache[numericId];
         if (!settings) {
-            const settingsResponse = await fetch(`/api/modules/${moduleId}/settings`);
+            const settingsResponse = await fetch(`/api/modules/${numericId}/settings`);
             if (settingsResponse.ok) {
                 const settingsData = await settingsResponse.json();
                 if (settingsData.content && settingsData.content.clockData) {
-                    clockSettingsCache[moduleId] = settingsData.content.clockData;
+                    clockSettingsCache[numericId] = settingsData.content.clockData;
                 }
             }
             return;
@@ -145,7 +170,7 @@ async function updateClockTime(moduleId) {
             }
         });
 
-        const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+        const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
         if (moduleElement) {
             const clockDisplay = moduleElement.querySelector('.clock-display');
             if (clockDisplay) {
@@ -270,31 +295,34 @@ function renderClockSettings(data) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ НАСТРОЕК ЧАСОВ =====
 function initClockSettingsEvents(moduleId, settingsContainer) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     const formatSelect = settingsContainer.querySelector('.clock-format');
     if (formatSelect) {
         formatSelect.addEventListener('change', function() {
-            updateClockSetting(moduleId, 'format', this.value);
+            updateClockSetting(numericId, 'format', this.value);
         });
     }
 
     const timezoneSelect = settingsContainer.querySelector('.clock-timezone');
     if (timezoneSelect) {
         timezoneSelect.addEventListener('change', function() {
-            updateClockSetting(moduleId, 'timezone', this.value);
+            updateClockSetting(numericId, 'timezone', this.value);
         });
     }
 
     const secondsCheckbox = settingsContainer.querySelector('.clock-seconds');
     if (secondsCheckbox) {
         secondsCheckbox.addEventListener('change', function() {
-            updateClockSetting(moduleId, 'showSeconds', this.checked);
+            updateClockSetting(numericId, 'showSeconds', this.checked);
         });
     }
 
     const addFaceBtn = settingsContainer.querySelector('.clock-add-face-btn');
     if (addFaceBtn) {
         addFaceBtn.addEventListener('click', function() {
-            showAddClockFaceModal(moduleId);
+            showAddClockFaceModal(numericId);
         });
     }
 
@@ -304,17 +332,20 @@ function initClockSettingsEvents(moduleId, settingsContainer) {
             e.stopPropagation();
             const index = parseInt(this.dataset.index);
             console.log('Removing face at index:', index);
-            removeClockFace(moduleId, index);
+            removeClockFace(numericId, index);
         });
     });
 }
 
 // ===== УДАЛЕНИЕ ЦИФЕРБЛАТА =====
 async function removeClockFace(moduleId, index) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     if (!confirm('Удалить этот циферблат?')) return;
 
     try {
-        const response = await fetch(`/api/modules/${moduleId}/action`, {
+        const response = await fetch(`/api/modules/${numericId}/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -331,31 +362,29 @@ async function removeClockFace(moduleId, index) {
                 return;
             }
 
-            // Сохраняем состояние секунд
-            const currentSettings = clockSettingsCache[moduleId] || {};
+            const currentSettings = clockSettingsCache[numericId] || {};
             const showSeconds = currentSettings.showSeconds || false;
 
-            // Применяем состояние к полученным данным
             if (data.content && data.content.clockData) {
                 data.content.clockData.showSeconds = showSeconds;
-                clockSettingsCache[moduleId] = data.content.clockData;
+                clockSettingsCache[numericId] = data.content.clockData;
             }
 
-            const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+            const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
 
                 const settingsDiv = moduleElement.querySelector('.module-settings');
                 if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    const settingsResponse = await fetch(`/api/modules/${moduleId}/settings`);
+                    const settingsResponse = await fetch(`/api/modules/${numericId}/settings`);
                     if (settingsResponse.ok) {
                         const settingsData = await settingsResponse.json();
                         if (settingsData.content && settingsData.content.clockData) {
                             settingsData.content.clockData.showSeconds = showSeconds;
-                            clockSettingsCache[moduleId] = settingsData.content.clockData;
+                            clockSettingsCache[numericId] = settingsData.content.clockData;
                         }
                         settingsDiv.innerHTML = renderClockSettings(settingsData);
-                        initClockSettingsEvents(moduleId, settingsDiv);
+                        initClockSettingsEvents(numericId, settingsDiv);
                     }
                 }
             }
@@ -372,8 +401,11 @@ async function removeClockFace(moduleId, index) {
 
 // ===== ОБНОВЛЕНИЕ НАСТРОЙКИ ЧАСОВ =====
 async function updateClockSetting(moduleId, key, value) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     try {
-        const response = await fetch(`/api/modules/${moduleId}/action`, {
+        const response = await fetch(`/api/modules/${numericId}/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -386,17 +418,17 @@ async function updateClockSetting(moduleId, key, value) {
             const data = await response.json();
 
             if (data.content && data.content.clockData) {
-                clockSettingsCache[moduleId] = data.content.clockData;
+                clockSettingsCache[numericId] = data.content.clockData;
             }
 
-            const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+            const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
 
                 const settingsDiv = moduleElement.querySelector('.module-settings');
                 if (settingsDiv && settingsDiv.style.display !== 'none') {
                     settingsDiv.innerHTML = renderClockSettings(data);
-                    initClockSettingsEvents(moduleId, settingsDiv);
+                    initClockSettingsEvents(numericId, settingsDiv);
                 }
             }
             showToast('✅ Настройки часов обновлены');
@@ -409,8 +441,11 @@ async function updateClockSetting(moduleId, key, value) {
 
 // ===== ДОБАВЛЕНИЕ ЦИФЕРБЛАТА =====
 async function addClockFace(moduleId, name, timezone) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     try {
-        const response = await fetch(`/api/modules/${moduleId}/action`, {
+        const response = await fetch(`/api/modules/${numericId}/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -422,31 +457,29 @@ async function addClockFace(moduleId, name, timezone) {
         if (response.ok) {
             const data = await response.json();
 
-            // Сохраняем состояние секунд
-            const currentSettings = clockSettingsCache[moduleId] || {};
+            const currentSettings = clockSettingsCache[numericId] || {};
             const showSeconds = currentSettings.showSeconds || false;
 
-            // Применяем состояние к полученным данным
             if (data.content && data.content.clockData) {
                 data.content.clockData.showSeconds = showSeconds;
-                clockSettingsCache[moduleId] = data.content.clockData;
+                clockSettingsCache[numericId] = data.content.clockData;
             }
 
-            const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+            const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
 
                 const settingsDiv = moduleElement.querySelector('.module-settings');
                 if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    const settingsResponse = await fetch(`/api/modules/${moduleId}/settings`);
+                    const settingsResponse = await fetch(`/api/modules/${numericId}/settings`);
                     if (settingsResponse.ok) {
                         const settingsData = await settingsResponse.json();
                         if (settingsData.content && settingsData.content.clockData) {
                             settingsData.content.clockData.showSeconds = showSeconds;
-                            clockSettingsCache[moduleId] = settingsData.content.clockData;
+                            clockSettingsCache[numericId] = settingsData.content.clockData;
                         }
                         settingsDiv.innerHTML = renderClockSettings(settingsData);
-                        initClockSettingsEvents(moduleId, settingsDiv);
+                        initClockSettingsEvents(numericId, settingsDiv);
                     }
                 }
             }
@@ -460,6 +493,9 @@ async function addClockFace(moduleId, name, timezone) {
 
 // ===== МОДАЛЬНОЕ ОКНО ДЛЯ ДОБАВЛЕНИЯ ЦИФЕРБЛАТА =====
 function showAddClockFaceModal(moduleId) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     const overlay = document.createElement('div');
     overlay.style.cssText = `
         position: fixed;
@@ -515,7 +551,7 @@ function showAddClockFaceModal(moduleId) {
                         style="flex:1; padding:10px; border-radius:8px; background:rgba(255,255,255,0.06); border:none; color:rgba(255,255,255,0.5); cursor:pointer;">
                     Отмена
                 </button>
-                <button onclick="addClockFaceFromModal(${moduleId})" 
+                <button onclick="addClockFaceFromModal(${numericId})" 
                         style="flex:1; padding:10px; border-radius:8px; background:rgba(76,175,80,0.3); border:1px solid rgba(76,175,80,0.3); color:white; cursor:pointer;">
                     Добавить
                 </button>
@@ -534,6 +570,9 @@ function showAddClockFaceModal(moduleId) {
 
 // ===== ДОБАВЛЕНИЕ ЦИФЕРБЛАТА ИЗ МОДАЛЬНОГО ОКНА =====
 function addClockFaceFromModal(moduleId) {
+    const numericId = getNumericId(moduleId);
+    if (numericId === null) return;
+
     const nameInput = document.getElementById('clockFaceName');
     const timezoneInput = document.getElementById('clockFaceTimezone');
 
@@ -555,5 +594,5 @@ function addClockFaceFromModal(moduleId) {
     const overlay = document.querySelector('.clock-modal-overlay');
     if (overlay) overlay.remove();
 
-    addClockFace(moduleId, name, timezone);
+    addClockFace(numericId, name, timezone);
 }

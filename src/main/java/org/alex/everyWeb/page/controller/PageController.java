@@ -1,7 +1,8 @@
 package org.alex.everyWeb.page.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
+import org.alex.everyWeb.page.service.LayoutService;
 import org.alex.everyWeb.page.service.PageService;
 import org.alex.everyWeb.wallpaper.service.WallpaperService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +23,13 @@ public class PageController {
     @Autowired
     private WallpaperService wallpaperService;
 
+    @Autowired
+    private LayoutService layoutService;  // ← Добавляем
+
     @GetMapping("/")
     public String home(Model model) {
-        // Пытаемся получить последнюю открытую страницу из сессии или куки
-        // Используем JavaScript для редиректа на последнюю страницу
-        // Возвращаем пустую страницу с редиректом через JavaScript
-        return "redirect";
+        // Редирект на главную страницу
+        return "redirect:/page/main";
     }
 
     @GetMapping("/page/{name}")
@@ -52,6 +54,14 @@ public class PageController {
         model.addAttribute("linkBgOpacity", page.getLinkBgOpacity() != null ? page.getLinkBgOpacity() : 15);
         model.addAttribute("linkBgDarkness", page.getLinkBgDarkness() != null ? page.getLinkBgDarkness() : 0);
         model.addAttribute("showAddLinkButton", page.getShowAddLinkButton() != null ? page.getShowAddLinkButton() : true);
+
+        // Получаем раскладку страницы
+        try {
+            var layout = layoutService.getLayout(page.getId());
+            model.addAttribute("layout", layout);
+        } catch (Exception e) {
+            // Игнорируем
+        }
 
         // Получаем текущие обои
         String currentWallpaper = null;

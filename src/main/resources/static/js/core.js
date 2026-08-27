@@ -7,9 +7,6 @@ let currentPageId = null;
 let settingsData = null;
 let linkSettings = null;
 
-// ===== КЛЮЧ ДЛЯ ХРАНЕНИЯ ПОСЛЕДНЕЙ СТРАНИЦЫ =====
-const LAST_PAGE_KEY = 'everyweb_last_page';
-
 // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 function escapeHtml(text) {
     if (!text) return '';
@@ -30,18 +27,6 @@ function showToast(message) {
     toast._timeout = setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
-}
-
-// ===== СОХРАНЕНИЕ ПОСЛЕДНЕЙ СТРАНИЦЫ =====
-function saveLastPage(pageName) {
-    if (pageName) {
-        localStorage.setItem(LAST_PAGE_KEY, pageName);
-        console.log('Saved last page:', pageName);
-    }
-}
-
-function getLastPage() {
-    return localStorage.getItem(LAST_PAGE_KEY);
 }
 
 // ===== ПРИМЕНЕНИЕ ОБОЕВ =====
@@ -115,11 +100,11 @@ async function forceChangeWallpaper() {
 // ===== ЗАГРУЗКА НАСТРОЕК ССЫЛОК =====
 async function loadLinkSettingsFromServer() {
     try {
-        console.log('Loading link settings from server...');
+        console.log('=== LOADING LINK SETTINGS FROM SERVER ===');
         const response = await fetch(`/api/pages/${currentPageId}/links/settings`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Raw data from server:', data);
+            console.log('Raw data from server:', JSON.stringify(data, null, 2));
 
             const settings = {
                 iconSize: data.linkIconSize || data.iconSize || 28,
@@ -130,18 +115,27 @@ async function loadLinkSettingsFromServer() {
             };
 
             console.log('Parsed settings:', settings);
+            console.log('showAddLinkButton from server:', settings.showAddLinkButton);
 
             linkSettings = settings;
+
             applyLinkStylesFromSettings(settings);
 
-            const showAddButton = settings.showAddLinkButton;
-            const container = document.getElementById('linksContainer');
-            if (container) {
-                if (typeof renderLinks === 'function') {
-                    renderLinks();
+            if (typeof renderLinks === 'function') {
+                console.log('Calling renderLinks with showAddButton:', settings.showAddLinkButton);
+                renderLinks();
+            }
+
+            const overlay = document.getElementById('settingsOverlay');
+            if (overlay && overlay.classList.contains('active')) {
+                const checkbox = document.getElementById('showAddLinkButton');
+                if (checkbox) {
+                    checkbox.checked = settings.showAddLinkButton;
+                    console.log('Checkbox updated to:', settings.showAddLinkButton);
                 }
             }
 
+            console.log('=== LINK SETTINGS LOAD COMPLETE ===');
             return settings;
         }
     } catch (error) {
@@ -283,17 +277,8 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Current page ID:', currentPageId);
     }
 
-    // Получаем имя текущей страницы
-    const pageTitleElement = document.querySelector('.header .page-title span:last-child');
-    if (pageTitleElement) {
-        const currentPageName = pageTitleElement.textContent.trim();
-        // Сохраняем текущую страницу
-        saveLastPage(currentPageName);
-        console.log('Current page saved:', currentPageName);
-    }
-
     if (typeof initHeader === 'function') initHeader();
-    if (typeof initLinks === 'function') initLinks();
+    if (typeof initGrid === 'function') initGrid();
     if (typeof initModules === 'function') initModules();
 
     if (typeof WallpaperModule !== 'undefined' && currentPageId) {

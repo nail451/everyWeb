@@ -5,7 +5,7 @@ import org.alex.everyWeb.link.model.Link;
 import org.alex.everyWeb.link.repository.DTO.LinkDTO;
 import org.alex.everyWeb.link.repository.DTO.LinkResponseDTO;
 import org.alex.everyWeb.link.repository.LinkRepository;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
 import org.alex.everyWeb.page.repository.PageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

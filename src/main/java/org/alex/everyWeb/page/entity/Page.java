@@ -1,4 +1,4 @@
-package org.alex.everyWeb.page.model;
+package org.alex.everyWeb.page.entity;
 
 import jakarta.persistence.*;
 import org.alex.everyWeb.link.model.Link;
@@ -33,7 +33,11 @@ public class Page {
     private Integer linkBgDarkness = 0;
 
     @Column(name = "show_add_link_button")
-    private Boolean showAddLinkButton = true;  // ← НОВОЕ ПОЛЕ
+    private Boolean showAddLinkButton = true;
+
+    // ===== СВЯЗЬ С РАСКЛАДКОЙ =====
+    @OneToOne(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
+    private PageLayout pageLayout;
 
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
@@ -67,6 +71,9 @@ public class Page {
 
     public Boolean getShowAddLinkButton() { return showAddLinkButton; }
     public void setShowAddLinkButton(Boolean showAddLinkButton) { this.showAddLinkButton = showAddLinkButton; }
+
+    public PageLayout getPageLayout() { return pageLayout; }
+    public void setPageLayout(PageLayout pageLayout) { this.pageLayout = pageLayout; }
 
     public List<Link> getLinks() { return links; }
     public void setLinks(List<Link> links) { this.links = links; }

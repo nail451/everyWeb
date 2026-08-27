@@ -3,7 +3,7 @@ package org.alex.everyWeb.wallpaper.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
 import org.alex.everyWeb.page.repository.PageRepository;
 import org.alex.everyWeb.wallpaper.model.WallpaperSettings;
 import org.alex.everyWeb.wallpaper.repository.DTO.WallpaperInfoDTO;

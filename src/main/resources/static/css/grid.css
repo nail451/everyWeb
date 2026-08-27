@@ -1,0 +1,159 @@
+/* ========================================
+   GRID LAYOUT - ВИДЖЕТЫ НА СТРАНИЦЕ
+   ======================================== */
+
+.page-grid {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    min-height: calc(100vh - 120px);
+    position: relative;
+}
+
+.page-grid.editing .widget {
+    cursor: grab;
+    border: 2px dashed rgba(76, 175, 80, 0.3);
+    transition: all 0.2s ease;
+}
+
+.page-grid.editing .widget:hover {
+    border-color: rgba(76, 175, 80, 0.6);
+    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.15);
+}
+
+.page-grid.editing .widget .widget-remove {
+    display: flex;
+}
+
+.page-grid.editing .widget .widget-resize-handle {
+    display: flex;
+}
+
+/* ===== ВИДЖЕТ ===== */
+.widget {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 80px;
+}
+
+.widget:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Кнопки управления видны только в режиме редактирования */
+.widget .widget-actions {
+    display: none !important;
+}
+
+.page-grid.editing .widget .widget-actions {
+    display: flex !important;
+}
+
+/* Кнопка удаления */
+.widget .widget-remove {
+    display: none !important;
+}
+
+.page-grid.editing .widget .widget-remove {
+    display: flex !important;
+}
+
+/* Кнопка настроек */
+.widget .widget-settings-btn {
+    display: none !important;
+}
+
+.page-grid.editing .widget .widget-settings-btn {
+    display: flex !important;
+}
+
+/* Resize handle */
+.widget .widget-resize-handle {
+    display: none !important;
+}
+
+.page-grid.editing .widget .widget-resize-handle {
+    display: flex !important;
+}
+
+/* Заголовок виджета */
+.widget .widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.widget .widget-title {
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ===== СТИЛИ ДЛЯ РАЗНЫХ ТИПОВ ВИДЖЕТОВ ===== */
+.widget.link-widget .link-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.widget.link-widget .link-grid .link-card {
+    min-width: 60px;
+    max-width: 100px;
+    padding: 10px 12px;
+    min-height: 70px;
+}
+
+.widget.link-widget .link-grid .link-card .link-icon {
+    font-size: 24px;
+}
+
+.widget.link-widget .link-grid .link-card .link-title {
+    font-size: 10px;
+    max-width: 80px;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+    .page-grid {
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .widget {
+        padding: 12px;
+        border-radius: 12px;
+        min-height: 60px;
+    }
+
+    .widget .widget-title {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-grid {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .widget {
+        padding: 10px;
+        border-radius: 10px;
+        min-height: 50px;
+    }
+}

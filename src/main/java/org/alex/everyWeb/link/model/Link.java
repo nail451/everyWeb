@@ -1,7 +1,7 @@
 package org.alex.everyWeb.link.model;
 
 import jakarta.persistence.*;
-import org.alex.everyWeb.page.model.Page;
+import org.alex.everyWeb.page.entity.Page;
 
 @Entity
 @Table(name = "links")
