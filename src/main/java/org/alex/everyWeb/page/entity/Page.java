@@ -19,22 +19,6 @@ public class Page {
     @Column(unique = true, nullable = false)
     private String name;
 
-    // ===== НАСТРОЙКИ ССЫЛОК =====
-    @Column(name = "link_icon_size")
-    private Integer linkIconSize = 28;
-
-    @Column(name = "link_font_size")
-    private Integer linkFontSize = 12;
-
-    @Column(name = "link_bg_opacity")
-    private Integer linkBgOpacity = 15;
-
-    @Column(name = "link_bg_darkness")
-    private Integer linkBgDarkness = 0;
-
-    @Column(name = "show_add_link_button")
-    private Boolean showAddLinkButton = true;
-
     // ===== СВЯЗЬ С РАСКЛАДКОЙ =====
     @OneToOne(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     private PageLayout pageLayout;
@@ -56,21 +40,6 @@ public class Page {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-
-    public Integer getLinkIconSize() { return linkIconSize; }
-    public void setLinkIconSize(Integer linkIconSize) { this.linkIconSize = linkIconSize; }
-
-    public Integer getLinkFontSize() { return linkFontSize; }
-    public void setLinkFontSize(Integer linkFontSize) { this.linkFontSize = linkFontSize; }
-
-    public Integer getLinkBgOpacity() { return linkBgOpacity; }
-    public void setLinkBgOpacity(Integer linkBgOpacity) { this.linkBgOpacity = linkBgOpacity; }
-
-    public Integer getLinkBgDarkness() { return linkBgDarkness; }
-    public void setLinkBgDarkness(Integer linkBgDarkness) { this.linkBgDarkness = linkBgDarkness; }
-
-    public Boolean getShowAddLinkButton() { return showAddLinkButton; }
-    public void setShowAddLinkButton(Boolean showAddLinkButton) { this.showAddLinkButton = showAddLinkButton; }
 
     public PageLayout getPageLayout() { return pageLayout; }
     public void setPageLayout(PageLayout pageLayout) { this.pageLayout = pageLayout; }

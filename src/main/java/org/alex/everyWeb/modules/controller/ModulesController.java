@@ -169,7 +169,6 @@ public class ModulesController {
     @GetMapping("/{moduleId}/update")
     public ResponseEntity<?> updateModuleData(@PathVariable Long moduleId) {
         try {
-            // Проверяем, существует ли модуль
             ModuleEntity moduleEntity = modulesService.getModuleById(moduleId);
             if (moduleEntity == null) {
                 return ResponseEntity.notFound().build();
@@ -177,7 +176,6 @@ public class ModulesController {
 
             ModuleData data = moduleContext.updateModuleData(moduleId);
 
-            // Возвращаем полные данные
             Map<String, Object> response = new HashMap<>();
             response.put("content", data.getContent());
             return ResponseEntity.ok(response);
@@ -198,7 +196,6 @@ public class ModulesController {
 
             Object result = moduleContext.executeAction(moduleId, action, params);
 
-            // Если результат - ModuleData, возвращаем его с контентом
             if (result instanceof ModuleData) {
                 ModuleData data = (ModuleData) result;
                 Map<String, Object> response = new HashMap<>();
@@ -222,12 +219,6 @@ public class ModulesController {
             ModuleEntity moduleEntity = modulesService.getModuleById(moduleId);
             if (moduleEntity == null) {
                 return ResponseEntity.notFound().build();
-            }
-
-            // Проверяем, что модуль имеет тип CLOCK, WEATHER или NEXTCLOUD
-            String type = moduleEntity.getType();
-            if (!"CLOCK".equals(type) && !"WEATHER".equals(type) && !"NEXTCLOUD".equals(type)) {
-                return ResponseEntity.ok().build();
             }
 
             ModuleData data = moduleContext.getModuleData(moduleId);

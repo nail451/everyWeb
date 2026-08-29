@@ -109,31 +109,4 @@ public class PageService {
             modulesRepository.save(module);
         }
     }
-
-    // ===== НАСТРОЙКИ ССЫЛОК =====
-    public Page updateLinkSettings(Long pageId, Integer iconSize, Integer fontSize,
-                                   Integer bgOpacity, Integer bgDarkness) {
-        Page page = getPageById(pageId);
-
-        if (iconSize != null && iconSize >= 16 && iconSize <= 100) {
-            page.setLinkIconSize(iconSize);
-        }
-        if (fontSize != null && fontSize >= 8 && fontSize <= 24) {
-            page.setLinkFontSize(fontSize);
-        }
-        if (bgOpacity != null && bgOpacity >= 0 && bgOpacity <= 100) {
-            page.setLinkBgOpacity(bgOpacity);
-        }
-        if (bgDarkness != null && bgDarkness >= -50 && bgDarkness <= 50) {
-            page.setLinkBgDarkness(bgDarkness);
-        }
-
-        return pageRepository.save(page);
-    }
-
-    public Page updateShowAddLinkButton(Long pageId, Boolean show) {
-        Page page = getPageById(pageId);
-        page.setShowAddLinkButton(show != null ? show : true);
-        return pageRepository.save(page);
-    }
 }

@@ -224,13 +224,33 @@ function createWidgetElement(widget) {
     div.dataset.rowSpan = widget.rowSpan;
     div.dataset.colSpan = widget.colSpan;
 
+    // ===== ВАЖНО: Убираем overflow hidden чтобы панель настроек была видна =====
+    div.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: all 0.3s ease;
+        position: relative;
+        min-height: 80px;
+        overflow: visible !important;
+    `;
+
+    if (widget.type === 'LINK' && widget.settings) {
+        div.dataset.linkSettings = widget.settings;
+    }
+
     if (gridState.isEditing) {
         div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
         div.style.border = '2px solid rgba(76,175,80,0.15)';
         div.style.cursor = 'grab';
     }
 
-    // Заголовок
+    // ===== ЗАГОЛОВОК =====
     const header = document.createElement('div');
     header.className = 'widget-header';
     header.style.cssText = `
@@ -240,9 +260,10 @@ function createWidgetElement(widget) {
         margin-bottom: 8px;
         padding-bottom: 6px;
         border-bottom: 1px solid rgba(255,255,255,0.04);
+        flex-shrink: 0;
+        min-height: 24px;
     `;
 
-    // Название виджета
     const titleSpan = document.createElement('span');
     titleSpan.className = 'widget-title';
     titleSpan.style.cssText = 'font-size:13px; font-weight:500; opacity:0.6; display:flex; align-items:center; gap:6px;';
@@ -252,13 +273,12 @@ function createWidgetElement(widget) {
     `;
     header.appendChild(titleSpan);
 
-    // Действия (только в режиме редактирования)
+    // ===== ДЕЙСТВИЯ (только в режиме редактирования) =====
     if (gridState.isEditing) {
         const actions = document.createElement('div');
         actions.className = 'widget-actions';
-        actions.style.cssText = 'display:flex; gap:4px; opacity:0.6; transition:opacity 0.3s;';
+        actions.style.cssText = 'display:flex; gap:4px; opacity:0.6; transition:opacity 0.3s; flex-shrink:0;';
 
-        // Кнопка настроек модуля (⚙️)
         const settingsBtn = document.createElement('button');
         settingsBtn.className = 'widget-settings-btn';
         settingsBtn.innerHTML = '⚙️';
@@ -271,6 +291,7 @@ function createWidgetElement(widget) {
             cursor: pointer;
             font-size: 12px;
             transition: all 0.2s;
+            flex-shrink:0;
         `;
         settingsBtn.title = 'Настройки модуля';
         settingsBtn.onclick = function(e) {
@@ -279,7 +300,6 @@ function createWidgetElement(widget) {
         };
         actions.appendChild(settingsBtn);
 
-        // Кнопка удаления (×)
         const removeBtn = document.createElement('button');
         removeBtn.className = 'widget-remove';
         removeBtn.innerHTML = '×';
@@ -292,6 +312,7 @@ function createWidgetElement(widget) {
             cursor: pointer;
             font-size: 14px;
             transition: all 0.2s;
+            flex-shrink:0;
         `;
         removeBtn.title = 'Удалить виджет';
         removeBtn.onclick = function(e) {
@@ -305,19 +326,27 @@ function createWidgetElement(widget) {
 
     div.appendChild(header);
 
-    // Контент
+    // ===== КОНТЕНТ (обёртка для содержимого виджета) =====
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'widget-content-wrapper';
+    contentWrapper.style.cssText = 'flex:1; display:flex; flex-direction:column; min-height:0; position:relative;';
+
+    // Контент виджета
     const content = document.createElement('div');
     content.className = 'widget-content';
+    content.style.cssText = 'flex:1; display:flex; flex-direction:column; min-height:60px;';
     content.innerHTML = getWidgetContent(widget);
-    div.appendChild(content);
+    contentWrapper.appendChild(content);
 
-    // Настройки (скрыты по умолчанию)
+    // ===== НАСТРОЙКИ (ВНУТРИ contentWrapper, ПОСЛЕ КОНТЕНТА) =====
     const settingsDiv = document.createElement('div');
     settingsDiv.className = 'module-settings';
-    settingsDiv.style.cssText = 'display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);';
-    div.appendChild(settingsDiv);
+    settingsDiv.style.cssText = 'display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); flex-shrink:0;';
+    contentWrapper.appendChild(settingsDiv);
 
-    // Resize handle (только в режиме редактирования)
+    div.appendChild(contentWrapper);
+
+    // ===== RESIZE HANDLE =====
     if (gridState.isEditing) {
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'widget-resize-handle';
@@ -338,6 +367,7 @@ function createWidgetElement(widget) {
             background: rgba(255,255,255,0.08);
             border-radius: 4px;
             transition: all 0.2s;
+            z-index: 10;
         `;
         resizeHandle.addEventListener('mouseenter', function() {
             this.style.opacity = '0.8';

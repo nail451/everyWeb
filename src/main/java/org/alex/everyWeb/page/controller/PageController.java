@@ -52,13 +52,6 @@ public class PageController {
         model.addAttribute("page", page);
         model.addAttribute("pages", pageService.getAllPages());
 
-        // Передаем настройки ссылок
-        model.addAttribute("linkIconSize", page.getLinkIconSize() != null ? page.getLinkIconSize() : 28);
-        model.addAttribute("linkFontSize", page.getLinkFontSize() != null ? page.getLinkFontSize() : 12);
-        model.addAttribute("linkBgOpacity", page.getLinkBgOpacity() != null ? page.getLinkBgOpacity() : 15);
-        model.addAttribute("linkBgDarkness", page.getLinkBgDarkness() != null ? page.getLinkBgDarkness() : 0);
-        model.addAttribute("showAddLinkButton", page.getShowAddLinkButton() != null ? page.getShowAddLinkButton() : true);
-
         // Получаем раскладку страницы
         try {
             var layout = layoutService.getLayout(page.getId());

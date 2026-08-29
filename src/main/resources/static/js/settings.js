@@ -29,9 +29,6 @@ async function loadSettings() {
         settingsData = await response.json();
         renderSettings(settingsData);
 
-        // ===== ЗАГРУЖАЕМ НАСТРОЙКИ ССЫЛОК =====
-        await loadLinkSettings();
-
         // ===== ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ЧЕКБОКСА =====
         const checkbox = document.getElementById('showAddLinkButton');
         if (checkbox && linkSettings) {
@@ -59,79 +56,6 @@ function renderSettings(data) {
     }
 }
 
-// ============================================================
-// НАСТРОЙКИ ССЫЛОК
-// ============================================================
-
-async function loadLinkSettings() {
-    console.log('🟡 loadLinkSettings START');
-    try {
-        const response = await fetch(`/api/pages/${currentPageId}/links/settings`);
-        if (response.ok) {
-            const settings = await response.json();
-            console.log('🟡 Settings from server:', settings);
-
-            linkSettings = {
-                iconSize: settings.linkIconSize || settings.iconSize || 28,
-                fontSize: settings.linkFontSize || settings.fontSize || 12,
-                bgOpacity: settings.linkBgOpacity || settings.bgOpacity || 15,
-                bgDarkness: settings.linkBgDarkness || settings.bgDarkness || 0,
-                showAddLinkButton: settings.showAddLinkButton !== undefined ? settings.showAddLinkButton : true
-            };
-            console.log('🟡 linkSettings after load:', linkSettings);
-            console.log('🟡 showAddLinkButton:', linkSettings.showAddLinkButton);
-
-            // Устанавливаем значения ползунков
-            const iconSlider = document.getElementById('linkIconSize');
-            if (iconSlider) {
-                iconSlider.value = linkSettings.iconSize;
-            }
-
-            const fontSlider = document.getElementById('linkFontSize');
-            if (fontSlider) {
-                fontSlider.value = linkSettings.fontSize;
-            }
-
-            const opacitySlider = document.getElementById('linkBgOpacity');
-            if (opacitySlider) {
-                opacitySlider.value = linkSettings.bgOpacity;
-            }
-
-            const darknessSlider = document.getElementById('linkBgDarkness');
-            if (darknessSlider) {
-                darknessSlider.value = linkSettings.bgDarkness;
-            }
-
-            // ===== ОБНОВЛЯЕМ ЧЕКБОКС =====
-            const checkbox = document.getElementById('showAddLinkButton');
-            if (checkbox) {
-                checkbox.checked = linkSettings.showAddLinkButton;
-                console.log('🟡 Checkbox set to:', checkbox.checked);
-            }
-
-            // Обновляем отображение
-            updateLinkSettingsDisplay(linkSettings);
-
-            // Применяем стили
-            applyLinkStylesFromSettings(linkSettings);
-
-            // Пересоздаем иконки
-            if (typeof recreateLinkIcons === 'function') {
-                recreateLinkIcons(linkSettings);
-            }
-
-            // ===== ПЕРЕРИСОВЫВАЕМ ССЫЛКИ =====
-            if (typeof renderLinks === 'function') {
-                renderLinks();
-                console.log('🟡 renderLinks called from loadLinkSettings');
-            }
-        }
-    } catch (error) {
-        console.error('🔴 Error loading link settings:', error);
-    }
-    console.log('🟡 loadLinkSettings END');
-}
-
 function updateLinkSettingsDisplay(settings) {
     const iconSize = settings.iconSize || 28;
     const fontSize = settings.fontSize || 12;
@@ -154,104 +78,6 @@ function updateLinkSettingsDisplay(settings) {
         if (bgDarkness < -10) darknessText = 'Темнее';
         darknessSpan.textContent = darknessText + ' (' + bgDarkness + '%)';
     }
-}
-
-async function updateLinkSetting(key, value) {
-    try {
-        // Получаем текущие значения из ползунков
-        const iconSlider = document.getElementById('linkIconSize');
-        const fontSlider = document.getElementById('linkFontSize');
-        const opacitySlider = document.getElementById('linkBgOpacity');
-        const darknessSlider = document.getElementById('linkBgDarkness');
-
-        if (!iconSlider || !fontSlider || !opacitySlider || !darknessSlider) {
-            showToast('❌ Ошибка: не найдены элементы управления');
-            return;
-        }
-
-        const settings = {
-            iconSize: parseInt(iconSlider.value) || 28,
-            fontSize: parseInt(fontSlider.value) || 12,
-            bgOpacity: parseInt(opacitySlider.value) || 15,
-            bgDarkness: parseInt(darknessSlider.value) || 0
-        };
-
-        const response = await fetch(`/api/pages/${currentPageId}/links/settings`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settings)
-        });
-
-        if (response.ok) {
-            const savedSettings = await response.json();
-
-            // ===== ВАЖНО: Извлекаем правильные значения =====
-            const updatedSettings = {
-                iconSize: savedSettings.linkIconSize || settings.iconSize || 28,
-                fontSize: savedSettings.linkFontSize || settings.fontSize || 12,
-                bgOpacity: savedSettings.linkBgOpacity || settings.bgOpacity || 15,
-                bgDarkness: savedSettings.linkBgDarkness || settings.bgDarkness || 0
-            };
-
-            // Сохраняем в глобальную переменную
-            linkSettings = updatedSettings;
-
-            // Обновляем отображение в UI
-            updateLinkSettingsDisplay(updatedSettings);
-
-            // Применяем стили с обновленными настройками
-            applyLinkStylesFromSettings(updatedSettings);
-
-            // Пересоздаем иконки с обновленным размером
-            if (typeof recreateLinkIcons === 'function') {
-                recreateLinkIcons(updatedSettings);
-            }
-
-            showToast('✅ Настройки обновлены');
-        } else {
-            const error = await response.text();
-            showToast('❌ Ошибка сохранения: ' + error);
-        }
-    } catch (error) {
-        showToast('❌ Ошибка обновления настроек');
-    }
-}
-
-async function updateShowAddButton(checked) {
-    console.log('🟢 updateShowAddButton START, checked:', checked);
-    try {
-        const response = await fetch(`/api/pages/${currentPageId}/show-add-button`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ show: checked })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            console.log('🟢 Server response:', data);
-
-            // Обновляем linkSettings
-            if (linkSettings) {
-                linkSettings.showAddLinkButton = checked;
-                console.log('🟢 linkSettings.showAddLinkButton =', linkSettings.showAddLinkButton);
-            }
-
-            // Перерисовываем ссылки
-            if (typeof renderLinks === 'function') {
-                renderLinks();
-                console.log('🟢 renderLinks called');
-            }
-
-            showToast(checked ? '✅ Кнопка добавления включена' : '✅ Кнопка добавления выключена');
-        } else {
-            console.error('🟡 Server error:', await response.text());
-            showToast('❌ Ошибка обновления настройки');
-        }
-    } catch (error) {
-        console.error('🔴 Error updating show add button:', error);
-        showToast('❌ Ошибка обновления настройки');
-    }
-    console.log('🟢 updateShowAddButton END');
 }
 
 // ============================================================

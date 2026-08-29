@@ -1,65 +1,193 @@
 /**
- * MODULES.JS - Управление модулями (общая логика)
+ * MODULES.JS - Общая логика для всех модулей
+ * Версия: 2.0 - LINK логика вынесена в links.js
  */
 
-window.openEditLinkModalFromWidget = openEditLinkModalFromWidget;
+let widgetSettingsCache = {};
 
-function initModules() {
-    console.log('Modules initialized');
-    // Модули теперь рендерятся через grid.js
+// ===== РЕНДЕРИНГ ОБЩИХ НАСТРОЕК ВИДЖЕТА =====
+function renderWidgetSettings(moduleId, hideBackground) {
+    return `
+        <div class="widget-settings-section" style="
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        ">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <span style="font-size:12px; font-weight:600; opacity:0.6; color:rgba(255,255,255,0.6); letter-spacing:0.5px; text-transform:uppercase;">
+                    📐 Настройки виджета
+                </span>
+                <span style="font-size:10px; opacity:0.3; color:rgba(255,255,255,0.3);">общие</span>
+            </div>
+            
+            <!-- Скрыть фон виджета -->
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" class="widget-setting-checkbox" 
+                       data-module="${moduleId}" data-setting="hideBackground"
+                       ${hideBackground ? 'checked' : ''}
+                       style="accent-color:#4CAF50; width:18px; height:18px; cursor:pointer;">
+                <label style="font-size:12px; opacity:0.7; color:rgba(255,255,255,0.7); cursor:pointer;">
+                    Скрыть фон виджета
+                </label>
+            </div>
+            <div style="font-size:10px; opacity:0.3; color:rgba(255,255,255,0.3); margin-top:4px; padding-left:28px;">
+                Оставляет только содержимое, убирает фон и заголовок
+            </div>
+        </div>
+    `;
 }
 
-// ===== ДОБАВЛЕНИЕ МОДУЛЯ =====
-async function addModule() {
-    // Используем диалог добавления виджета из grid.js
-    if (typeof addWidgetDialog === 'function') {
-        addWidgetDialog();
-    } else {
-        showToast('❌ Система виджетов не загружена');
+// ===== ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ ОБЩИХ НАСТРОЕК =====
+function initWidgetSettingsEvents(moduleId, settingsContainer) {
+    const checkboxes = settingsContainer.querySelectorAll('.widget-setting-checkbox');
+    checkboxes.forEach(checkbox => {
+        const newCheckbox = checkbox.cloneNode(true);
+        checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+
+        newCheckbox.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+        });
+
+        newCheckbox.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const moduleIdFromCheckbox = this.dataset.module;
+            const setting = this.dataset.setting;
+            const value = this.checked;
+
+            // Сохраняем общую настройку
+            saveWidgetSetting(moduleIdFromCheckbox, setting, value);
+
+            // Применяем к виджету
+            applyWidgetSetting(moduleIdFromCheckbox, setting, value);
+        });
+    });
+}
+
+// ===== СОХРАНЕНИЕ ОБЩЕЙ НАСТРОЙКИ =====
+async function saveWidgetSetting(moduleId, setting, value) {
+    console.log('Saving widget setting:', moduleId, setting, value);
+
+    try {
+        const updateParams = {};
+        updateParams[setting] = value;
+
+        const response = await fetch(`/api/modules/${moduleId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'updateSettings',
+                params: updateParams
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.content && data.content.linkData) {
+                // Обновляем кэш
+                if (!widgetSettingsCache[moduleId]) {
+                    widgetSettingsCache[moduleId] = {};
+                }
+                widgetSettingsCache[moduleId][setting] = value;
+            }
+            console.log('✅ Widget setting saved:', setting, value);
+            return true;
+        } else {
+            console.error('❌ Failed to save widget setting:', await response.text());
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error saving widget setting:', error);
+        return false;
     }
 }
 
-// ===== УДАЛЕНИЕ МОДУЛЯ =====
-function deleteModule(moduleId) {
-    if (typeof removeWidget === 'function') {
-        removeWidget(moduleId);
-    } else {
-        showToast('❌ Система виджетов не загружена');
-    }
-}
-
-// ===== ПЕРЕКЛЮЧЕНИЕ НАСТРОЕК МОДУЛЯ =====
-function toggleModuleSettings(moduleId) {
-    console.log('toggleModuleSettings called for:', moduleId);
+// ===== ПРИМЕНЕНИЕ ОБЩЕЙ НАСТРОЙКИ =====
+function applyWidgetSetting(moduleId, setting, value) {
+    console.log('Applying widget setting:', moduleId, setting, value);
 
     const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-    if (!widget) {
-        console.error('Widget not found:', moduleId);
-        showToast('❌ Виджет не найден');
-        return;
-    }
+    if (!widget) return;
 
-    // Проверяем, что мы в режиме редактирования
-    if (!gridState || !gridState.isEditing) {
-        showToast('✏️ Включите режим редактирования для доступа к настройкам');
-        return;
+    // Обновляем кэш
+    if (!widgetSettingsCache[moduleId]) {
+        widgetSettingsCache[moduleId] = {};
     }
+    widgetSettingsCache[moduleId][setting] = value;
 
-    const settingsDiv = widget.querySelector('.module-settings');
-    if (!settingsDiv) {
-        console.error('Settings div not found for widget:', moduleId);
-        showToast('❌ Настройки не найдены');
-        return;
+    // Применяем настройку к виджету
+    if (setting === 'hideBackground') {
+        applyHideBackground(widget, value);
     }
+}
 
-    if (settingsDiv.style.display === 'none' || settingsDiv.style.display === '') {
-        settingsDiv.style.display = 'block';
-        console.log('Loading settings for module:', moduleId);
-        loadModuleSettings(widget);
+// ===== ПРИМЕНЕНИЕ СКРЫТИЯ ФОНА =====
+function applyHideBackground(widget, hide) {
+    if (!widget) return;
+
+    const moduleId = widget.dataset.widgetId;
+
+    if (hide) {
+        widget.style.background = 'transparent';
+        widget.style.backdropFilter = 'none';
+        widget.style.border = 'none';
+        widget.style.boxShadow = 'none';
+        widget.style.padding = '4px';
+        widget.style.backgroundColor = 'transparent';
+        widget.style.overflow = 'visible';
+
+        const header = widget.querySelector('.widget-header');
+        if (header) {
+            const titleSpan = header.querySelector('.widget-title');
+            if (titleSpan) {
+                titleSpan.style.display = 'none';
+            }
+            const actions = header.querySelector('.widget-actions');
+            if (actions) {
+                actions.style.display = 'flex';
+                actions.style.marginLeft = 'auto';
+                actions.style.flexShrink = '0';
+            }
+            header.style.borderBottom = 'none';
+            header.style.marginBottom = '0';
+            header.style.paddingBottom = '0';
+            header.style.minHeight = '28px';
+            header.style.justifyContent = 'flex-end';
+        }
     } else {
-        settingsDiv.style.display = 'none';
-        console.log('Settings closed for module:', moduleId);
+        widget.style.background = '';
+        widget.style.backdropFilter = '';
+        widget.style.border = '';
+        widget.style.boxShadow = '';
+        widget.style.padding = '';
+        widget.style.backgroundColor = '';
+        widget.style.overflow = 'visible';
+
+        const header = widget.querySelector('.widget-header');
+        if (header) {
+            const titleSpan = header.querySelector('.widget-title');
+            if (titleSpan) {
+                titleSpan.style.display = '';
+            }
+            const actions = header.querySelector('.widget-actions');
+            if (actions) {
+                actions.style.display = '';
+                actions.style.marginLeft = '';
+                actions.style.flexShrink = '';
+            }
+            header.style.borderBottom = '';
+            header.style.marginBottom = '';
+            header.style.paddingBottom = '';
+            header.style.minHeight = '';
+            header.style.justifyContent = '';
+        }
     }
+}
+
+
+
+// ===== ИНИЦИАЛИЗАЦИЯ =====
+function initModules() {
+    console.log('Modules initialized');
 }
 
 // ===== ЗАГРУЗКА НАСТРОЕК МОДУЛЯ =====
@@ -81,40 +209,69 @@ async function loadModuleSettings(moduleElement) {
             return;
         }
 
-        // Для LINK модуля - показываем настройки ссылок
-        if (moduleType === 'LINK') {
-            settingsDiv.innerHTML = renderLinkWidgetSettings(numericId);
-            initLinkWidgetSettingsEvents(numericId, settingsDiv);
-            return;
-        }
-
+        // Загружаем настройки модуля (содержат и общие настройки тоже)
         const response = await fetch(`/api/modules/${numericId}/settings`);
+
         if (response.ok) {
             const data = await response.json();
-            console.log('Settings data loaded:', data);
+            console.log('Settings data loaded for module', moduleType, ':', data);
 
-            if (moduleType === 'CLOCK' && typeof renderClockSettings === 'function') {
-                settingsDiv.innerHTML = renderClockSettings(data);
-                if (typeof initClockSettingsEvents === 'function') {
-                    initClockSettingsEvents(numericId, settingsDiv);
+            const content = data.content || {};
+            const moduleSettings = content.linkData || content.settings || {};
+
+            // Получаем общие настройки
+            const hideBackground = moduleSettings.hideBackground || false;
+
+            // Сохраняем в кэш общих настроек
+            if (!widgetSettingsCache[numericId]) {
+                widgetSettingsCache[numericId] = {};
+            }
+            widgetSettingsCache[numericId].hideBackground = hideBackground;
+
+            // Применяем общие настройки к виджету
+            applyHideBackground(moduleElement, hideBackground);
+
+            // === СТРОИМ ПАНЕЛЬ НАСТРОЕК ===
+            let html = '';
+
+            // 1. ОБЩИЕ НАСТРОЙКИ ВИДЖЕТА
+            html += renderWidgetSettings(numericId, hideBackground);
+
+            // 2. СПЕЦИФИЧНЫЕ НАСТРОЙКИ МОДУЛЯ
+            if (moduleType === 'LINK') {
+                if (typeof renderLinkSettings === 'function') {
+                    html += renderLinkSettings(data, numericId);
                 }
+            } else if (moduleType === 'CLOCK' && typeof renderClockSettings === 'function') {
+                html += renderClockSettings(data);
             } else if (moduleType === 'WEATHER' && typeof renderWeatherSettings === 'function') {
-                settingsDiv.innerHTML = renderWeatherSettings(data);
-                if (typeof initWeatherSettingsEvents === 'function') {
-                    initWeatherSettingsEvents(numericId, settingsDiv);
-                }
+                html += renderWeatherSettings(data);
             } else if (moduleType === 'NEXTCLOUD' && typeof renderNextcloudSettings === 'function') {
-                settingsDiv.innerHTML = renderNextcloudSettings(data);
-                if (typeof initNextcloudSettingsEvents === 'function') {
-                    initNextcloudSettingsEvents(numericId, settingsDiv);
-                }
+                html += renderNextcloudSettings(data);
             } else {
-                settingsDiv.innerHTML = `
+                html += `
                     <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
                         Настройки для модуля "${moduleType}" не найдены
                     </div>
                 `;
             }
+
+            settingsDiv.innerHTML = html;
+
+            // Инициализируем события для общих настроек
+            initWidgetSettingsEvents(numericId, settingsDiv);
+
+            // Инициализируем события для специфичных настроек
+            if (moduleType === 'LINK' && typeof initLinkSettingsEvents === 'function') {
+                initLinkSettingsEvents(numericId, settingsDiv);
+            } else if (moduleType === 'CLOCK' && typeof initClockSettingsEvents === 'function') {
+                initClockSettingsEvents(numericId, settingsDiv);
+            } else if (moduleType === 'WEATHER' && typeof initWeatherSettingsEvents === 'function') {
+                initWeatherSettingsEvents(numericId, settingsDiv);
+            } else if (moduleType === 'NEXTCLOUD' && typeof initNextcloudSettingsEvents === 'function') {
+                initNextcloudSettingsEvents(numericId, settingsDiv);
+            }
+
         } else if (response.status === 404) {
             settingsDiv.innerHTML = `
                 <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
@@ -138,6 +295,57 @@ async function loadModuleSettings(moduleElement) {
     }
 }
 
+// ===== ПЕРЕКЛЮЧЕНИЕ НАСТРОЕК МОДУЛЯ =====
+function toggleModuleSettings(moduleId) {
+    console.log('toggleModuleSettings called for:', moduleId);
+
+    const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
+    if (!widget) {
+        showToast('❌ Виджет не найден');
+        return;
+    }
+
+    if (!window.gridState || !window.gridState.isEditing) {
+        showToast('✏️ Включите режим редактирования для доступа к настройкам');
+        return;
+    }
+
+    const wrapper = widget.querySelector('.widget-content-wrapper');
+    if (!wrapper) {
+        showToast('❌ Ошибка: обёртка контента не найдена');
+        return;
+    }
+
+    let settingsDiv = wrapper.querySelector('.module-settings');
+
+    if (!settingsDiv) {
+        console.log('Creating module-settings div for widget:', moduleId);
+        settingsDiv = document.createElement('div');
+        settingsDiv.className = 'module-settings';
+        settingsDiv.style.cssText = 'display:none; margin-top:10px; flex-shrink:0;';
+        wrapper.appendChild(settingsDiv);
+    }
+
+    const isOpen = settingsDiv.style.display !== 'none' && settingsDiv.style.display !== '';
+
+    if (isOpen) {
+        settingsDiv.style.display = 'none';
+        if (window.gridState && window.gridState.isEditing) {
+            widget.draggable = true;
+            widget.style.cursor = 'grab';
+        }
+        console.log('Settings closed for module:', moduleId);
+    } else {
+        settingsDiv.style.display = 'block';
+        widget.draggable = false;
+        widget.style.cursor = 'default';
+        loadModuleSettings(widget);
+        console.log('Settings opened for module:', moduleId);
+    }
+}
+
+
+
 // ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
 function initializeModules() {
     console.log('Initializing modules...');
@@ -159,14 +367,9 @@ function initializeModules() {
         }
 
         if (moduleType === 'LINK') {
-            loadLinkWidgetData(widgetElement);
-        }
-    });
-
-    // Общие инициализации
-    document.querySelectorAll('.clock-display').forEach(clock => {
-        if (typeof updateClockDisplay !== 'function') {
-            updateClock(clock);
+            if (typeof loadLinkWidgetData === 'function') {
+                loadLinkWidgetData(widgetElement);
+            }
         }
     });
 
@@ -191,23 +394,6 @@ function initializeModules() {
 }
 
 // ===== ОБЩИЕ ФУНКЦИИ ДЛЯ МОДУЛЕЙ =====
-
-// ЧАСЫ (базовая реализация)
-function updateClock(element) {
-    const now = new Date();
-    const time = now.toLocaleTimeString('ru-RU', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-    element.textContent = time;
-}
-
-// ЗАМЕТКИ
-function saveNotes(textarea) {
-    const moduleId = textarea.dataset.widgetId || textarea.dataset.moduleId;
-    localStorage.setItem('notes_' + moduleId, textarea.value);
-}
 
 // TO-DO
 function addTodo(input, moduleId) {
@@ -268,320 +454,13 @@ function deleteTodo(moduleId, todoId) {
     loadTodos(moduleId);
 }
 
-// ===== ЗАГРУЗКА ССЫЛОК В ВИДЖЕТ =====
-async function loadLinkWidgetData(widgetElement) {
-    const linkGrid = widgetElement.querySelector('.link-grid');
-    if (!linkGrid) return;
-
-    let pageId = linkGrid.dataset.pageId;
-    if (!pageId || pageId === 'undefined') {
-        pageId = currentPageId;
-    }
-
-    if (!pageId) {
-        linkGrid.innerHTML = `
-            <div style="text-align:center; opacity:0.3; padding:10px; grid-column:1/-1;">
-                ⚠️ Ошибка: ID страницы не найден
-            </div>
-        `;
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/pages/${pageId}/links`);
-        if (response.ok) {
-            const links = await response.json();
-            if (links && links.length > 0) {
-                let html = '';
-                links.forEach(link => {
-                    const title = link.title || 'Ссылка';
-                    const url = link.url || '#';
-
-                    // ===== ОПРЕДЕЛЯЕМ ИКОНКУ =====
-                    let iconHtml = '';
-                    const iconType = link.iconType || 'emoji';
-                    const icon = link.icon || '🔗';
-                    const customImage = link.customImage || null;
-
-                    if (iconType === 'custom' && customImage) {
-                        iconHtml = `<img src="${customImage}" alt="${title}" style="width:24px; height:24px; border-radius:4px; object-fit:cover;">`;
-                    } else if (iconType === 'favicon' && icon && icon.startsWith('http')) {
-                        iconHtml = `<img src="${icon}" alt="${title}" style="width:24px; height:24px; border-radius:4px; object-fit:contain; background:rgba(255,255,255,0.05); padding:2px;"
-                                        onerror="this.style.display='none'; this.parentElement.querySelector('.link-icon-fallback').style.display='block'">
-                                    <span class="link-icon-fallback" style="display:none; font-size:20px;">🔗</span>`;
-                    } else {
-                        iconHtml = `<span style="font-size:20px;">${icon}</span>`;
-                    }
-
-                    // ===== ВАЖНО: Добавляем обработчик для редактирования =====
-                    const isEditing = gridState && gridState.isEditing;
-
-                    html += `
-                        <a href="${url}" target="_blank" rel="noopener noreferrer" 
-                           class="link-item-link"
-                           data-link-id="${link.id}"
-                           data-link-title="${escapeHtml(title)}"
-                           data-link-url="${url}"
-                           data-link-icon="${icon}"
-                           data-link-icon-type="${iconType}"
-                           data-link-custom-image="${customImage || ''}"
-                           style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; 
-                                  padding:8px 12px; background:rgba(255,255,255,0.06); border-radius:8px; 
-                                  text-decoration:none; color:rgba(255,255,255,0.85); min-width:60px; max-width:100px;
-                                  min-height:70px; transition:all 0.2s; text-align:center;
-                                  ${isEditing ? 'cursor:pointer; border:2px solid transparent;' : ''}
-                                  ${isEditing ? 'border-color: rgba(33,150,243,0.2);' : ''}"
-                           onmouseover="this.style.background='rgba(255,255,255,0.12)'"
-                           onmouseout="this.style.background='rgba(255,255,255,0.06)'"
-                           ${isEditing ? `onclick="event.preventDefault(); openEditLinkModalFromWidget(${link.id});"` : ''}>
-                            <div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px;">
-                                ${iconHtml}
-                            </div>
-                            <span style="font-size:10px; text-align:center; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:0.7;">${escapeHtml(title)}</span>
-                            ${isEditing ? '' : ''}
-                        </a>
-                    `;
-                });
-                linkGrid.innerHTML = html;
-            } else {
-                linkGrid.innerHTML = `
-                    <div style="text-align:center; opacity:0.3; padding:10px; grid-column:1/-1;">
-                        📭 Нет ссылок
-                    </div>
-                `;
-            }
-        } else if (response.status === 404) {
-            linkGrid.innerHTML = `
-                <div style="text-align:center; opacity:0.3; padding:10px; grid-column:1/-1;">
-                    📭 Нет ссылок
-                </div>
-            `;
-        } else {
-            linkGrid.innerHTML = `
-                <div style="text-align:center; color:#ff6b6b; padding:10px; grid-column:1/-1;">
-                    ❌ Ошибка загрузки ссылок (${response.status})
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error loading link widget data:', error);
-        linkGrid.innerHTML = `
-            <div style="text-align:center; color:#ff6b6b; padding:10px; grid-column:1/-1;">
-                ❌ Ошибка загрузки ссылок
-            </div>
-        `;
-    }
-}
-
-// ===== ОТКРЫТИЕ РЕДАКТИРОВАНИЯ ИЗ ВИДЖЕТА =====
-function openEditLinkModalFromWidget(linkId) {
-    console.log('openEditLinkModalFromWidget called for link:', linkId);
-
-    // Находим ссылку в виджете
-    const linkElement = document.querySelector(`.link-item-link[data-link-id="${linkId}"]`);
-    if (!linkElement) {
-        showToast('❌ Ссылка не найдена');
-        return;
-    }
-
-    // Собираем данные из data-атрибутов
-    const linkData = {
-        id: linkId,
-        title: linkElement.dataset.linkTitle || '',
-        url: linkElement.dataset.linkUrl || '',
-        icon: linkElement.dataset.linkIcon || '🔗',
-        iconType: linkElement.dataset.linkIconType || 'emoji',
-        customImage: linkElement.dataset.linkCustomImage || null
-    };
-
-    console.log('Link data for edit:', linkData);
-
-    if (typeof LinksModal !== 'undefined') {
-        LinksModal.openEditWithData(linkData);
-    } else {
-        showToast('❌ Система ссылок не загружена');
-    }
-}
-
-// ===== НАСТРОЙКИ LINK ВИДЖЕТА =====
-function renderLinkWidgetSettings(moduleId) {
-    // Получаем текущие ссылки из виджета
-    const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-    const linkGrid = widget ? widget.querySelector('.link-grid') : null;
-    const pageId = linkGrid ? linkGrid.dataset.pageId : currentPageId;
-
-    let html = `
-        <div style="display:flex; flex-direction:column; gap:12px; padding:4px 0;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:13px; opacity:0.7;">🔗 Управление ссылками</span>
-                <button class="link-add-btn" onclick="openLinkWidgetAddModal(${moduleId})" 
-                        style="padding:4px 12px; border-radius:4px; background:rgba(76,175,80,0.2); 
-                               border:1px solid rgba(76,175,80,0.3); color:white; cursor:pointer; font-size:12px;">
-                    + Добавить
-                </button>
-            </div>
-            <div class="link-widget-list" style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;">
-                <div style="text-align:center; opacity:0.3; padding:10px; font-size:13px;">
-                    ⏳ Загрузка ссылок...
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Загружаем ссылки асинхронно
-    setTimeout(() => {
-        loadLinkWidgetSettingsData(moduleId);
-    }, 100);
-
-    return html;
-}
-
-async function loadLinkWidgetSettingsData(moduleId) {
-    const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-    if (!widget) return;
-
-    const linkGrid = widget.querySelector('.link-grid');
-    const pageId = linkGrid ? linkGrid.dataset.pageId : currentPageId;
-    const listContainer = widget.querySelector('.link-widget-list');
-    if (!listContainer) return;
-
-    try {
-        const response = await fetch(`/api/pages/${pageId}/links`);
-        if (response.ok) {
-            const links = await response.json();
-            if (links && links.length > 0) {
-                let html = '';
-                links.forEach(link => {
-                    // ===== ОПРЕДЕЛЯЕМ ИКОНКУ =====
-                    let iconDisplay = '';
-                    const iconType = link.iconType || 'emoji';
-                    const icon = link.icon || '🔗';
-                    const customImage = link.customImage || null;
-
-                    if (iconType === 'custom' && customImage) {
-                        iconDisplay = `<img src="${customImage}" style="width:18px; height:18px; border-radius:4px; object-fit:cover;">`;
-                    } else if (iconType === 'favicon' && icon && icon.startsWith('http')) {
-                        iconDisplay = `<img src="${icon}" style="width:18px; height:18px; border-radius:4px; object-fit:contain; background:rgba(255,255,255,0.05); padding:2px;"
-                                            onerror="this.style.display='none'; this.parentElement.textContent='🔗'">`;
-                    } else {
-                        iconDisplay = icon;
-                    }
-
-                    html += `
-                        <div style="display:flex; align-items:center; gap:8px; padding:4px 8px; 
-                                    background:rgba(255,255,255,0.03); border-radius:6px; font-size:13px;">
-                            <span style="font-size:18px; width:24px; text-align:center;">${iconDisplay}</span>
-                            <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${link.title || 'Ссылка'}</span>
-                            <span style="font-size:11px; opacity:0.4; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${link.url || ''}</span>
-                            <button onclick="deleteLinkFromWidget(${moduleId}, ${link.id})" 
-                                    style="background:rgba(244,67,54,0.2); border:none; color:rgba(255,255,255,0.5); 
-                                           border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:14px;">
-                                ×
-                            </button>
-                        </div>
-                    `;
-                });
-                listContainer.innerHTML = html;
-            } else {
-                listContainer.innerHTML = `
-                    <div style="text-align:center; opacity:0.3; padding:10px; font-size:13px;">
-                        📭 Нет ссылок
-                    </div>
-                `;
-            }
-        }
-    } catch (error) {
-        console.error('Error loading link settings data:', error);
-        listContainer.innerHTML = `
-            <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
-                ❌ Ошибка загрузки ссылок
-            </div>
-        `;
-    }
-}
-
-function initLinkWidgetSettingsEvents(moduleId, settingsContainer) {
-    // События уже привязаны через onclick
-}
-
-// ===== ДОБАВЛЕНИЕ ССЫЛКИ ИЗ ВИДЖЕТА =====
-function openLinkWidgetAddModal(moduleId) {
-    console.log('openLinkWidgetAddModal called for module:', moduleId);
-    console.log('LinksModal available?', typeof LinksModal !== 'undefined');
-
-    if (typeof LinksModal === 'undefined') {
-        console.error('LinksModal not loaded!');
-        showToast('❌ Система ссылок не загружена. Обновите страницу.');
-        return;
-    }
-
-    // Проверяем, что LinksModal инициализирован
-    if (!LinksModal.pageId) {
-        console.log('LinksModal not initialized, initializing now...');
-        if (typeof currentPageId !== 'undefined' && currentPageId) {
-            LinksModal.init(currentPageId);
-        } else {
-            showToast('❌ Ошибка: ID страницы не найден');
-            return;
-        }
-    }
-
-    // Устанавливаем колбэк после добавления
-    LinksModal.afterSubmit(function(data) {
-        console.log('Link added, refreshing widget:', moduleId);
-        setTimeout(() => {
-            const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-            if (widget) {
-                loadLinkWidgetData(widget);
-                loadLinkWidgetSettingsData(parseInt(moduleId));
-            }
-            // Обновляем все LINK виджеты
-            document.querySelectorAll('.widget.link-widget').forEach(w => {
-                const wid = w.dataset.widgetId;
-                if (wid !== String(moduleId)) {
-                    loadLinkWidgetData(w);
-                }
-            });
-        }, 300);
-    });
-
-    // Открываем модальное окно
-    LinksModal.open();
-}
-
-// ===== УДАЛЕНИЕ ССЫЛКИ ИЗ ВИДЖЕТА =====
-async function deleteLinkFromWidget(moduleId, linkId) {
-    if (!confirm('Удалить ссылку?')) return;
-
-    try {
-        const response = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
-        if (response.ok) {
-            showToast('✅ Ссылка удалена');
-            // Обновляем список в настройках виджета
-            loadLinkWidgetSettingsData(moduleId);
-            // Обновляем отображение в виджете
-            const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-            if (widget) {
-                loadLinkWidgetData(widget);
-            }
-        } else {
-            showToast('❌ Ошибка удаления ссылки');
-        }
-    } catch (error) {
-        console.error('Error deleting link:', error);
-        showToast('❌ Ошибка удаления ссылки');
-    }
-}
-
-// ===== ГЛОБАЛЬНЫЕ ПРИВЯЗКИ ДЛЯ HTML =====
+// ===== ГЛОБАЛЬНЫЕ ПРИВЯЗКИ =====
 window.toggleModuleSettings = toggleModuleSettings;
 window.loadModuleSettings = loadModuleSettings;
-window.addModule = addModule;
-window.deleteModule = deleteModule;
+window.initializeModules = initializeModules;
+window.addTodo = addTodo;
+window.loadTodos = loadTodos;
+window.toggleTodo = toggleTodo;
+window.deleteTodo = deleteTodo;
 
-console.log('✅ Modules.js loaded. Functions available:', {
-    toggleModuleSettings: typeof window.toggleModuleSettings,
-    loadModuleSettings: typeof window.loadModuleSettings,
-    addModule: typeof window.addModule,
-    deleteModule: typeof window.deleteModule
-});
+console.log('✅ modules.js 2.0 loaded');

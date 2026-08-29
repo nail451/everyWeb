@@ -1,5 +1,6 @@
 /**
  * LINKS-MODAL.JS - Модальное окно для добавления/редактирования ссылок
+ * Версия: 2.3 - исправлена проблема с повторным открытием
  */
 
 const LinksModal = {
@@ -151,9 +152,7 @@ const LinksModal = {
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-        // После создания модального окна, устанавливаем правильное состояние
         setTimeout(() => {
-            // По умолчанию показываем только эмодзи
             const emojiPicker = document.getElementById('emojiPicker');
             const faviconPicker = document.getElementById('faviconPicker');
             const customImagePicker = document.getElementById('customImagePicker');
@@ -162,7 +161,6 @@ const LinksModal = {
             if (faviconPicker) faviconPicker.style.display = 'none';
             if (customImagePicker) customImagePicker.style.display = 'none';
 
-            // Убеждаемся, что радио кнопка эмодзи выбрана
             const emojiRadio = document.querySelector('input[name="iconType"][value="emoji"]');
             if (emojiRadio) emojiRadio.checked = true;
 
@@ -171,25 +169,27 @@ const LinksModal = {
         }, 50);
     },
 
-    // ===== ОТКРЫТИЕ ДЛЯ ДОБАВЛЕНИЯ =====
     open() {
         console.log('LinksModal.open() called');
 
-        // Проверяем инициализацию
         if (!this.ensureInitialized()) {
             showToast('❌ Ошибка: система ссылок не инициализирована');
             return;
         }
 
+        // === ВАЖНО: Полный сброс состояния перед открытием ===
         this.isEdit = false;
         this.editId = null;
+        this.selectedIcon = '🔗';
+        this.selectedIconType = 'emoji';
+        this.customImageData = null;
+
         this.setModalTitle('➕ Добавить ссылку');
         this.setSubmitButtonText('➕ Добавить');
         this.resetForm();
         this.showModal();
     },
 
-    // ===== ОТКРЫТИЕ ДЛЯ РЕДАКТИРОВАНИЯ С ДАННЫМИ =====
     openEditWithData(link) {
         if (!link) {
             showToast('❌ Ошибка: данные ссылки не найдены');
@@ -197,30 +197,30 @@ const LinksModal = {
         }
 
         console.log('LinksModal.openEditWithData() called for link:', link.id);
+
+        // === ВАЖНО: Сброс перед редактированием ===
         this.isEdit = true;
         this.editId = link.id;
+        this.selectedIcon = '🔗';
+        this.selectedIconType = 'emoji';
+        this.customImageData = null;
+
+        this.setModalTitle('✏️ Редактировать ссылку');
+        this.setSubmitButtonText('💾 Сохранить');
 
         this.fillForm(link);
         this.showModal();
     },
 
     showModal() {
-        console.log('LinksModal.showModal() called');
-
-        // Сначала создаем оверлей если его нет
         let overlay = document.getElementById('linksModalOverlay');
         if (!overlay) {
-            console.log('Creating modal overlay');
             this.createModal();
             overlay = document.getElementById('linksModalOverlay');
         }
 
-        if (!overlay) {
-            console.error('Failed to create modal overlay');
-            return;
-        }
+        if (!overlay) return;
 
-        // Показываем оверлей
         overlay.classList.add('active');
         overlay.style.display = 'flex';
 
@@ -243,7 +243,6 @@ const LinksModal = {
         if (el) el.textContent = text;
     },
 
-    // ===== ЗАПОЛНЕНИЕ ФОРМЫ =====
     fillForm(link) {
         console.log('Filling form with link data:', link);
 
@@ -254,9 +253,7 @@ const LinksModal = {
         let icon = link.icon || '🔗';
         let customImage = link.customImage || null;
 
-        console.log('Form data:', { iconType, icon, customImage: customImage ? 'present' : 'null' });
-
-        // Если иконка - это URL (favicon) и тип не указан
+        // Определяем тип иконки
         if (icon && (icon.startsWith('http://') || icon.startsWith('https://'))) {
             const ext = icon.split('.').pop().toLowerCase();
             if (['ico', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp'].includes(ext)) {
@@ -268,12 +265,10 @@ const LinksModal = {
         this.selectedIcon = icon;
         this.customImageData = customImage;
 
-        // Устанавливаем радио кнопку
         document.querySelectorAll('input[name="iconType"]').forEach(el => {
             el.checked = (el.value === iconType);
         });
 
-        // Переключаем видимость
         this.switchIconType(iconType);
 
         if (iconType === 'custom' && customImage) {
@@ -293,17 +288,14 @@ const LinksModal = {
                 document.getElementById('faviconStatus').textContent = '✅ Favicon загружен';
             }
         } else {
-            // Эмодзи
             this.selectedIcon = icon;
             this.updateIconSelection();
             document.getElementById('customIcon').value = '';
-            // Скрываем превью
             document.getElementById('customImagePreview').style.display = 'none';
             document.getElementById('faviconPreview').style.display = 'none';
         }
     },
 
-    // ===== СБРОС ФОРМЫ =====
     resetForm() {
         document.getElementById('linkTitle').value = '';
         document.getElementById('linkUrl').value = '';
@@ -321,17 +313,14 @@ const LinksModal = {
 
         this.updateIconSelection();
 
-        // Переключаем на эмодзи
         const emojiRadio = document.querySelector('input[name="iconType"][value="emoji"]');
         if (emojiRadio) emojiRadio.checked = true;
 
-        // Показываем только эмодзи
         document.getElementById('emojiPicker').style.display = 'block';
         document.getElementById('faviconPicker').style.display = 'none';
         document.getElementById('customImagePicker').style.display = 'none';
     },
 
-    // ===== ОСТАЛЬНЫЕ МЕТОДЫ =====
     bindEvents() {
         const overlay = document.getElementById('linksModalOverlay');
         if (overlay) {
@@ -349,7 +338,6 @@ const LinksModal = {
         });
     },
 
-    // ===== ПЕРЕКЛЮЧЕНИЕ ТИПА ИКОНКИ =====
     switchIconType(type) {
         console.log('Switching icon type to:', type);
         this.selectedIconType = type;
@@ -358,12 +346,10 @@ const LinksModal = {
         const faviconPicker = document.getElementById('faviconPicker');
         const customImagePicker = document.getElementById('customImagePicker');
 
-        // Скрываем все
         if (emojiPicker) emojiPicker.style.display = 'none';
         if (faviconPicker) faviconPicker.style.display = 'none';
         if (customImagePicker) customImagePicker.style.display = 'none';
 
-        // Показываем только выбранный
         if (type === 'emoji' && emojiPicker) {
             emojiPicker.style.display = 'block';
         } else if (type === 'favicon' && faviconPicker) {
@@ -433,9 +419,14 @@ const LinksModal = {
 
             const preview = document.getElementById('customImagePreview');
             const img = document.getElementById('customImagePreviewImg');
-            img.src = dataUrl;
-            preview.style.display = 'block';
+            if (preview && img) {
+                img.src = dataUrl;
+                preview.style.display = 'block';
+            }
             showToast('✅ Изображение загружено');
+        };
+        reader.onerror = function() {
+            showToast('❌ Ошибка загрузки изображения');
         };
         reader.readAsDataURL(file);
     },
@@ -444,7 +435,8 @@ const LinksModal = {
         this.customImageData = null;
         this.selectedIcon = '🔗';
         this.selectedIconType = 'emoji';
-        document.getElementById('customImagePreview').style.display = 'none';
+        const preview = document.getElementById('customImagePreview');
+        if (preview) preview.style.display = 'none';
         document.getElementById('customImageInput').value = '';
         document.querySelector('input[name="iconType"][value="emoji"]').checked = true;
         this.switchIconType('emoji');
@@ -481,10 +473,20 @@ const LinksModal = {
             overlay.classList.remove('active');
             overlay.style.display = 'none';
         }
+
+        // === ВАЖНО: Полный сброс состояния при закрытии ===
         this.isOpen = false;
         this.isEdit = false;
         this.editId = null;
+        this.customImageData = null;
+        // НЕ сбрасываем _afterSubmitCallback здесь, чтобы он мог выполниться
+
         document.body.style.overflow = '';
+
+        // Сбрасываем форму для следующего открытия
+        setTimeout(() => {
+            this.resetForm();
+        }, 100);
     },
 
     // ===== ОТПРАВКА ФОРМЫ =====
@@ -520,25 +522,24 @@ const LinksModal = {
         let iconType = this.selectedIconType;
         let customImage = null;
 
-        console.log('Submit with:', { icon, iconType, customImage: this.customImageData ? 'present' : 'null' });
+        console.log('Submitting with iconType:', iconType, 'icon:', icon);
 
         if (iconType === 'custom') {
             customImage = this.customImageData;
-            icon = '🔗'; // Для custom используем дефолтную иконку
-            console.log('Custom image mode, icon set to default');
+            icon = '🔗';
+
+            if (!customImage) {
+                showToast('❌ Пожалуйста, загрузите изображение');
+                return;
+            }
         } else if (iconType === 'favicon') {
-            if (icon && icon.startsWith('http')) {
-                // Сохраняем URL favicon
-                console.log('Favicon mode, icon:', icon);
-            } else {
+            if (!icon || !icon.startsWith('http')) {
                 icon = '🔗';
                 iconType = 'emoji';
-                console.log('Favicon not found, falling back to emoji');
             }
         } else {
             icon = icon || '🔗';
             iconType = 'emoji';
-            console.log('Emoji mode, icon:', icon);
         }
 
         const payload = {
@@ -550,7 +551,10 @@ const LinksModal = {
             customImage: customImage
         };
 
-        console.log('Final payload:', payload);
+        console.log('Final payload:', {
+            ...payload,
+            customImage: payload.customImage ? 'present' : 'null'
+        });
 
         const submitBtn = document.getElementById('linksModalSubmitBtn');
         const originalText = submitBtn.textContent;
@@ -558,26 +562,49 @@ const LinksModal = {
         submitBtn.disabled = true;
 
         try {
-            const response = await fetch('/api/links/add', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            let response;
+
+            if (this.isEdit && this.editId) {
+                response = await fetch(`/api/links/${this.editId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                response = await fetch('/api/links/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
 
             if (response.ok) {
                 const data = await response.json();
                 showToast(this.isEdit ? '✅ Ссылка обновлена' : '✅ Ссылка добавлена');
+
+                // === ВАЖНО: Сохраняем колбэк перед закрытием ===
+                const callback = this._afterSubmitCallback;
+
+                // Закрываем модальное окно (сбрасывает состояние)
                 this.close();
 
-                if (typeof this._afterSubmitCallback === 'function') {
-                    const callback = this._afterSubmitCallback;
-                    this._afterSubmitCallback = null;
+                // === ВАЖНО: Сбрасываем колбэк после использования ===
+                this._afterSubmitCallback = null;
+
+                // Вызываем колбэк с данными
+                if (typeof callback === 'function') {
                     callback(data);
                 }
 
-                if (typeof this._afterSubmitCallback !== 'function') {
-                    setTimeout(() => location.reload(), 500);
+                // Обновляем виджеты
+                if (typeof refreshAllLinkWidgets === 'function') {
+                    setTimeout(refreshAllLinkWidgets, 300);
                 }
+
+                // Возвращаем кнопку в исходное состояние
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+
             } else {
                 const error = await response.text();
                 console.error('Server error:', error);
@@ -613,5 +640,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Добавляем проверку, что LinksModal доступен глобально
-console.log('✅ links-modal.js loaded. LinksModal available:', typeof LinksModal !== 'undefined');
+console.log('✅ links-modal.js 2.3 loaded');
