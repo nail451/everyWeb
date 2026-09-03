@@ -34,6 +34,9 @@ public class Page {
     @OneToOne(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     private WallpaperSettings wallpaperSettings;
 
+    @Column(name = "password")
+    private String password;
+
     // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -52,4 +55,7 @@ public class Page {
 
     public WallpaperSettings getWallpaperSettings() { return wallpaperSettings; }
     public void setWallpaperSettings(WallpaperSettings wallpaperSettings) { this.wallpaperSettings = wallpaperSettings; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }

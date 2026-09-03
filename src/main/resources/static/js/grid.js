@@ -141,6 +141,29 @@ async function loadGridData() {
                 editBtn.style.background = gridState.isEditing ? 'rgba(76,175,80,0.2)' : 'rgba(33,150,243,0.2)';
                 editBtn.style.borderColor = gridState.isEditing ? 'rgba(76,175,80,0.3)' : 'rgba(33,150,243,0.3)';
             }
+
+            // ===== ВОССТАНАВЛИВАЕМ НАСТРОЙКИ ПОСЛЕ ПЕРЕЗАГРУЗКИ =====
+            // Несколько попыток с задержкой
+            setTimeout(() => {
+                if (typeof restoreAllWidgetSettings === 'function') {
+                    console.log('🔄 Restoring settings after grid load (attempt 1)');
+                    restoreAllWidgetSettings();
+                }
+            }, 100);
+
+            setTimeout(() => {
+                if (typeof restoreAllWidgetSettings === 'function') {
+                    console.log('🔄 Restoring settings after grid load (attempt 2)');
+                    restoreAllWidgetSettings();
+                }
+            }, 300);
+
+            setTimeout(() => {
+                if (typeof restoreAllWidgetSettings === 'function') {
+                    console.log('🔄 Restoring settings after grid load (attempt 3)');
+                    restoreAllWidgetSettings();
+                }
+            }, 600);
         }
     } catch (error) {
         console.error('Error loading grid data:', error);

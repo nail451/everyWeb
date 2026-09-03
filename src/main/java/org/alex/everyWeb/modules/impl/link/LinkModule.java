@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Модуль LINK - отображение ссылок с индивидуальными настройками.
- * Настройки хранятся в ModuleEntity.settings в формате JSON.
- */
 @Component
 public class LinkModule extends Module {
 
@@ -90,6 +86,8 @@ public class LinkModule extends Module {
 
     /**
      * Обработка обновления настроек.
+     * hideBackground и alignment обрабатываются в ModuleContext,
+     * поэтому здесь они не нужны.
      */
     private Object handleUpdateSettings(LinkData linkData, Map<String, Object> params, ModuleConfig config) {
         if (params.containsKey("iconSize")) {
@@ -112,25 +110,13 @@ public class LinkModule extends Module {
             if (value != null) linkData.setBgDarkness(value);
         }
 
-        if (params.containsKey("hideBackground")) {
-            Boolean value = toBoolean(params.get("hideBackground"));
-            if (value != null) linkData.setHideBackground(value);
-        }
-
-        if (params.containsKey("alignment")) {
-            String value = (String) params.get("alignment");
-            if (value != null && !value.trim().isEmpty()) {
-                linkData.setAlignment(value.trim());
-            }
-        }
+        // ===== hideBackground и alignment УДАЛЕНЫ =====
+        // Они обрабатываются в ModuleContext
 
         saveLinkData(config, linkData);
         return buildModuleData(linkData, config);
     }
 
-    /**
-     * Сборка ModuleData с текущими настройками.
-     */
     private ModuleData buildModuleData(LinkData linkData, ModuleConfig config) {
         ModuleData data = new ModuleData("LINK", "Ссылки");
         Map<String, Object> content = new HashMap<>();
@@ -141,9 +127,6 @@ public class LinkModule extends Module {
         return data;
     }
 
-    /**
-     * Получение LinkData из конфига.
-     */
     private LinkData getLinkData(ModuleConfig config) {
         String settingsJson = config.getString("linkData");
 
@@ -155,7 +138,6 @@ public class LinkModule extends Module {
                 }
             } catch (Exception e) {
                 System.err.println("Error parsing link data: " + e.getMessage());
-                // Пробуем парсить как Map для обратной совместимости
                 try {
                     Map<String, Object> map = objectMapper.readValue(
                             settingsJson,
@@ -181,13 +163,9 @@ public class LinkModule extends Module {
             }
         }
 
-        // Возвращаем настройки по умолчанию
         return new LinkData();
     }
 
-    /**
-     * Сохранение LinkData в конфиг.
-     */
     private void saveLinkData(ModuleConfig config, LinkData linkData) {
         try {
             String json = objectMapper.writeValueAsString(linkData);
@@ -199,9 +177,6 @@ public class LinkModule extends Module {
         }
     }
 
-    /**
-     * Безопасное преобразование в Integer.
-     */
     private Integer toInteger(Object value) {
         if (value == null) return null;
         if (value instanceof Number) {
@@ -214,9 +189,6 @@ public class LinkModule extends Module {
         }
     }
 
-    /**
-     * Безопасное преобразование в Boolean.
-     */
     private Boolean toBoolean(Object value) {
         if (value == null) return null;
         if (value instanceof Boolean) {

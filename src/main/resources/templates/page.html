@@ -12,6 +12,7 @@
     <link rel="stylesheet" th:href="@{/css/links-modal.css}">
     <link rel="stylesheet" th:href="@{/css/settings.css}">
     <link rel="stylesheet" th:href="@{/css/wallpaper.css}">
+    <link rel="stylesheet" th:href="@{/css/create-page-modal.css}">
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 </head>
@@ -45,7 +46,10 @@
                th:text="${p.name}"
                th:classappend="${p.id == page.id} ? 'active' : ''"
                style="padding:2px 8px; border-radius:4px; text-decoration:none; color:rgba(255,255,255,0.4); font-size:12px;"></a>
-            <button class="add-page-btn" onclick="createPage()" style="padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.06); color:rgba(255,255,255,0.4); cursor:pointer; font-size:12px;">➕</button>
+            <button class="add-page-btn" onclick="createPage()"
+                    style="padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.06); color:rgba(255,255,255,0.4); cursor:pointer; font-size:12px;">
+                ➕
+            </button>
         </div>
     </div>
 </div>
@@ -121,6 +125,64 @@
         </div>
     </div>
 </div>
+<!-- ===== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ СТРАНИЦЫ ===== -->
+<div class="create-page-overlay" id="createPageOverlay" style="display:none !important;">
+    <div class="create-page-modal">
+        <div class="modal-header">
+            <h2>📄 Создать страницу</h2>
+            <button class="modal-close" id="createPageCloseBtn">✕</button>
+        </div>
+
+        <form id="createPageForm">
+            <div class="form-group">
+                <label for="pageName">Название страницы</label>
+                <input type="text" id="pageName" placeholder="Введите название..." required autofocus>
+                <span class="hint">Уникальное имя для страницы (только буквы, цифры, - и _)</span>
+            </div>
+
+            <div class="form-group">
+                <label for="pagePassword">Пароль (опционально)</label>
+                <input type="password" id="pagePassword" placeholder="Введите пароль...">
+                <span class="password-hint">🔒 Если оставить пустым, страница будет доступна без пароля</span>
+            </div>
+
+            <div id="createPageError" style="display:none; color:#ff6b6b; font-size:13px; margin-bottom:12px; padding:8px 12px; background:rgba(244,67,54,0.1); border-radius:8px; border:1px solid rgba(244,67,54,0.2);">
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="createPageCancelBtn">Отмена</button>
+                <button type="submit" class="btn-submit">➕ Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ПРОВЕРКИ ПАРОЛЯ ===== -->
+<div class="password-check-overlay" id="passwordCheckOverlay" style="display:none !important;">
+    <div class="password-check-modal">
+        <div class="modal-header">
+            <div>
+                <span class="lock-icon">🔒</span>
+                <h2 style="display:inline-block; margin-left:10px;">Введите пароль</h2>
+            </div>
+            <button class="modal-close" id="passwordCheckCloseBtn">✕</button>
+        </div>
+
+        <form id="passwordCheckForm">
+            <div class="form-group">
+                <label for="pagePasswordInput">Пароль для <span id="passwordPageName"></span></label>
+                <input type="password" id="pagePasswordInput" placeholder="Введите пароль..." required autofocus>
+            </div>
+
+            <div class="error-message" id="passwordError">❌ Неверный пароль</div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="passwordCheckCancelBtn">Отмена</button>
+                <button type="submit" class="btn-submit">🔓 Войти</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- JAVASCRIPT -->
 <script th:src="@{/js/core.js}"></script>
@@ -134,6 +196,7 @@
 <script th:src="@{/js/nextcloud-module.js}"></script>
 <script th:src="@{/js/settings.js}"></script>
 <script th:src="@{/js/wallpaper.js}"></script>
+<script th:src="@{/js/pages.js}"></script>
 
 <!-- Добавление виджетов -->
 <script>

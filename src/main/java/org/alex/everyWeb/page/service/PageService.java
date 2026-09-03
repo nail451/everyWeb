@@ -1,5 +1,6 @@
 package org.alex.everyWeb.page.service;
 
+import org.alex.everyWeb.config.PasswordService;
 import org.alex.everyWeb.link.model.Link;
 import org.alex.everyWeb.link.repository.LinkRepository;
 import org.alex.everyWeb.modules.entity.ModuleEntity;
@@ -25,7 +26,11 @@ public class PageService {
     @Autowired
     private ModuleRepository modulesRepository;
 
+    @Autowired
+    private PasswordService passwordService;
+
     // ===== СТРАНИЦЫ =====
+
     public Page getPageByName(String name) {
         return pageRepository.findByName(name)
                 .orElseThrow(() -> new RuntimeException("Page not found: " + name));
@@ -40,25 +45,75 @@ public class PageService {
         return pageRepository.findAll();
     }
 
-    public Page createPage(String name) {
+    /**
+     * Создает страницу с зашифрованным паролем
+     */
+    public Page createPage(String name, String rawPassword) {
         if (pageRepository.findByName(name).isPresent()) {
             throw new RuntimeException("Page with name '" + name + "' already exists");
         }
+
         Page page = new Page();
         page.setName(name);
+
+        // Шифруем пароль, если он указан
+        if (rawPassword != null && !rawPassword.trim().isEmpty()) {
+            String encryptedPassword = passwordService.encodePassword(rawPassword.trim());
+            page.setPassword(encryptedPassword);
+        } else {
+            page.setPassword(null);
+        }
+
         return pageRepository.save(page);
     }
 
+    /**
+     * Создает страницу без пароля (для обратной совместимости)
+     */
+    public Page createPage(String name) {
+        return createPage(name, null);
+    }
+
+    /**
+     * Проверяет пароль страницы
+     */
+    public boolean verifyPassword(Long pageId, String rawPassword) {
+        Page page = getPageById(pageId);
+        String storedPassword = page.getPassword();
+
+        // Если пароль не установлен - всегда true
+        if (storedPassword == null || storedPassword.isEmpty()) {
+            return true;
+        }
+
+        // Проверяем пароль через PasswordService
+        return passwordService.matches(rawPassword, storedPassword);
+    }
+
+    /**
+     * Обновляет пароль страницы
+     */
+    public void updatePassword(Long pageId, String newRawPassword) {
+        Page page = getPageById(pageId);
+
+        if (newRawPassword == null || newRawPassword.trim().isEmpty()) {
+            page.setPassword(null);
+        } else {
+            String encryptedPassword = passwordService.encodePassword(newRawPassword.trim());
+            page.setPassword(encryptedPassword);
+        }
+
+        pageRepository.save(page);
+    }
+
     public void deletePage(Long pageId) {
-        // Удаляем связанные ссылки
         linksRepository.deleteByPageId(pageId);
-        // Удаляем связанные модули
         modulesRepository.deleteByPageId(pageId);
-        // Удаляем страницу
         pageRepository.deleteById(pageId);
     }
 
     // ===== МОДУЛИ =====
+
     public ModuleEntity addModule(Long pageId, String type, String title, String settings) {
         Page page = getPageById(pageId);
 

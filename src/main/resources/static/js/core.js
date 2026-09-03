@@ -294,6 +294,55 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('LinksModal initialized?', typeof LinksModal !== 'undefined' && LinksModal._initialized);
 });
 
+// ===== ИНИЦИАЛИЗАЦИЯ =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Core.js loaded');
+
+    const pageContainer = document.getElementById('pageContainer');
+    if (pageContainer) {
+        currentPageId = parseInt(pageContainer.dataset.pageId);
+        console.log('Current page ID:', currentPageId);
+    }
+
+    if (typeof initHeader === 'function') initHeader();
+    if (typeof initGrid === 'function') initGrid();
+    if (typeof initModules === 'function') initModules();
+
+    // ===== ВОССТАНАВЛИВАЕМ НАСТРОЙКИ ПОСЛЕ ЗАГРУЗКИ =====
+    // Несколько попыток для надёжности
+    setTimeout(() => {
+        if (typeof restoreAllWidgetSettings === 'function') {
+            console.log('🔄 Restoring settings on page load (attempt 1)');
+            restoreAllWidgetSettings();
+        }
+    }, 300);
+
+    setTimeout(() => {
+        if (typeof restoreAllWidgetSettings === 'function') {
+            console.log('🔄 Restoring settings on page load (attempt 2)');
+            restoreAllWidgetSettings();
+        }
+    }, 600);
+
+    setTimeout(() => {
+        if (typeof restoreAllWidgetSettings === 'function') {
+            console.log('🔄 Restoring settings on page load (attempt 3)');
+            restoreAllWidgetSettings();
+        }
+    }, 1000);
+
+    if (typeof WallpaperModule !== 'undefined' && currentPageId) {
+        WallpaperModule.init(currentPageId);
+    }
+
+    if (currentPageId) {
+        loadLinkSettingsFromServer();
+    }
+
+    console.log('LinksModal available?', typeof LinksModal !== 'undefined');
+    console.log('LinksModal initialized?', typeof LinksModal !== 'undefined' && LinksModal._initialized);
+});
+
 // ===== НАВИГАЦИЯ ПО СТРЕЛКАМ =====
 document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.metaKey) {

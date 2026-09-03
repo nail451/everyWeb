@@ -1,0 +1,375 @@
+/* ========================================
+   CREATE PAGE MODAL - ПОЛНОСТЬЮ
+   ======================================== */
+
+/* ===== ОБЩИЕ СТИЛИ ДЛЯ ОВЕРЛЕЕВ ===== */
+.create-page-overlay,
+.password-check-overlay {
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    z-index: 99999 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 20px !important;
+    animation: fadeIn 0.3s ease !important;
+}
+
+.create-page-overlay.active,
+.password-check-overlay.active {
+    display: flex !important;
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СТРАНИЦЫ ===== */
+.create-page-modal {
+    background: rgba(30, 30, 50, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 24px !important;
+    padding: 35px !important;
+    max-width: 480px !important;
+    width: 100% !important;
+    color: #ffffff !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    animation: slideUp 0.3s ease !important;
+    position: relative !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+}
+
+.create-page-modal .modal-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 24px !important;
+    padding-bottom: 18px !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.create-page-modal .modal-header h2 {
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+.create-page-modal .modal-close {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 22px !important;
+    cursor: pointer !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease !important;
+    opacity: 0.6 !important;
+}
+
+.create-page-modal .modal-close:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: rotate(90deg) !important;
+}
+
+.create-page-modal .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    margin-bottom: 18px !important;
+}
+
+.create-page-modal .form-group label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    letter-spacing: 0.3px !important;
+}
+
+.create-page-modal .form-group input {
+    padding: 10px 14px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+    font-family: inherit !important;
+}
+
+.create-page-modal .form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.create-page-modal .form-group input:focus {
+    outline: none !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05) !important;
+}
+
+.create-page-modal .form-group .hint,
+.create-page-modal .form-group .password-hint {
+    font-size: 11px !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+    margin-top: 2px !important;
+}
+
+.create-page-modal .form-actions {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 8px !important;
+}
+
+.create-page-modal .form-actions button {
+    flex: 1 !important;
+    padding: 12px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    font-family: inherit !important;
+}
+
+.create-page-modal .form-actions .btn-cancel {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.create-page-modal .form-actions .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.create-page-modal .form-actions .btn-submit {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2) !important;
+}
+
+.create-page-modal .form-actions .btn-submit:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 24px rgba(76, 175, 80, 0.3) !important;
+}
+
+.create-page-modal .form-actions .btn-submit:active {
+    transform: translateY(0) !important;
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО ПРОВЕРКИ ПАРОЛЯ ===== */
+.password-check-modal {
+    background: rgba(30, 30, 50, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 24px !important;
+    padding: 35px !important;
+    max-width: 420px !important;
+    width: 100% !important;
+    color: #ffffff !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    animation: slideUp 0.3s ease !important;
+    position: relative !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+}
+
+.password-check-modal .modal-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.password-check-modal .modal-header h2 {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+}
+
+.password-check-modal .modal-header .lock-icon {
+    font-size: 28px !important;
+}
+
+.password-check-modal .modal-close {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 22px !important;
+    cursor: pointer !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease !important;
+    opacity: 0.6 !important;
+}
+
+.password-check-modal .modal-close:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: rotate(90deg) !important;
+}
+
+.password-check-modal .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    margin-bottom: 18px !important;
+}
+
+.password-check-modal .form-group label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    letter-spacing: 0.3px !important;
+}
+
+.password-check-modal .form-group input {
+    padding: 10px 14px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+    font-family: inherit !important;
+    letter-spacing: 2px !important;
+}
+
+.password-check-modal .form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.25) !important;
+    letter-spacing: 0 !important;
+}
+
+.password-check-modal .form-group input:focus {
+    outline: none !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05) !important;
+}
+
+.password-check-modal .error-message {
+    color: #ff6b6b !important;
+    font-size: 12px !important;
+    margin-top: 8px !important;
+    text-align: center !important;
+    display: none !important;
+}
+
+.password-check-modal .error-message.show {
+    display: block !important;
+}
+
+.password-check-modal .form-actions {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 8px !important;
+}
+
+.password-check-modal .form-actions button {
+    flex: 1 !important;
+    padding: 12px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    font-family: inherit !important;
+}
+
+.password-check-modal .form-actions .btn-cancel {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.password-check-modal .form-actions .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.password-check-modal .form-actions .btn-submit {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.2) !important;
+}
+
+.password-check-modal .form-actions .btn-submit:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 24px rgba(33, 150, 243, 0.3) !important;
+}
+
+.password-check-modal .form-actions .btn-submit:active {
+    transform: translateY(0) !important;
+}
+
+/* ===== АНИМАЦИИ ===== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+    .create-page-modal,
+    .password-check-modal {
+        padding: 24px !important;
+        max-width: 400px !important;
+    }
+
+    .create-page-modal .modal-header h2,
+    .password-check-modal .modal-header h2 {
+        font-size: 18px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .create-page-modal,
+    .password-check-modal {
+        padding: 18px !important;
+        max-width: 100% !important;
+        border-radius: 16px !important;
+    }
+
+    .create-page-modal .form-actions,
+    .password-check-modal .form-actions {
+        flex-direction: column !important;
+    }
+
+    .create-page-modal .form-actions button,
+    .password-check-modal .form-actions button {
+        padding: 10px !important;
+        font-size: 13px !important;
+    }
+}

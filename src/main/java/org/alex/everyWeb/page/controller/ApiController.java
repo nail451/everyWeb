@@ -1,5 +1,6 @@
 package org.alex.everyWeb.page.controller;
 
+import org.alex.everyWeb.config.PasswordService;
 import org.alex.everyWeb.link.repository.DTO.LinkDTO;
 import org.alex.everyWeb.link.repository.DTO.LinkRequestDTO;
 import org.alex.everyWeb.link.service.LinksService;
@@ -40,6 +41,9 @@ public class ApiController {
 
     @Autowired
     private LayoutService layoutService;
+
+    @Autowired
+    private PasswordService passwordService;
 
     // ===== НАСТРОЙКИ =====
     @GetMapping("/settings/{pageId}")
@@ -113,6 +117,27 @@ public class ApiController {
     }
 
     // ===== СТРАНИЦЫ =====
+
+    @GetMapping("/pages")
+    public ResponseEntity<?> getPages() {
+        try {
+            List<Page> pages = pageService.getAllPages();
+            List<Map<String, Object>> result = pages.stream().map(page -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", page.getId());
+                map.put("name", page.getName());
+                // Просто проверяем, есть ли пароль (не показываем сам пароль)
+                map.put("hasPassword", page.getPassword() != null && !page.getPassword().isEmpty());
+                return map;
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/pages")
     public ResponseEntity<?> createPage(@RequestBody Map<String, String> request) {
         try {
@@ -120,12 +145,54 @@ public class ApiController {
             if (name == null || name.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Name is required");
             }
-            Page page = pageService.createPage(name.trim());
-            return ResponseEntity.ok(page);
+
+            String password = request.get("password");
+            if (password != null && password.trim().isEmpty()) {
+                password = null;
+            }
+
+            // Пароль будет зашифрован в PageService
+            Page page = pageService.createPage(name.trim(), password);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", page.getId());
+            response.put("name", page.getName());
+            response.put("hasPassword", page.getPassword() != null);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/page/{pageId}/verify-password")
+    public ResponseEntity<?> verifyPassword(@PathVariable Long pageId,
+                                            @RequestBody Map<String, String> request) {
+        try {
+            String password = request.get("password");
+
+            if (password == null || password.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Password is required"
+                ));
+            }
+
+            // Используем PageService для проверки пароля
+            boolean valid = pageService.verifyPassword(pageId, password);
+
+            Page page = pageService.getPageById(pageId);
+            boolean hasPassword = page.getPassword() != null && !page.getPassword().isEmpty();
+
+            return ResponseEntity.ok(Map.of(
+                    "valid", valid,
+                    "hasPassword", hasPassword
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -171,7 +238,6 @@ public class ApiController {
     }
 
     // ===== LAYOUT ENDPOINTS =====
-
     @GetMapping("/pages/{pageId}/layout")
     public ResponseEntity<?> getLayout(@PathVariable Long pageId) {
         try {

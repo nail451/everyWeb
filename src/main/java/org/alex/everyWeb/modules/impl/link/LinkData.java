@@ -8,18 +8,14 @@ public class LinkData {
 
     private Integer iconSize;
     private Integer fontSize;
-    private Integer blurAmount;        // 0-100%
+    private Integer blurAmount;
     private Integer bgDarkness;
-    private Boolean hideBackground;
-    private String alignment;
 
     public LinkData() {
         this.iconSize = 28;
         this.fontSize = 12;
-        this.blurAmount = 15;          // ← по умолчанию 15% (лёгкое размытие)
+        this.blurAmount = 15;
         this.bgDarkness = 0;
-        this.hideBackground = false;
-        this.alignment = "center-center";
     }
 
     @JsonCreator
@@ -27,16 +23,12 @@ public class LinkData {
             @JsonProperty("iconSize") Integer iconSize,
             @JsonProperty("fontSize") Integer fontSize,
             @JsonProperty("blurAmount") Integer blurAmount,
-            @JsonProperty("bgDarkness") Integer bgDarkness,
-            @JsonProperty("hideBackground") Boolean hideBackground,
-            @JsonProperty("alignment") String alignment
+            @JsonProperty("bgDarkness") Integer bgDarkness
     ) {
         this.iconSize = iconSize != null ? iconSize : 28;
         this.fontSize = fontSize != null ? fontSize : 12;
         this.blurAmount = blurAmount != null ? Math.max(0, Math.min(100, blurAmount)) : 15;
         this.bgDarkness = bgDarkness != null ? Math.max(-50, Math.min(50, bgDarkness)) : 0;
-        this.hideBackground = hideBackground != null ? hideBackground : false;
-        this.alignment = alignment != null ? alignment : "center-center";
     }
 
     public Integer getIconSize() { return iconSize; }
@@ -51,20 +43,12 @@ public class LinkData {
     public Integer getBgDarkness() { return bgDarkness; }
     public void setBgDarkness(Integer bgDarkness) { this.bgDarkness = bgDarkness != null ? Math.max(-50, Math.min(50, bgDarkness)) : 0; }
 
-    public Boolean getHideBackground() { return hideBackground; }
-    public void setHideBackground(Boolean hideBackground) { this.hideBackground = hideBackground != null ? hideBackground : false; }
-
-    public String getAlignment() { return alignment; }
-    public void setAlignment(String alignment) { this.alignment = alignment != null ? alignment : "center-center"; }
-
     @JsonIgnore
     public boolean isValid() {
         return iconSize != null && iconSize >= 16 && iconSize <= 100 &&
                 fontSize != null && fontSize >= 8 && fontSize <= 24 &&
                 blurAmount != null && blurAmount >= 0 && blurAmount <= 100 &&
-                bgDarkness != null && bgDarkness >= -50 && bgDarkness <= 50 &&
-                hideBackground != null &&
-                alignment != null;
+                bgDarkness != null && bgDarkness >= -50 && bgDarkness <= 50;
     }
 
     @Override
@@ -74,8 +58,6 @@ public class LinkData {
                 ", fontSize=" + fontSize +
                 ", blurAmount=" + blurAmount +
                 ", bgDarkness=" + bgDarkness +
-                ", hideBackground=" + hideBackground +
-                ", alignment='" + alignment + '\'' +
                 '}';
     }
 }

@@ -25,17 +25,17 @@ public class PageController {
     private WallpaperService wallpaperService;
 
     @Autowired
-    private LayoutService layoutService;  // ← Добавляем
+    private LayoutService layoutService;
 
     @Autowired
     private LinksService linksService;
 
     @GetMapping("/")
     public String home(Model model) {
-        // Редирект на главную страницу
         return "redirect:/page/main";
     }
 
+    // ===== ТОЛЬКО ОДИН МЕТОД getPage =====
     @GetMapping("/page/{name}")
     public String getPage(@PathVariable String name, Model model) {
         try {

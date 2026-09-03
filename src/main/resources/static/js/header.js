@@ -61,6 +61,15 @@ function updateNavigationArrows() {
     nextArrow.classList.remove('disabled');
 }
 
+function saveLastPage(pageName) {
+    try {
+        localStorage.setItem('everyweb_last_page', pageName);
+        console.log('Saved last page:', pageName);
+    } catch (e) {
+        // Игнорируем ошибки localStorage
+    }
+}
+
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Header initialized');
