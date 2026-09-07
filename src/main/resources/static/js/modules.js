@@ -526,6 +526,16 @@ async function loadModuleSettings(moduleElement) {
                 contentHtml = window.renderWeatherSettings(data);
             } else if (moduleType === 'NEXTCLOUD' && typeof window.renderNextcloudSettings === 'function') {
                 contentHtml = window.renderNextcloudSettings(data);
+            } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
+                if (typeof window.renderSystemSettings === 'function') {
+                    contentHtml = window.renderSystemSettings(data);
+                } else {
+                    contentHtml = `
+                        <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
+                            Настройки для системного модуля "${moduleType}" не найдены
+                        </div>
+                    `;
+                }
             } else {
                 contentHtml = `
                     <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
@@ -560,6 +570,10 @@ async function loadModuleSettings(moduleElement) {
                 window.initWeatherSettingsEvents(numericId, settingsDiv);
             } else if (moduleType === 'NEXTCLOUD' && typeof window.initNextcloudSettingsEvents === 'function') {
                 window.initNextcloudSettingsEvents(numericId, settingsDiv);
+            } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
+                if (typeof window.initSystemSettingsEvents === 'function') {
+                    window.initSystemSettingsEvents(numericId, settingsDiv);
+                }
             }
 
         } else if (response.status === 404) {
@@ -657,6 +671,12 @@ function initializeModules() {
         if (moduleType === 'LINK') {
             if (typeof loadLinkWidgetData === 'function') {
                 loadLinkWidgetData(widgetElement);
+            }
+        }
+
+        if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
+            if (typeof initSystemModule === 'function') {
+                initSystemModule(widgetElement, moduleId);
             }
         }
     });

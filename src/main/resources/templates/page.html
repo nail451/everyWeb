@@ -194,6 +194,7 @@
 <script th:src="@{/js/clock-module.js}"></script>
 <script th:src="@{/js/weather-module.js}"></script>
 <script th:src="@{/js/nextcloud-module.js}"></script>
+<script th:src="@{/js/system-modules.js}"></script>
 <script th:src="@{/js/settings.js}"></script>
 <script th:src="@{/js/wallpaper.js}"></script>
 <script th:src="@{/js/pages.js}"></script>
@@ -207,7 +208,12 @@
             {type: 'WEATHER', name: '🌤️ Погода'},
             {type: 'NOTE', name: '📝 Заметки'},
             {type: 'TODO', name: '✅ Список дел'},
-            {type: 'NEXTCLOUD', name: '☁️ Nextcloud'}
+            {type: 'NEXTCLOUD', name: '☁️ Nextcloud'},
+            {type: 'CPU', name: '📊 Процессор'},
+            {type: 'MEMORY', name: '🧠 Память'},
+            {type: 'DISK', name: '💾 Диски'},
+            {type: 'NETWORK', name: '🌐 Сеть'},
+            {type: 'BATTERY', name: '🔋 Батарея'}
         ];
 
         let message = 'Выберите тип виджета:\n';

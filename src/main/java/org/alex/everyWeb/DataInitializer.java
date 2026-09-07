@@ -30,7 +30,14 @@ public class DataInitializer implements CommandLineRunner {
                 createModule("WEATHER", "Погода", "Погода в выбранном городе", "🌤️", true, true, "weather-module", "weather-module.js"),
                 createModule("NEXTCLOUD", "Nextcloud", "Интеграция с Nextcloud", "☁️", true, true, "nextcloud-module", "nextcloud-module.js"),
                 createModule("NOTES", "Заметки", "Быстрые заметки", "📝", true, false, "notes-module", "notes-module.js"),
-                createModule("TODO", "Список дел", "To-Do список", "✅", true, false, "todo-module", "todo-module.js")
+                createModule("TODO", "Список дел", "To-Do список", "✅", true, false, "todo-module", "todo-module.js"),
+                createModule("CPU", "Процессор", "Загрузка процессора и информация о ядрах", "📊",true, true, "cpu-module", "system-modules.js"),
+                createModule("MEMORY", "Память", "Использование оперативной памяти", "🧠", true, true, "memory-module","system-modules.js"),
+                createModule("DISK", "Диски","Информация о дисках и свободном месте","💾",  true, true, "disk-module","system-modules.js"),
+                createModule("NETWORK", "Сеть","Скорость сети и информация об интерфейсах","🌐",  true, true, "network-module","system-modules.js"),
+                createModule("BATTERY", "Батарея","Состояние батареи и заряд","🔋",  true, true, "battery-module","system-modules.js")
+
+
         };
 
         for (AvailableModule module : modules) {

@@ -206,3 +206,52 @@
     white-space: nowrap;
     opacity: 0.7;
 }
+
+/* ===== СИСТЕМНЫЕ МОДУЛИ ===== */
+.widget.cpu-module .system-display {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.widget.memory-module .system-display {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.widget.disk-module .system-display {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.widget.network-module .system-display {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.widget.battery-module .system-display {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Стили для скролла в дисках и сети */
+.widget.disk-module .system-display,
+.widget.network-module .system-display {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.widget.disk-module .system-display::-webkit-scrollbar,
+.widget.network-module .system-display::-webkit-scrollbar {
+    width: 3px;
+}
+
+.widget.disk-module .system-display::-webkit-scrollbar-thumb,
+.widget.network-module .system-display::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+}
