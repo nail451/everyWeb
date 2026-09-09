@@ -152,6 +152,22 @@ public class ModulesController {
         }
     }
 
+    // ===== ПОЛУЧЕНИЕ МОДУЛЯ ПО ID =====
+    @GetMapping("/{moduleId}")
+    public ResponseEntity<?> getModule(@PathVariable Long moduleId) {
+        try {
+            ModuleEntity module = modulesService.getModuleById(moduleId);
+            if (module == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(module);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
     // ===== ПОЛУЧЕНИЕ ДАННЫХ МОДУЛЯ =====
     @GetMapping("/{moduleId}/data")
     public ResponseEntity<?> getModuleData(@PathVariable Long moduleId) {

@@ -8,10 +8,10 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     database: postgresql
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: false
@@ -37,3 +37,8 @@ app:
     upload-dir: ./wallpapers
     max-file-size: 52428800    # 50MB
     allowed-extensions: jpg,jpeg,png,gif,bmp,webp
+  push:
+    public-key: "BBWEgedaobNc5WjJzkW95dMFudVyt5HlM0p_423KIbGXFwaiCmT8IT8GgUubTxtsiKj2nttJWm46yjLBT_pWv1g"
+    private-key: "c7Z-P77-8onldW9_1m_PspkgRGNIH30w-pjj8Nlb6CM"
+    fcm-server-key: "BOmFCOFnvK-zlR2N1PfZFPafnfVXk8EMTCozZel4x0NyTfvdeG0PuOfWE5Y1zt-53cd-6AhoeMQ2BRJBztsBBsE"
+    fcm-project-id: "everyweb-71176"

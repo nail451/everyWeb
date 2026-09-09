@@ -99,8 +99,6 @@ function renderWidgetSettings(moduleId, hideBackground, alignment) {
 
 // ===== УСТАНОВКА ВЫРАВНИВАНИЯ =====
 function setAlignment(moduleId, alignment) {
-    console.log('🔵 setAlignment called:', moduleId, alignment);
-
     // Обновляем UI в текущих настройках
     const section = document.querySelector(`.widget-settings-section[data-module-id="${moduleId}"]`);
     if (section) {
@@ -139,7 +137,6 @@ function initWidgetSettingsEvents(moduleId, settingsContainer) {
             const setting = this.dataset.setting;
             const value = this.checked;
 
-            console.log('Widget setting changed:', moduleIdFromCheckbox, setting, value);
             saveWidgetSetting(moduleIdFromCheckbox, setting, value);
         });
     });
@@ -147,14 +144,10 @@ function initWidgetSettingsEvents(moduleId, settingsContainer) {
 
 // ===== СОХРАНЕНИЕ ОБЩЕЙ НАСТРОЙКИ =====
 async function saveWidgetSetting(moduleId, setting, value) {
-    console.log('🔵 saveWidgetSetting called:', { moduleId, setting, value });
-
     try {
         const updateParams = {};
         updateParams[setting] = value;
 
-        // ===== ВАЖНО: Отправляем как updateSettings для ЛЮБОГО модуля =====
-        // Общие настройки (hideBackground, alignment) будут обработаны в ModuleContext
         const response = await fetch(`/api/modules/${moduleId}/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -166,8 +159,6 @@ async function saveWidgetSetting(moduleId, setting, value) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Widget setting saved on server');
-
             // Обновляем кэш
             if (!widgetSettingsCache[moduleId]) {
                 widgetSettingsCache[moduleId] = {};
@@ -177,15 +168,43 @@ async function saveWidgetSetting(moduleId, setting, value) {
             // Применяем к виджету сразу
             applyWidgetStyles(moduleId);
 
+            // ===== ВМЕСТО ПЕРЕЗАГРУЗКИ: ОБНОВЛЯЕМ UI НАПРЯМУЮ =====
+            const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
+            if (widget) {
+                const settingsDiv = widget.querySelector('.module-settings');
+                if (settingsDiv && settingsDiv.style.display !== 'none') {
+                    // Обновляем чекбокс если это hideBackground
+                    if (setting === 'hideBackground') {
+                        const checkbox = settingsDiv.querySelector('.widget-setting-checkbox[data-setting="hideBackground"]');
+                        if (checkbox) {
+                            checkbox.checked = value;
+                        }
+                    }
+                    // Обновляем кнопки выравнивания если это alignment
+                    if (setting === 'alignment') {
+                        const alignmentBtns = settingsDiv.querySelectorAll('.alignment-btn');
+                        alignmentBtns.forEach(btn => {
+                            const isActive = btn.dataset.alignment === value;
+                            btn.style.borderColor = isActive ? '#4CAF50' : 'rgba(255,255,255,0.08)';
+                            btn.style.background = isActive ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.03)';
+                            btn.style.color = isActive ? '#81C784' : 'rgba(255,255,255,0.3)';
+                        });
+                        const label = settingsDiv.querySelector('.alignment-grid + div');
+                        if (label) {
+                            label.textContent = value.replace('-', ' → ');
+                        }
+                    }
+                }
+            }
+
+            showToast('✅ Настройка сохранена');
             return true;
         } else {
             const errorText = await response.text();
-            console.error('❌ Failed to save widget setting:', errorText);
             showToast('❌ Ошибка сохранения настройки');
             return false;
         }
     } catch (error) {
-        console.error('❌ Error saving widget setting:', error);
         showToast('❌ Ошибка сохранения настройки');
         return false;
     }
@@ -197,52 +216,76 @@ async function loadWidgetSettings(moduleId) {
         const response = await fetch(`/api/modules/${moduleId}/settings`);
         if (response.ok) {
             const data = await response.json();
-            console.log('🔵 loadWidgetSettings: data for module', moduleId, data);
-
             const content = data.content || {};
             const settings = content.settings || {};
             const linkData = content.linkData || {};
 
-            const hideBackground = settings.hideBackground !== undefined
-                ? settings.hideBackground
-                : (linkData.hideBackground || false);
+            // ===== ВАЖНО: НЕ ПЕРЕЗАПИСЫВАЕМ КЭШ, ЕСЛИ ТАМ УЖЕ ЕСТЬ ЗНАЧЕНИЯ =====
+            // Если в кэше уже есть настройки, используем их (они самые свежие)
+            const cachedSettings = widgetSettingsCache[moduleId] || {};
 
-            const alignment = settings.alignment !== undefined
-                ? settings.alignment
-                : (linkData.alignment || 'center-center');
+            // Берем значения из кэша, если они есть, иначе из сервера
+            const hideBackground = cachedSettings.hideBackground !== undefined
+                ? cachedSettings.hideBackground
+                : (settings.hideBackground !== undefined
+                    ? settings.hideBackground
+                    : (linkData.hideBackground || false));
 
-            console.log('🔵 loadWidgetSettings: parsed for', moduleId, { hideBackground, alignment });
+            const alignment = cachedSettings.alignment !== undefined
+                ? cachedSettings.alignment
+                : (settings.alignment !== undefined
+                    ? settings.alignment
+                    : (linkData.alignment || 'center-center'));
 
+            // Обновляем кэш ТОЛЬКО если там нет значений
             if (!widgetSettingsCache[moduleId]) {
                 widgetSettingsCache[moduleId] = {};
             }
-            widgetSettingsCache[moduleId].hideBackground = hideBackground;
-            widgetSettingsCache[moduleId].alignment = alignment;
 
-            // ===== ПРИМЕНЯЕМ СТИЛИ СРАЗУ =====
+            // НЕ ПЕРЕЗАПИСЫВАЕМ существующие значения!
+            if (widgetSettingsCache[moduleId].hideBackground === undefined) {
+                widgetSettingsCache[moduleId].hideBackground = hideBackground;
+            }
+            if (widgetSettingsCache[moduleId].alignment === undefined) {
+                widgetSettingsCache[moduleId].alignment = alignment;
+            }
+
+            // Применяем стили
             applyWidgetStyles(moduleId);
 
-            return { hideBackground, alignment };
+            return {
+                hideBackground: widgetSettingsCache[moduleId].hideBackground,
+                alignment: widgetSettingsCache[moduleId].alignment
+            };
         } else {
-            console.warn('🔵 loadWidgetSettings: failed for', moduleId, response.status);
+
         }
     } catch (error) {
-        console.error('Error loading widget settings:', error);
+
     }
     return null;
 }
 
 // ===== ПРИМЕНЕНИЕ СТИЛЕЙ ВИДЖЕТА =====
-function applyWidgetStyles(moduleId) {
-    console.log('🔵 applyWidgetStyles called for:', moduleId);
+let styleApplyTimeout = {};
 
+function applyWidgetStyles(moduleId) {
     if (moduleId) {
-        const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-        if (!widget) {
-            console.log('🔵 Widget not found for:', moduleId);
-            return;
+        // Отменяем предыдущий таймаут для этого модуля
+        if (styleApplyTimeout[moduleId]) {
+            clearTimeout(styleApplyTimeout[moduleId]);
+            delete styleApplyTimeout[moduleId];
         }
-        applyWidgetStylesToElement(widget);
+
+        // Откладываем применение стилей на 100ms
+        styleApplyTimeout[moduleId] = setTimeout(() => {
+            const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
+            if (!widget) {
+                return;
+            }
+            applyWidgetStylesToElement(widget);
+            delete styleApplyTimeout[moduleId];
+        }, 100);
         return;
     }
 
@@ -257,19 +300,13 @@ function applyWidgetStylesToElement(widget) {
     const moduleId = widget.dataset.widgetId;
     const settings = widgetSettingsCache[moduleId] || {};
 
-    console.log('🔵 applyWidgetStylesToElement:', moduleId, settings);
-
-    // Если нет настроек в кэше — загружаем
     if (Object.keys(settings).length === 0) {
-        console.log('🔵 No settings in cache for', moduleId, 'loading...');
         loadWidgetSettings(moduleId);
         return;
     }
 
     const hideBackground = settings.hideBackground || false;
     const alignment = settings.alignment || 'center-center';
-
-    console.log('🔵 Applying styles to', moduleId, { hideBackground, alignment });
 
     // ===== ПРИМЕНЯЕМ СКРЫТИЕ ФОНА =====
     if (hideBackground) {
@@ -407,13 +444,8 @@ function applyWidgetStylesToElement(widget) {
 
 // ===== ВОССТАНОВЛЕНИЕ НАСТРОЕК ПОСЛЕ ПЕРЕЗАГРУЗКИ =====
 function restoreAllWidgetSettings() {
-    console.log('🔄 Restoring all widget settings');
-
     const widgets = document.querySelectorAll('.widget');
-    console.log('🔄 Found widgets:', widgets.length);
-
     if (widgets.length === 0) {
-        console.log('🔄 No widgets found, will retry...');
         return;
     }
 
@@ -425,12 +457,9 @@ function restoreAllWidgetSettings() {
         const moduleId = widget.dataset.widgetId;
         if (moduleId) {
             pendingRequests++;
-            console.log('🔄 Loading settings for widget:', moduleId);
-
             // Загружаем настройки и применяем
             loadWidgetSettings(moduleId).then(() => {
                 completedRequests++;
-                console.log(`🔄 Settings loaded for ${moduleId} (${completedRequests}/${pendingRequests})`);
             });
         }
     });
@@ -443,13 +472,12 @@ function restoreAllWidgetSettings() {
                 applyWidgetStyles(moduleId);
             }
         });
-        console.log('🔄 All styles reapplied');
     }, 500);
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 function initModules() {
-    console.log('Modules initialized');
+
 }
 
 // ===== ЗАГРУЗКА НАСТРОЕК МОДУЛЯ =====
@@ -471,40 +499,26 @@ async function loadModuleSettings(moduleElement) {
             return;
         }
 
-        console.log('loadModuleSettings: Loading settings for module', numericId, 'type:', moduleType);
-
-        // ===== ВАЖНО: Сначала загружаем настройки с сервера и применяем их =====
+        // Загружаем настройки с сервера
         await loadWidgetSettings(numericId);
 
         const response = await fetch(`/api/modules/${numericId}/settings`);
 
         if (response.ok) {
             const data = await response.json();
-            console.log('Settings data loaded:', data);
-
             const content = data.content || {};
 
-            // ===== ВАЖНО: Используем НАСТОЯЩИЕ настройки из кэша =====
-            // Не из data, а из widgetSettingsCache!
+            // ===== БЕРЕМ НАСТРОЙКИ ИЗ КЭША =====
             const cachedSettings = widgetSettingsCache[numericId] || {};
             const hideBackground = cachedSettings.hideBackground || false;
             const alignment = cachedSettings.alignment || 'center-center';
-
-            console.log('🔵 Using cached settings for UI:', { hideBackground, alignment });
-
-            // Убеждаемся, что кэш обновлён
-            if (!widgetSettingsCache[numericId]) {
-                widgetSettingsCache[numericId] = {};
-            }
-            widgetSettingsCache[numericId].hideBackground = hideBackground;
-            widgetSettingsCache[numericId].alignment = alignment;
 
             // Применяем стили к виджету
             applyWidgetStyles(numericId);
 
             let html = '';
 
-            // 1. ОБЩИЕ НАСТРОЙКИ ВИДЖЕТА (передаём реальные значения)
+            // 1. ОБЩИЕ НАСТРОЙКИ ВИДЖЕТА
             html += renderWidgetSettings(numericId, hideBackground, alignment);
 
             // 2. СПЕЦИФИЧНЫЕ НАСТРОЙКИ МОДУЛЯ
@@ -576,6 +590,9 @@ async function loadModuleSettings(moduleElement) {
                 }
             }
 
+            // ===== ПРИМЕНЯЕМ СТИЛИ =====
+            applyWidgetStyles(numericId);
+
         } else if (response.status === 404) {
             settingsDiv.innerHTML = wrapSettingsInDarkTheme(`
                 <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
@@ -590,7 +607,6 @@ async function loadModuleSettings(moduleElement) {
             `);
         }
     } catch (error) {
-        console.error('Error loading module settings:', error);
         settingsDiv.innerHTML = wrapSettingsInDarkTheme(`
             <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
                 ❌ Ошибка загрузки настроек: ${error.message}
@@ -601,8 +617,6 @@ async function loadModuleSettings(moduleElement) {
 
 // ===== ПЕРЕКЛЮЧЕНИЕ НАСТРОЕК МОДУЛЯ =====
 function toggleModuleSettings(moduleId) {
-    console.log('toggleModuleSettings called for:', moduleId);
-
     const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
     if (!widget) {
         showToast('❌ Виджет не найден');
@@ -623,7 +637,6 @@ function toggleModuleSettings(moduleId) {
     let settingsDiv = wrapper.querySelector('.module-settings');
 
     if (!settingsDiv) {
-        console.log('Creating module-settings div for widget:', moduleId);
         settingsDiv = document.createElement('div');
         settingsDiv.className = 'module-settings';
         settingsDiv.style.cssText = 'display:none; margin-top:10px; flex-shrink:0;';
@@ -638,20 +651,16 @@ function toggleModuleSettings(moduleId) {
             widget.draggable = true;
             widget.style.cursor = 'grab';
         }
-        console.log('Settings closed for module:', moduleId);
     } else {
         settingsDiv.style.display = 'block';
         widget.draggable = false;
         widget.style.cursor = 'default';
         loadModuleSettings(widget);
-        console.log('Settings opened for module:', moduleId);
     }
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
 function initializeModules() {
-    console.log('Initializing modules...');
-
     document.querySelectorAll('.widget').forEach(widgetElement => {
         const moduleId = widgetElement.dataset.widgetId;
         const moduleType = widgetElement.dataset.widgetType;
@@ -766,8 +775,6 @@ function deleteTodo(moduleId, todoId) {
 const originalLoadGridData = window.loadGridData || function() {};
 
 window.loadGridData = async function() {
-    console.log('🔄 loadGridData called - restoring settings after grid update');
-
     if (typeof originalLoadGridData === 'function') {
         await originalLoadGridData();
     }
@@ -775,21 +782,18 @@ window.loadGridData = async function() {
     // Несколько попыток восстановления
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
-            console.log('🔄 Restoring after grid update (attempt 1)');
             restoreAllWidgetSettings();
         }
     }, 200);
 
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
-            console.log('🔄 Restoring after grid update (attempt 2)');
             restoreAllWidgetSettings();
         }
     }, 500);
 
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
-            console.log('🔄 Restoring after grid update (attempt 3)');
             restoreAllWidgetSettings();
         }
     }, 800);
@@ -813,7 +817,3 @@ window.addTodo = addTodo;
 window.loadTodos = loadTodos;
 window.toggleTodo = toggleTodo;
 window.deleteTodo = deleteTodo;
-
-console.log('✅ modules.js 2.6 loaded');
-console.log('✅ toggleModuleSettings exported:', typeof window.toggleModuleSettings === 'function');
-console.log('✅ setAlignment exported:', typeof window.setAlignment === 'function');

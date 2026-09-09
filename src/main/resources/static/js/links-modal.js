@@ -22,22 +22,18 @@ const LinksModal = {
     ],
 
     init(pageId) {
-        console.log('LinksModal.init() called with pageId:', pageId);
         this.pageId = pageId;
         this._initialized = true;
         this.createModal();
         this.bindEvents();
-        console.log('LinksModal initialized');
     },
 
     afterSubmit(callback) {
         this._afterSubmitCallback = callback;
-        console.log('AfterSubmit callback set');
     },
 
     ensureInitialized() {
         if (!this._initialized || !this.pageId) {
-            console.log('LinksModal not initialized, initializing...');
             if (typeof currentPageId !== 'undefined' && currentPageId) {
                 this.init(currentPageId);
                 return true;
@@ -170,8 +166,6 @@ const LinksModal = {
     },
 
     open() {
-        console.log('LinksModal.open() called');
-
         if (!this.ensureInitialized()) {
             showToast('❌ Ошибка: система ссылок не инициализирована');
             return;
@@ -195,8 +189,6 @@ const LinksModal = {
             showToast('❌ Ошибка: данные ссылки не найдены');
             return;
         }
-
-        console.log('LinksModal.openEditWithData() called for link:', link.id);
 
         // === ВАЖНО: Сброс перед редактированием ===
         this.isEdit = true;
@@ -244,8 +236,6 @@ const LinksModal = {
     },
 
     fillForm(link) {
-        console.log('Filling form with link data:', link);
-
         document.getElementById('linkTitle').value = link.title || '';
         document.getElementById('linkUrl').value = link.url || '';
 
@@ -339,7 +329,6 @@ const LinksModal = {
     },
 
     switchIconType(type) {
-        console.log('Switching icon type to:', type);
         this.selectedIconType = type;
 
         const emojiPicker = document.getElementById('emojiPicker');
@@ -467,7 +456,6 @@ const LinksModal = {
     },
 
     close() {
-        console.log('LinksModal.close() called');
         const overlay = document.getElementById('linksModalOverlay');
         if (overlay) {
             overlay.classList.remove('active');
@@ -522,8 +510,6 @@ const LinksModal = {
         let iconType = this.selectedIconType;
         let customImage = null;
 
-        console.log('Submitting with iconType:', iconType, 'icon:', icon);
-
         if (iconType === 'custom') {
             customImage = this.customImageData;
             icon = '🔗';
@@ -550,11 +536,6 @@ const LinksModal = {
             iconType: iconType,
             customImage: customImage
         };
-
-        console.log('Final payload:', {
-            ...payload,
-            customImage: payload.customImage ? 'present' : 'null'
-        });
 
         const submitBtn = document.getElementById('linksModalSubmitBtn');
         const originalText = submitBtn.textContent;
@@ -607,13 +588,11 @@ const LinksModal = {
 
             } else {
                 const error = await response.text();
-                console.error('Server error:', error);
                 showToast('❌ Ошибка: ' + error);
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
             }
         } catch (error) {
-            console.error('Submit error:', error);
             showToast('❌ Ошибка сохранения');
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -623,21 +602,16 @@ const LinksModal = {
 
 // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
 function openAddLinkModal() {
-    console.log('openAddLinkModal() called');
     if (typeof LinksModal !== 'undefined') {
         LinksModal.open();
     } else {
-        console.error('LinksModal not defined');
         showToast('❌ Система ссылок не загружена');
     }
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('links-modal.js loaded');
     if (typeof currentPageId !== 'undefined' && currentPageId) {
         LinksModal.init(currentPageId);
     }
 });
-
-console.log('✅ links-modal.js 2.3 loaded');

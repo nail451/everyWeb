@@ -52,14 +52,12 @@ async function loadLinkSettingsFromServer(moduleId) {
             return linkData;
         }
     } catch (error) {
-        console.error('Error loading link settings:', error);
+
     }
     return null;
 }
 
 async function saveLinkSettingToServer(moduleId, setting, value) {
-    console.log('Saving link setting:', moduleId, setting, value);
-
     try {
         const updateParams = {};
         updateParams[setting] = value;
@@ -83,14 +81,11 @@ async function saveLinkSettingToServer(moduleId, setting, value) {
                     widget.dataset.linkSettings = JSON.stringify(data.content.linkData);
                 }
             }
-            console.log('✅ Link setting saved:', setting, value);
             return true;
         } else {
-            console.error('❌ Failed to save link setting:', await response.text());
             return false;
         }
     } catch (error) {
-        console.error('❌ Error saving link setting:', error);
         return false;
     }
 }
@@ -225,16 +220,12 @@ function applyLinkStylesToWidget(widget, settings) {
 // ============================================================
 
 async function renderLinksInWidget(widgetElement) {
-    console.log('renderLinksInWidget called for:', widgetElement?.dataset?.widgetId);
-
     if (!widgetElement) {
-        console.error('renderLinksInWidget: widgetElement is null');
         return;
     }
 
     const linkGrid = widgetElement.querySelector('.link-grid');
     if (!linkGrid) {
-        console.warn('Link grid not found in widget:', widgetElement);
         return;
     }
 
@@ -244,7 +235,6 @@ async function renderLinksInWidget(widgetElement) {
     }
 
     if (!pageId) {
-        console.error('Page ID not found for widget:', widgetElement.dataset.widgetId);
         linkGrid.innerHTML = `
             <div style="text-align:center; opacity:0.3; padding:10px; grid-column:1/-1; color: rgba(255,255,255,0.5);">
                 ⚠️ Ошибка: ID страницы не найден
@@ -255,7 +245,6 @@ async function renderLinksInWidget(widgetElement) {
 
     try {
         const moduleId = widgetElement.dataset.widgetId;
-        console.log('Loading links for module:', moduleId, 'page:', pageId);
 
         let settings = linkModuleSettingsCache[moduleId];
         if (!settings) {
@@ -289,7 +278,6 @@ async function renderLinksInWidget(widgetElement) {
 
         const response = await fetch(`/api/pages/${pageId}/links`);
         if (!response.ok) {
-            console.error('Failed to load links:', response.status);
             linkGrid.innerHTML = `
                 <div style="text-align:center; color:#ff6b6b; padding:10px; grid-column:1/-1;">
                     ❌ Ошибка загрузки ссылок (${response.status})
@@ -299,8 +287,6 @@ async function renderLinksInWidget(widgetElement) {
         }
 
         const links = await response.json();
-        console.log('Links loaded:', links ? links.length : 0);
-
         let html = '';
 
         if (links && links.length > 0) {
@@ -378,8 +364,6 @@ async function renderLinksInWidget(widgetElement) {
         }
 
         linkGrid.innerHTML = html;
-        console.log('✅ Links rendered successfully for module:', moduleId);
-
         // Применяем стили к новым ссылкам
         applyLinkStylesToWidget(widgetElement, settings);
 
@@ -389,7 +373,6 @@ async function renderLinksInWidget(widgetElement) {
         }
 
     } catch (error) {
-        console.error('Error rendering links:', error);
         linkGrid.innerHTML = `
             <div style="text-align:center; color:#ff6b6b; padding:10px; grid-column:1/-1;">
                 ❌ Ошибка загрузки ссылок: ${error.message}
@@ -403,8 +386,6 @@ async function renderLinksInWidget(widgetElement) {
 // ============================================================
 
 function renderLinkSettings(data, moduleId) {
-    console.log('Rendering link content settings for module:', moduleId);
-
     const content = data.content || {};
     const linkData = content.linkData || content.settings || {};
 
@@ -489,8 +470,6 @@ function renderLinkSettings(data, moduleId) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ НАСТРОЕК =====
 function initLinkSettingsEvents(moduleId, settingsContainer) {
-    console.log('Initializing link settings events for module:', moduleId);
-
     const sliders = settingsContainer.querySelectorAll('.link-slider');
     sliders.forEach(slider => {
         const setting = slider.dataset.setting;
@@ -571,7 +550,6 @@ async function loadLinkWidgetData(widgetElement) {
 }
 
 async function refreshAllLinkWidgets() {
-    console.log('refreshAllLinkWidgets called');
     const widgets = document.querySelectorAll('.widget.link-widget');
     for (const widget of widgets) {
         await loadLinkWidgetData(widget);
@@ -583,8 +561,6 @@ async function refreshAllLinkWidgets() {
 // ============================================================
 
 function openEditLinkModalFromWidget(linkId) {
-    console.log('openEditLinkModalFromWidget called for link:', linkId);
-
     const linkElement = document.querySelector(`.link-item-link[data-link-id="${linkId}"]`);
     if (!linkElement) {
         showToast('❌ Ссылка не найдена');
@@ -611,8 +587,6 @@ function openEditLinkModalFromWidget(linkId) {
 }
 
 function openLinkWidgetAddModal(moduleId) {
-    console.log('openLinkWidgetAddModal called for module:', moduleId);
-
     if (typeof LinksModal === 'undefined') {
         showToast('❌ Система ссылок не загружена. Обновите страницу.');
         return;
@@ -648,7 +622,6 @@ async function deleteLink(linkId) {
             showToast('❌ Ошибка удаления ссылки');
         }
     } catch (error) {
-        console.error('Error deleting link:', error);
         showToast('❌ Ошибка удаления ссылки');
     }
 }
@@ -686,6 +659,3 @@ window.getLinkSettingsFromWidget = getLinkSettingsFromWidget;
 window.applyLinkStylesToWidget = applyLinkStylesToWidget;
 window.saveLinkSettingToServer = saveLinkSettingToServer;
 window.loadLinkSettingsFromServer = loadLinkSettingsFromServer;
-
-console.log('✅ links.js 3.9 loaded');
-console.log('✅ renderLinkSettings available:', typeof window.renderLinkSettings === 'function');

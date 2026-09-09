@@ -2,10 +2,7 @@
  * NEXTCLOUD-MODULE.JS - Логика модуля Nextcloud
  */
 
-console.log('Nextcloud module loaded!');
-
 function initNextcloudModule(moduleElement, moduleId) {
-    console.log('Initializing Nextcloud module:', moduleId);
     loadNextcloudData(moduleElement, moduleId);
 }
 
@@ -14,11 +11,10 @@ async function loadNextcloudData(moduleElement, moduleId) {
         const response = await fetch(`/api/modules/${moduleId}/data`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Nextcloud data loaded:', data);
             renderNextcloudDisplay(moduleElement, data);
         }
     } catch (error) {
-        console.error('Error loading Nextcloud data:', error);
+
     }
 }
 
@@ -112,8 +108,6 @@ function renderNextcloudDisplay(moduleElement, data) {
 
 // ===== НАСТРОЙКИ МОДУЛЯ NEXTCLOUD =====
 function renderNextcloudSettings(data) {
-    console.log('Rendering Nextcloud settings with data:', data);
-
     // Проверяем наличие данных
     if (!data || !data.content) {
         return `
@@ -267,8 +261,6 @@ async function testNextcloudConnection(moduleId, settingsContainer) {
 
         if (response.ok) {
             const result = await response.json();
-            console.log('Connection test result:', result);
-
             if (result.connected) {
                 showToast('✅ Подключение успешно!');
                 // Автоматически сохраняем настройки
@@ -281,7 +273,6 @@ async function testNextcloudConnection(moduleId, settingsContainer) {
             showToast('❌ Ошибка: ' + error);
         }
     } catch (error) {
-        console.error('Error testing connection:', error);
         showToast('❌ Ошибка проверки подключения');
     }
 }
@@ -329,8 +320,6 @@ async function updateNextcloudSettings(moduleId, settingsContainer, silent = fal
 
         if (response.ok) {
             const data = await response.json();
-            console.log('Nextcloud settings updated:', data);
-
             const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
             if (moduleElement) {
                 renderNextcloudDisplay(moduleElement, data);
@@ -347,7 +336,6 @@ async function updateNextcloudSettings(moduleId, settingsContainer, silent = fal
             if (!silent) showToast('❌ Ошибка: ' + error);
         }
     } catch (error) {
-        console.error('Error updating nextcloud settings:', error);
         if (!silent) showToast('❌ Ошибка сохранения настроек');
     }
 }

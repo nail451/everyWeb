@@ -38,7 +38,6 @@ public class ModuleContext {
         ModuleData data = module.createData(config);
 
         // ===== ДОБАВЛЯЕМ ОБЩИЕ НАСТРОЙКИ В CONTENT =====
-        // Читаем общие настройки из корня settings
         Map<String, Object> content = (Map<String, Object>) data.getContent();
         if (content == null) {
             content = new HashMap<>();
@@ -48,9 +47,7 @@ public class ModuleContext {
         // Получаем общие настройки
         Map<String, Object> widgetSettings = getWidgetSettingsMap(moduleEntity);
         if (widgetSettings != null && !widgetSettings.isEmpty()) {
-            // Добавляем общие настройки в content как отдельный объект
             content.put("settings", widgetSettings);
-            System.out.println("✅ Added widget settings to content: " + widgetSettings);
         }
 
         // Добавляем также в config для обратной совместимости
@@ -109,15 +106,15 @@ public class ModuleContext {
 
         ModuleConfig config = getModuleConfig(moduleEntity);
 
-        // ===== ОБРАБАТЫВАЕМ ОБЩИЕ НАСТРОЙКИ =====
-        boolean widgetSettingsChanged = false;
+        // ===== 1. ПОЛУЧАЕМ ТЕКУЩИЕ НАСТРОЙКИ =====
         Map<String, Object> allSettings = getSettingsMap(moduleEntity);
+        System.out.println("🔵 Current allSettings: " + allSettings);
 
+        // ===== 2. ОБРАБАТЫВАЕМ ОБЩИЕ НАСТРОЙКИ =====
         if (params.containsKey("hideBackground")) {
             Object value = params.get("hideBackground");
             if (value instanceof Boolean) {
                 allSettings.put("hideBackground", (Boolean) value);
-                widgetSettingsChanged = true;
                 System.out.println("✅ Saved hideBackground: " + value);
             }
         }
@@ -126,34 +123,55 @@ public class ModuleContext {
             Object value = params.get("alignment");
             if (value instanceof String) {
                 allSettings.put("alignment", (String) value);
-                widgetSettingsChanged = true;
                 System.out.println("✅ Saved alignment: " + value);
             }
         }
 
-        // Если общие настройки изменились — сохраняем их в корень settings
-        if (widgetSettingsChanged) {
-            try {
-                // Сохраняем linkData если он есть
-                if (allSettings.containsKey("linkData")) {
-                    // linkData уже есть в allSettings
-                }
-                String updatedSettings = objectMapper.writeValueAsString(allSettings);
-                moduleEntity.setSettings(updatedSettings);
-                modulesRepository.save(moduleEntity);
-                System.out.println("✅ Widget settings saved: " + updatedSettings);
-            } catch (Exception e) {
-                System.err.println("❌ Error saving widget settings: " + e.getMessage());
-                e.printStackTrace();
-            }
+        // ===== 3. СОХРАНЯЕМ ОБЩИЕ НАСТРОЙКИ В БД =====
+        try {
+            String updatedSettings = objectMapper.writeValueAsString(allSettings);
+            moduleEntity.setSettings(updatedSettings);
+            modulesRepository.save(moduleEntity);
+            System.out.println("✅ Settings saved to DB: " + updatedSettings);
+        } catch (Exception e) {
+            System.err.println("❌ Error saving settings: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        // Передаём управление модулю (без общих настроек)
+        // ===== 4. ПЕРЕДАЁМ УПРАВЛЕНИЕ МОДУЛЮ =====
         Map<String, Object> moduleParams = new HashMap<>(params);
         moduleParams.remove("hideBackground");
         moduleParams.remove("alignment");
 
+        // Обновляем config для модуля
+        for (Map.Entry<String, Object> entry : allSettings.entrySet()) {
+            config.put(entry.getKey(), entry.getValue());
+        }
+
         Object result = module.handleAction(action, moduleParams, config);
+
+        // ===== 5. СОХРАНЯЕМ НАСТРОЙКИ ПОСЛЕ ДЕЙСТВИЯ =====
+        // Получаем все настройки из config
+        Map<String, Object> finalSettings = new HashMap<>(allSettings);
+
+        // Добавляем настройки из config (которые могли быть изменены модулем)
+        for (Map.Entry<String, Object> entry : config.getSettings().entrySet()) {
+            String key = entry.getKey();
+            // Не перезаписываем общие настройки
+            if (!"hideBackground".equals(key) && !"alignment".equals(key)) {
+                finalSettings.put(key, entry.getValue());
+            }
+        }
+
+        try {
+            String finalSettingsJson = objectMapper.writeValueAsString(finalSettings);
+            moduleEntity.setSettings(finalSettingsJson);
+            modulesRepository.save(moduleEntity);
+            System.out.println("✅ Final settings saved to DB: " + finalSettingsJson);
+        } catch (Exception e) {
+            System.err.println("❌ Error saving final settings: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         if (result instanceof ModuleData) {
             return result;

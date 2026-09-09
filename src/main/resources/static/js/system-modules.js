@@ -2,8 +2,6 @@
  * SYSTEM-MODULES.JS - Логика системных модулей мониторинга
  */
 
-console.log('🔵 System modules loaded!');
-
 // ===== КЭШ ДЛЯ ДАННЫХ =====
 const systemCache = {};
 let systemIntervals = {};
@@ -38,16 +36,10 @@ function getBatteryIcon(percent, isCharging) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 function initSystemModule(moduleElement, moduleId) {
-    console.log('🔵 initSystemModule called for:', moduleId);
-
     const numericId = getNumericId(moduleId);
     if (numericId === null) {
-        console.error('❌ Invalid module ID:', moduleId);
         return;
     }
-
-    console.log('🔵 numericId:', numericId);
-    console.log('🔵 moduleElement:', moduleElement);
 
     // Очищаем старый интервал
     if (systemIntervals[numericId]) {
@@ -71,8 +63,6 @@ function initSystemModule(moduleElement, moduleId) {
         default: interval = 5000;
     }
 
-    console.log('🔵 Starting interval for', moduleType, 'every', interval, 'ms');
-
     systemIntervals[numericId] = setInterval(() => {
         updateSystemData(numericId);
     }, interval);
@@ -83,19 +73,14 @@ async function loadSystemData(moduleElement, moduleId) {
     const numericId = getNumericId(moduleId);
     if (numericId === null) return;
 
-    console.log('🔵 loadSystemData called for:', numericId);
-
     try {
         const response = await fetch(`/api/modules/${numericId}/data`);
-        console.log('🔵 Response status:', response.status);
 
         if (response.ok) {
             const data = await response.json();
-            console.log('🔵 Data received for', numericId, ':', data);
             systemCache[numericId] = data;
             renderSystemDisplay(moduleElement, data);
         } else {
-            console.error('❌ Failed to load system data:', response.status);
             // Показываем ошибку
             const systemDisplay = moduleElement.querySelector('.system-display') ||
                 moduleElement.querySelector('.widget-content');
@@ -108,7 +93,6 @@ async function loadSystemData(moduleElement, moduleId) {
             }
         }
     } catch (error) {
-        console.error('❌ Error loading system data:', error);
         const systemDisplay = moduleElement.querySelector('.system-display') ||
             moduleElement.querySelector('.widget-content');
         if (systemDisplay) {
@@ -147,17 +131,14 @@ async function updateSystemData(moduleId) {
 
 // ===== РЕНДЕРИНГ =====
 function renderSystemDisplay(moduleElement, data) {
-    console.log('🔵 renderSystemDisplay called for:', moduleElement.dataset.widgetId);
 
     let systemDisplay = moduleElement.querySelector('.system-display');
 
     // Если контейнера нет, ищем widget-content или создаем
     if (!systemDisplay) {
-        console.log('🔵 system-display not found, looking for widget-content...');
         systemDisplay = moduleElement.querySelector('.widget-content');
 
         if (!systemDisplay) {
-            console.log('🔵 widget-content not found, creating...');
             const wrapper = moduleElement.querySelector('.widget-content-wrapper') || moduleElement;
             systemDisplay = document.createElement('div');
             systemDisplay.className = 'widget-content system-display';
@@ -170,9 +151,6 @@ function renderSystemDisplay(moduleElement, data) {
 
     const content = data.content || {};
     const moduleType = moduleElement.dataset.widgetType;
-
-    console.log('🔵 Rendering for type:', moduleType);
-    console.log('🔵 Content:', content);
 
     let html = '';
 
@@ -196,7 +174,6 @@ function renderSystemDisplay(moduleElement, data) {
             html = `<div style="text-align:center; opacity:0.5;">Неизвестный тип: ${moduleType}</div>`;
     }
 
-    console.log('🔵 HTML length:', html.length);
     systemDisplay.innerHTML = html;
 }
 
@@ -684,7 +661,7 @@ function renderSystemSettings(data) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ =====
 function initSystemSettingsEvents(moduleId, settingsContainer) {
-    console.log('System settings initialized for:', moduleId);
+
 }
 
 // ===== ЭКСПОРТ =====
@@ -695,7 +672,3 @@ window.renderSystemDisplay = renderSystemDisplay;
 window.renderSystemSettings = renderSystemSettings;
 window.initSystemSettingsEvents = initSystemSettingsEvents;
 window.systemCache = systemCache;
-
-console.log('✅ system-modules.js fully loaded');
-console.log('✅ initSystemModule:', typeof initSystemModule === 'function');
-console.log('✅ renderSystemDisplay:', typeof renderSystemDisplay === 'function');

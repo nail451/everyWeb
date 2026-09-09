@@ -116,7 +116,6 @@ function getWidgetContent(widget) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 function initGrid() {
-    console.log('Grid initialized');
     loadGridData();
 }
 
@@ -126,13 +125,24 @@ async function loadGridData() {
         const response = await fetch(`/api/pages/${currentPageId}/layout`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Grid data loaded:', data);
-
             gridState.isEditing = data.isEditing || false;
             gridState.gridRows = data.gridRows || 4;
             gridState.gridCols = data.gridCols || 4;
             gridState.widgets = data.widgets || [];
 
+            // ===== ВАЖНО: СНАЧАЛА ЗАГРУЖАЕМ НАСТРОЙКИ ДЛЯ ВСЕХ ВИДЖЕТОВ =====
+            // Это нужно сделать ДО renderGrid(), чтобы виджеты создавались с правильными стилями
+            if (gridState.widgets.length > 0) {
+                const loadPromises = gridState.widgets.map(widget => {
+                    if (typeof loadWidgetSettings === 'function') {
+                        return loadWidgetSettings(widget.id);
+                    }
+                    return Promise.resolve();
+                });
+                await Promise.all(loadPromises);
+            }
+
+            // Теперь рендерим с уже загруженными настройками
             renderGrid();
 
             const editBtn = document.querySelector('.edit-mode-btn');
@@ -142,31 +152,27 @@ async function loadGridData() {
                 editBtn.style.borderColor = gridState.isEditing ? 'rgba(76,175,80,0.3)' : 'rgba(33,150,243,0.3)';
             }
 
-            // ===== ВОССТАНАВЛИВАЕМ НАСТРОЙКИ ПОСЛЕ ПЕРЕЗАГРУЗКИ =====
-            // Несколько попыток с задержкой
+            // Восстанавливаем настройки после загрузки (для новых виджетов)
             setTimeout(() => {
                 if (typeof restoreAllWidgetSettings === 'function') {
-                    console.log('🔄 Restoring settings after grid load (attempt 1)');
                     restoreAllWidgetSettings();
                 }
             }, 100);
 
             setTimeout(() => {
                 if (typeof restoreAllWidgetSettings === 'function') {
-                    console.log('🔄 Restoring settings after grid load (attempt 2)');
                     restoreAllWidgetSettings();
                 }
             }, 300);
 
             setTimeout(() => {
                 if (typeof restoreAllWidgetSettings === 'function') {
-                    console.log('🔄 Restoring settings after grid load (attempt 3)');
                     restoreAllWidgetSettings();
                 }
             }, 600);
         }
     } catch (error) {
-        console.error('Error loading grid data:', error);
+
     }
 }
 
@@ -236,7 +242,7 @@ function renderGrid() {
     }, 100);
 }
 
-// ===== СОЗДАНИЕ ЭЛЕМЕНТА ВИДЖЕТА =====
+/// ===== СОЗДАНИЕ ЭЛЕМЕНТА ВИДЖЕТА =====
 function createWidgetElement(widget) {
     const div = document.createElement('div');
     div.className = `widget ${widget.type.toLowerCase()}-widget`;
@@ -247,16 +253,21 @@ function createWidgetElement(widget) {
     div.dataset.rowSpan = widget.rowSpan;
     div.dataset.colSpan = widget.colSpan;
 
-    // ===== ВАЖНО: Убираем overflow hidden чтобы панель настроек была видна =====
+    // ===== ЗАГРУЖАЕМ НАСТРОЙКИ ИЗ КЭША (УЖЕ ДОЛЖНЫ БЫТЬ ЗАГРУЖЕНЫ) =====
+    const cachedSettings = (window.widgetSettingsCache && window.widgetSettingsCache[widget.id]) || {};
+    const hideBackground = cachedSettings.hideBackground || false;
+    const alignment = cachedSettings.alignment || 'center-center';
+
+    // ===== ПРИМЕНЯЕМ СТИЛИ СРАЗУ ПРИ СОЗДАНИИ =====
     div.style.cssText = `
         display: flex;
         flex-direction: column;
-        background: rgba(255, 255, 255, 0.06);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        background: ${hideBackground ? 'transparent' : 'rgba(255, 255, 255, 0.06)'};
+        backdrop-filter: ${hideBackground ? 'none' : 'blur(8px)'};
+        -webkit-backdrop-filter: ${hideBackground ? 'none' : 'blur(8px)'};
         border-radius: 16px;
-        padding: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: ${hideBackground ? '4px' : '16px'};
+        border: ${hideBackground ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'};
         transition: all 0.3s ease;
         position: relative;
         min-height: 80px;
@@ -267,10 +278,14 @@ function createWidgetElement(widget) {
         div.dataset.linkSettings = widget.settings;
     }
 
-    if (gridState.isEditing) {
+    // ===== ПРОВЕРКА НА РЕЖИМ РЕДАКТИРОВАНИЯ =====
+    const isEditing = window.gridState ? window.gridState.isEditing : false;
+
+    if (isEditing) {
         div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
         div.style.border = '2px solid rgba(76,175,80,0.15)';
         div.style.cursor = 'grab';
+        div.draggable = true;
     }
 
     // ===== ЗАГОЛОВОК =====
@@ -280,24 +295,24 @@ function createWidgetElement(widget) {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+        margin-bottom: ${hideBackground ? '0' : '8px'};
+        padding-bottom: ${hideBackground ? '0' : '6px'};
+        border-bottom: ${hideBackground ? 'none' : '1px solid rgba(255,255,255,0.04)'};
         flex-shrink: 0;
         min-height: 24px;
     `;
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'widget-title';
-    titleSpan.style.cssText = 'font-size:13px; font-weight:500; opacity:0.6; display:flex; align-items:center; gap:6px;';
+    titleSpan.style.cssText = `font-size:13px; font-weight:500; opacity:0.6; display:${hideBackground ? 'none' : 'flex'}; align-items:center; gap:6px;`;
     titleSpan.innerHTML = `
         ${getWidgetIcon(widget.type)} ${escapeHtml(widget.title || widget.type)}
-        ${gridState.isEditing ? `<span style="font-size:10px; opacity:0.3; margin-left:4px;">(${widget.rowSpan}×${widget.colSpan})</span>` : ''}
+        ${isEditing ? `<span style="font-size:10px; opacity:0.3; margin-left:4px;">(${widget.rowSpan}×${widget.colSpan})</span>` : ''}
     `;
     header.appendChild(titleSpan);
 
     // ===== ДЕЙСТВИЯ (только в режиме редактирования) =====
-    if (gridState.isEditing) {
+    if (isEditing) {
         const actions = document.createElement('div');
         actions.className = 'widget-actions';
         actions.style.cssText = 'display:flex; gap:4px; opacity:0.6; transition:opacity 0.3s; flex-shrink:0;';
@@ -319,7 +334,9 @@ function createWidgetElement(widget) {
         settingsBtn.title = 'Настройки модуля';
         settingsBtn.onclick = function(e) {
             e.stopPropagation();
-            toggleModuleSettings(widget.id);
+            if (typeof toggleModuleSettings === 'function') {
+                toggleModuleSettings(widget.id);
+            }
         };
         actions.appendChild(settingsBtn);
 
@@ -340,7 +357,9 @@ function createWidgetElement(widget) {
         removeBtn.title = 'Удалить виджет';
         removeBtn.onclick = function(e) {
             e.stopPropagation();
-            removeWidget(widget.id);
+            if (typeof removeWidget === 'function') {
+                removeWidget(widget.id);
+            }
         };
         actions.appendChild(removeBtn);
 
@@ -349,19 +368,34 @@ function createWidgetElement(widget) {
 
     div.appendChild(header);
 
-    // ===== КОНТЕНТ (обёртка для содержимого виджета) =====
+    // ===== КОНТЕНТ =====
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'widget-content-wrapper';
     contentWrapper.style.cssText = 'flex:1; display:flex; flex-direction:column; min-height:0; position:relative;';
 
-    // Контент виджета
     const content = document.createElement('div');
     content.className = 'widget-content';
-    content.style.cssText = 'flex:1; display:flex; flex-direction:column; min-height:60px;';
+
+    // ===== ПРИМЕНЯЕМ ВЫРАВНИВАНИЕ СРАЗУ =====
+    const [vertical, horizontal] = alignment.split('-');
+    content.style.cssText = `
+        flex:1; 
+        display:flex; 
+        flex-wrap:wrap; 
+        width:100%; 
+        height:100%; 
+        min-height:60px; 
+        gap:10px; 
+        padding:8px; 
+        align-content:center; 
+        box-sizing:border-box;
+        justify-content: ${horizontal === 'left' ? 'flex-start' : horizontal === 'right' ? 'flex-end' : 'center'};
+        align-items: ${vertical === 'top' ? 'flex-start' : vertical === 'bottom' ? 'flex-end' : 'center'};
+    `;
     content.innerHTML = getWidgetContent(widget);
     contentWrapper.appendChild(content);
 
-    // ===== НАСТРОЙКИ (ВНУТРИ contentWrapper, ПОСЛЕ КОНТЕНТА) =====
+    // ===== НАСТРОЙКИ =====
     const settingsDiv = document.createElement('div');
     settingsDiv.className = 'module-settings';
     settingsDiv.style.cssText = 'display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); flex-shrink:0;';
@@ -370,7 +404,7 @@ function createWidgetElement(widget) {
     div.appendChild(contentWrapper);
 
     // ===== RESIZE HANDLE =====
-    if (gridState.isEditing) {
+    if (isEditing) {
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'widget-resize-handle';
         resizeHandle.innerHTML = '↘';
@@ -403,6 +437,14 @@ function createWidgetElement(widget) {
         resizeHandle.addEventListener('mousedown', startResize);
         resizeHandle.addEventListener('touchstart', startResize);
         div.appendChild(resizeHandle);
+    }
+
+    // ===== ДОБАВЛЯЕМ ОБРАБОТЧИКИ ДЛЯ DRAG & DROP =====
+    if (isEditing) {
+        div.addEventListener('dragstart', handleDragStart);
+        div.addEventListener('dragend', handleDragEnd);
+        div.addEventListener('dragover', handleDragOver);
+        div.addEventListener('drop', handleDrop);
     }
 
     return div;
@@ -812,7 +854,6 @@ async function moveWidgetToPosition(widgetId, newRow, newCol) {
             showToast('✅ Виджет перемещен');
         }
     } catch (error) {
-        console.error('Error moving widget:', error);
         showToast('❌ Ошибка перемещения виджета');
     }
 }
@@ -950,7 +991,6 @@ async function resizeWidgetTo(widgetId, rowSpan, colSpan) {
             showToast('✅ Размер виджета изменен');
         }
     } catch (error) {
-        console.error('Error resizing widget:', error);
         showToast('❌ Ошибка изменения размера');
     }
 }
@@ -990,7 +1030,6 @@ async function removeWidget(widgetId) {
             showToast('✅ Виджет удален');
         }
     } catch (error) {
-        console.error('Error removing widget:', error);
         showToast('❌ Ошибка удаления виджета');
     }
 }
@@ -1007,14 +1046,12 @@ async function toggleEditMode() {
             showToast(gridState.isEditing ? '✏️ Режим редактирования включен' : '✅ Режим редактирования выключен');
         }
     } catch (error) {
-        console.error('Error toggling edit mode:', error);
         showToast('❌ Ошибка переключения режима');
     }
 }
 
 // ===== ДОБАВЛЕНИЕ ВИДЖЕТА =====
 async function addWidget(type, rowSpan, colSpan) {
-    console.log('addWidget called with:', { type, rowSpan, colSpan });
     try {
         const response = await fetch(`/api/pages/${currentPageId}/layout/widget`, {
             method: 'POST',
@@ -1032,7 +1069,6 @@ async function addWidget(type, rowSpan, colSpan) {
             showToast('✅ Виджет добавлен');
         }
     } catch (error) {
-        console.error('Error adding widget:', error);
         showToast('❌ Ошибка добавления виджета');
     }
 }
@@ -1079,7 +1115,6 @@ async function swapWidgets(widgetId1, widgetId2) {
             showToast('✅ Виджеты перемещены');
         }
     } catch (error) {
-        console.error('Error swapping widgets:', error);
         showToast('❌ Ошибка перемещения виджетов');
     }
 }

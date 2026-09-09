@@ -16,7 +16,6 @@ function escapeHtml(text) {
 }
 
 function showToast(message) {
-    console.log('Toast:', message);
     const toast = document.getElementById('toast');
     if (!toast) return;
 
@@ -49,10 +48,8 @@ function applyWallpaperWithOverlay(path) {
         body.style.backgroundPosition = 'center';
         body.style.backgroundAttachment = 'fixed';
         body.classList.add('wallpaper-applied');
-        console.log('✅ Wallpaper applied with overlay:', path);
     };
     img.onerror = function() {
-        console.warn('❌ Failed to load wallpaper:', path);
         body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
         body.classList.remove('wallpaper-applied');
     };
@@ -61,7 +58,6 @@ function applyWallpaperWithOverlay(path) {
 
 // ===== ПРИНУДИТЕЛЬНАЯ СМЕНА ОБОЕВ =====
 async function forceChangeWallpaper() {
-    console.log('Force change wallpaper called');
     try {
         showToast('⏳ Смена обоев...');
 
@@ -92,7 +88,6 @@ async function forceChangeWallpaper() {
             showToast('❌ Ошибка смены обоев: ' + error);
         }
     } catch (error) {
-        console.error('Error forcing wallpaper change:', error);
         showToast('❌ Ошибка смены обоев');
     }
 }
@@ -100,12 +95,9 @@ async function forceChangeWallpaper() {
 // ===== ЗАГРУЗКА НАСТРОЕК ССЫЛОК =====
 async function loadLinkSettingsFromServer() {
     try {
-        console.log('=== LOADING LINK SETTINGS FROM SERVER ===');
         const response = await fetch(`/api/pages/${currentPageId}/links/settings`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Raw data from server:', JSON.stringify(data, null, 2));
-
             const settings = {
                 iconSize: data.linkIconSize || data.iconSize || 28,
                 fontSize: data.linkFontSize || data.fontSize || 12,
@@ -114,15 +106,11 @@ async function loadLinkSettingsFromServer() {
                 showAddLinkButton: data.showAddLinkButton !== undefined ? data.showAddLinkButton : true
             };
 
-            console.log('Parsed settings:', settings);
-            console.log('showAddLinkButton from server:', settings.showAddLinkButton);
-
             linkSettings = settings;
 
             applyLinkStylesFromSettings(settings);
 
             if (typeof renderLinks === 'function') {
-                console.log('Calling renderLinks with showAddButton:', settings.showAddLinkButton);
                 renderLinks();
             }
 
@@ -131,15 +119,12 @@ async function loadLinkSettingsFromServer() {
                 const checkbox = document.getElementById('showAddLinkButton');
                 if (checkbox) {
                     checkbox.checked = settings.showAddLinkButton;
-                    console.log('Checkbox updated to:', settings.showAddLinkButton);
                 }
             }
 
-            console.log('=== LINK SETTINGS LOAD COMPLETE ===');
             return settings;
         }
     } catch (error) {
-        console.error('Error loading link settings:', error);
     }
     return null;
 }
@@ -147,7 +132,6 @@ async function loadLinkSettingsFromServer() {
 // ===== ПРИМЕНЕНИЕ НАСТРОЕК ССЫЛОК =====
 function applyLinkStylesFromSettings(settings) {
     if (!settings) {
-        console.warn('No settings provided to applyLinkStylesFromSettings');
         return;
     }
 
@@ -155,8 +139,6 @@ function applyLinkStylesFromSettings(settings) {
     const fontSize = settings.fontSize || settings.linkFontSize || 12;
     const bgOpacity = settings.bgOpacity || settings.linkBgOpacity || 15;
     const bgDarkness = settings.bgDarkness || settings.linkBgDarkness || 0;
-
-    console.log('Applying link styles with values:', { iconSize, fontSize, bgOpacity, bgDarkness });
 
     const opacity = bgOpacity / 100;
     const baseColor = `rgba(255, 255, 255, ${opacity})`;
@@ -232,13 +214,10 @@ function applyLinkStylesFromSettings(settings) {
 // ===== ПЕРЕСОЗДАНИЕ ИКОНОК =====
 function recreateLinkIcons(settings) {
     if (!settings) {
-        console.warn('No settings provided to recreateLinkIcons');
         return;
     }
 
     const iconSize = settings.iconSize || settings.linkIconSize || 28;
-    console.log('Recreating link icons with size:', iconSize);
-
     const iconSizePx = Math.max(16, Math.min(100, iconSize)) + 'px';
     const containerSize = Math.max(40, Math.min(112, iconSize + 12)) + 'px';
 
@@ -269,12 +248,9 @@ function recreateLinkIcons(settings) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Core.js loaded');
-
     const pageContainer = document.getElementById('pageContainer');
     if (pageContainer) {
         currentPageId = parseInt(pageContainer.dataset.pageId);
-        console.log('Current page ID:', currentPageId);
     }
 
     if (typeof initHeader === 'function') initHeader();
@@ -289,19 +265,27 @@ document.addEventListener('DOMContentLoaded', function() {
         loadLinkSettingsFromServer();
     }
 
-    // Проверяем, что LinksModal загружен
-    console.log('LinksModal available?', typeof LinksModal !== 'undefined');
-    console.log('LinksModal initialized?', typeof LinksModal !== 'undefined' && LinksModal._initialized);
+    // ===== PUSH УВЕДОМЛЕНИЯ =====
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(() => {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted' && typeof autoSubscribeToPush === 'function') {
+                        setTimeout(autoSubscribeToPush, 1000);
+                    }
+                });
+            } else if (Notification.permission === 'granted' && typeof autoSubscribeToPush === 'function') {
+                setTimeout(autoSubscribeToPush, 1000);
+            }
+        });
+    }
 });
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Core.js loaded');
-
     const pageContainer = document.getElementById('pageContainer');
     if (pageContainer) {
         currentPageId = parseInt(pageContainer.dataset.pageId);
-        console.log('Current page ID:', currentPageId);
     }
 
     if (typeof initHeader === 'function') initHeader();
@@ -312,21 +296,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Несколько попыток для надёжности
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
-            console.log('🔄 Restoring settings on page load (attempt 1)');
             restoreAllWidgetSettings();
         }
     }, 300);
 
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
-            console.log('🔄 Restoring settings on page load (attempt 2)');
             restoreAllWidgetSettings();
         }
     }, 600);
 
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
-            console.log('🔄 Restoring settings on page load (attempt 3)');
             restoreAllWidgetSettings();
         }
     }, 1000);
@@ -338,9 +319,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentPageId) {
         loadLinkSettingsFromServer();
     }
-
-    console.log('LinksModal available?', typeof LinksModal !== 'undefined');
-    console.log('LinksModal initialized?', typeof LinksModal !== 'undefined' && LinksModal._initialized);
 });
 
 // ===== НАВИГАЦИЯ ПО СТРЕЛКАМ =====

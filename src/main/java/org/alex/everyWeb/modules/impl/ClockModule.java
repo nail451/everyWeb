@@ -6,9 +6,13 @@ import org.alex.everyWeb.modules.api.ModuleConfig;
 import org.alex.everyWeb.modules.api.ModuleData;
 import org.alex.everyWeb.modules.api.ModuleInfo;
 import org.alex.everyWeb.modules.core.Module;
+import org.alex.everyWeb.modules.entity.ModuleEntity;
 import org.alex.everyWeb.modules.impl.clock.ClockData;
+import org.alex.everyWeb.modules.repository.ModuleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -20,14 +24,17 @@ public class ClockModule extends Module {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Autowired
+    private ModuleRepository moduleRepository;
+
     @Override
     public ModuleInfo getInfo() {
         ModuleInfo info = new ModuleInfo();
         info.setType("CLOCK");
         info.setName("Часы");
-        info.setDescription("Многофункциональные часы с поддержкой нескольких часовых поясов");
+        info.setDescription("Многофункциональные часы с будильниками и поддержкой нескольких часовых поясов");
         info.setIcon("🕐");
-        info.setVersion("1.0.0");
+        info.setVersion("2.0.0");
         info.setAuthor("System");
         info.setEnabled(true);
         info.setConfigurable(true);
@@ -86,13 +93,40 @@ public class ClockModule extends Module {
                     if (index >= 0 && index < clockData.getFaces().size()) {
                         clockData.removeFace(index);
                         saveClockData(config, clockData);
-                        // Возвращаем полные данные с сохранением всех настроек
                         return buildModuleData(clockData, config);
                     } else {
                         Map<String, Object> error = new HashMap<>();
                         error.put("error", "Циферблат не найден");
                         return error;
                     }
+                }
+                break;
+
+            // ===== БУДИЛЬНИКИ =====
+            case "addAlarm":
+                ClockData.Alarm newAlarm = parseAlarmFromParams(params);
+                if (newAlarm != null) {
+                    clockData.addAlarm(newAlarm);
+                    saveClockData(config, clockData);
+                    return buildModuleData(clockData, config);
+                }
+                break;
+
+            case "removeAlarm":
+                Integer alarmIndex = (Integer) params.get("index");
+                if (alarmIndex != null && alarmIndex >= 0 && alarmIndex < clockData.getAlarms().size()) {
+                    clockData.removeAlarm(alarmIndex);
+                    saveClockData(config, clockData);
+                    return buildModuleData(clockData, config);
+                }
+                break;
+
+            case "toggleAlarm":
+                Integer toggleIndex = (Integer) params.get("index");
+                if (toggleIndex != null && toggleIndex >= 0 && toggleIndex < clockData.getAlarms().size()) {
+                    clockData.toggleAlarm(toggleIndex);
+                    saveClockData(config, clockData);
+                    return buildModuleData(clockData, config);
                 }
                 break;
 
@@ -117,6 +151,69 @@ public class ClockModule extends Module {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
+    private ClockData.Alarm parseAlarmFromParams(Map<String, Object> params) {
+        try {
+            String name = (String) params.getOrDefault("name", "Будильник");
+            String time = (String) params.get("time");
+            Boolean enabled = (Boolean) params.getOrDefault("enabled", true);
+
+            List<DayOfWeek> repeatDays = new ArrayList<>();
+            Object repeatDaysObj = params.get("repeatDays");
+            if (repeatDaysObj instanceof List) {
+                List<?> daysList = (List<?>) repeatDaysObj;
+                for (Object day : daysList) {
+                    if (day instanceof String) {
+                        try {
+                            repeatDays.add(DayOfWeek.valueOf((String) day));
+                        } catch (IllegalArgumentException e) {
+                            // Игнорируем
+                        }
+                    }
+                }
+            }
+
+            Integer repeatIntervalHours = null;
+            Integer repeatIntervalMinutes = null;
+
+            Object hoursObj = params.get("repeatIntervalHours");
+            if (hoursObj instanceof Integer) {
+                repeatIntervalHours = (Integer) hoursObj;
+            } else if (hoursObj instanceof String) {
+                try {
+                    repeatIntervalHours = Integer.parseInt((String) hoursObj);
+                } catch (NumberFormatException e) {}
+            }
+
+            Object minutesObj = params.get("repeatIntervalMinutes");
+            if (minutesObj instanceof Integer) {
+                repeatIntervalMinutes = (Integer) minutesObj;
+            } else if (minutesObj instanceof String) {
+                try {
+                    repeatIntervalMinutes = Integer.parseInt((String) minutesObj);
+                } catch (NumberFormatException e) {}
+            }
+
+            String sound = (String) params.get("sound");
+            Boolean vibrate = (Boolean) params.getOrDefault("vibrate", true);
+
+            ClockData.Alarm alarm = new ClockData.Alarm();
+            alarm.setName(name);
+            alarm.setTime(time != null ? time : "08:00");
+            alarm.setEnabled(enabled);
+            alarm.setRepeatDays(repeatDays);
+            alarm.setRepeatIntervalHours(repeatIntervalHours);
+            alarm.setRepeatIntervalMinutes(repeatIntervalMinutes);
+            alarm.setSound(sound);
+            alarm.setVibrate(vibrate);
+
+            return alarm;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private ModuleData buildModuleData(ClockData clockData, ModuleConfig config) {
         ModuleData data = new ModuleData("CLOCK", "Часы");
         Map<String, Object> content = new HashMap<>();
@@ -132,25 +229,19 @@ public class ClockModule extends Module {
         String settingsJson = config.getString("clockData");
         if (settingsJson != null && !settingsJson.isEmpty()) {
             try {
-                ClockData data = objectMapper.readValue(settingsJson, ClockData.class);
-                // Если есть данные, возвращаем их
-                if (data != null && data.getFaces() != null && !data.getFaces().isEmpty()) {
-                    return data;
-                }
+                return objectMapper.readValue(settingsJson, ClockData.class);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        // Создаем новые данные с одним дефолтным циферблатом
-        ClockData data = new ClockData();
-        // Не добавляем дополнительный циферблат - основной уже есть в ClockData
-        return data;
+        return new ClockData();
     }
 
     private void saveClockData(ModuleConfig config, ClockData clockData) {
         try {
             String json = objectMapper.writeValueAsString(clockData);
             config.put("clockData", json);
+            System.out.println("✅ Clock data saved to config: " + json.substring(0, Math.min(200, json.length())));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -160,18 +251,15 @@ public class ClockModule extends Module {
         List<Map<String, Object>> times = new ArrayList<>();
         Instant now = Instant.now();
 
-        // Основной циферблат (всегда есть)
         ZoneId mainZone = ZoneId.of(clockData.getTimezone());
         times.add(createTimeInfo("", mainZone, now, clockData));
 
-        // Дополнительные циферблаты
         if (clockData.getFaces() != null) {
             for (ClockData.ClockFace face : clockData.getFaces()) {
                 try {
                     ZoneId zone = ZoneId.of(face.getTimezone());
                     times.add(createTimeInfo(face.getName(), zone, now, clockData));
                 } catch (Exception e) {
-                    // Если часовой пояс невалидный, пропускаем
                     System.err.println("Invalid timezone: " + face.getTimezone());
                 }
             }

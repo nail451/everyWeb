@@ -2,34 +2,25 @@
  * WEATHER-MODULE.JS - Логика модуля погоды (Open-Meteo)
  */
 
-console.log('Weather module loaded!');
 const weatherCache = {};
 
 function initWeatherModule(moduleElement, moduleId) {
-    console.log('Initializing weather module:', moduleId);
     loadWeatherData(moduleElement, moduleId);
 }
 
 async function loadWeatherData(moduleElement, moduleId) {
     try {
-        console.log(`Loading weather data for module ${moduleId}`);
-
         const response = await fetch(`/api/modules/${moduleId}/data`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Weather data loaded:', data);
-            // Сохраняем в кэш
             weatherCache[moduleId] = data;
             renderWeatherDisplay(moduleElement, data);
         } else {
-            console.error(`Failed to load weather data for module ${moduleId}:`, response.status);
-            // Если есть кэш, используем его
             if (weatherCache[moduleId]) {
                 renderWeatherDisplay(moduleElement, weatherCache[moduleId]);
             }
         }
     } catch (error) {
-        console.error('Error loading weather data:', error);
         if (weatherCache[moduleId]) {
             renderWeatherDisplay(moduleElement, weatherCache[moduleId]);
         }
@@ -98,8 +89,6 @@ function renderWeatherDisplay(moduleElement, data) {
 
 // ===== НАСТРОЙКИ МОДУЛЯ ПОГОДЫ =====
 function renderWeatherSettings(data) {
-    console.log('Rendering weather settings with data:', data);
-
     const content = data.content || {};
     const weatherData = content.weatherData || {};
     const weatherInfo = content.weatherInfo || {};
@@ -229,8 +218,6 @@ async function updateWeatherSettings(moduleId, settingsContainer) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('Weather settings updated:', data);
-
             const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
             if (moduleElement) {
                 renderWeatherDisplay(moduleElement, data);
@@ -247,7 +234,6 @@ async function updateWeatherSettings(moduleId, settingsContainer) {
             showToast('❌ Ошибка: ' + error);
         }
     } catch (error) {
-        console.error('Error updating weather settings:', error);
         showToast('❌ Ошибка обновления настроек');
     }
 }

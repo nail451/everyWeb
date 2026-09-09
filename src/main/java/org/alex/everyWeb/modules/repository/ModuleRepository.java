@@ -17,6 +17,11 @@ public interface ModuleRepository extends JpaRepository<ModuleEntity, Long> {
 
     List<ModuleEntity> findByPageIdAndIsActiveTrueOrderByPositionAsc(Long pageId);
 
+    // ===== ДОБАВЛЯЕМ МЕТОДЫ ДЛЯ ПОИСКА ПО ТИПУ =====
+    List<ModuleEntity> findByType(String type);
+
+    List<ModuleEntity> findByTypeAndIsActiveTrue(String type);
+
     @Modifying
     @Transactional
     @Query("DELETE FROM ModuleEntity m WHERE m.page.id = :pageId")

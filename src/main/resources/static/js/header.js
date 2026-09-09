@@ -4,8 +4,6 @@
 
 // ===== ПЕРЕХОД МЕЖДУ СТРАНИЦАМИ =====
 function navigatePage(direction) {
-    console.log('Navigate:', direction);
-
     const currentPageName = document.querySelector('.header .page-title span:last-child')?.textContent;
     if (!currentPageName) return;
 
@@ -64,7 +62,6 @@ function updateNavigationArrows() {
 function saveLastPage(pageName) {
     try {
         localStorage.setItem('everyweb_last_page', pageName);
-        console.log('Saved last page:', pageName);
     } catch (e) {
         // Игнорируем ошибки localStorage
     }
@@ -72,7 +69,6 @@ function saveLastPage(pageName) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Header initialized');
     updateNavigationArrows();
 
     window.addEventListener('popstate', updateNavigationArrows);

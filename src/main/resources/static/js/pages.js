@@ -21,8 +21,6 @@ async function loadPagesInfo() {
         const response = await fetch('/api/pages');
         if (response.ok) {
             const pages = await response.json();
-            console.log('📋 Pages info loaded:', pages);
-
             pagesInfo = {};
             pages.forEach(page => {
                 pagesInfo[page.id] = page;
@@ -32,7 +30,6 @@ async function loadPagesInfo() {
             return pages;
         }
     } catch (error) {
-        console.error('❌ Error loading pages info:', error);
     }
     return null;
 }
@@ -78,12 +75,10 @@ function isPageUnlocked(pageId) {
 
 function unlockPage(pageId) {
     sessionStorage.setItem('page_unlocked_' + pageId, 'true');
-    console.log('🔓 Page unlocked:', pageId);
 }
 
 function lockPage(pageId) {
     sessionStorage.removeItem('page_unlocked_' + pageId);
-    console.log('🔒 Page locked:', pageId);
 }
 
 // ============================================================
@@ -91,11 +86,9 @@ function lockPage(pageId) {
 // ============================================================
 
 function openCreatePageModal() {
-    console.log('🔵 openCreatePageModal called');
 
     const overlay = document.getElementById('createPageOverlay');
     if (!overlay) {
-        console.error('❌ createPageOverlay not found');
         return;
     }
 
@@ -123,8 +116,6 @@ function openCreatePageModal() {
 }
 
 function closeCreatePageModal() {
-    console.log('🔵 closeCreatePageModal called');
-
     const overlay = document.getElementById('createPageOverlay');
     if (!overlay) return;
 
@@ -134,8 +125,6 @@ function closeCreatePageModal() {
 }
 
 async function handleCreatePageSubmit(event) {
-    console.log('🔵 handleCreatePageSubmit called');
-
     if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -197,8 +186,6 @@ async function handleCreatePageSubmit(event) {
         }
 
         const data = await response.json();
-        console.log('✅ Page created:', data);
-
         showToast(`✅ Страница "${name}" создана${data.hasPassword ? ' 🔒 с паролем' : ''}`);
 
         closeCreatePageModal();
@@ -215,8 +202,6 @@ async function handleCreatePageSubmit(event) {
         }, 300);
 
     } catch (error) {
-        console.error('❌ Creation failed:', error);
-
         if (errorEl) {
             errorEl.textContent = '❌ ' + (error.message || 'Неизвестная ошибка');
             errorEl.style.display = 'block';
@@ -236,22 +221,11 @@ async function handleCreatePageSubmit(event) {
 // ============================================================
 
 function openPasswordCheckModal(pageId, pageName, redirectUrl) {
-    console.log('🔵 openPasswordCheckModal called:', { pageId, pageName, redirectUrl });
-
-    // ВАЖНО: Сохраняем ВСЕ данные для перехода
     pendingPageId = pageId;
     pendingPageName = pageName;
     pendingRedirectUrl = redirectUrl;
-
-    console.log('📌 Pending data set:', {
-        pageId: pendingPageId,
-        pageName: pendingPageName,
-        redirectUrl: pendingRedirectUrl
-    });
-
     const overlay = document.getElementById('passwordCheckOverlay');
     if (!overlay) {
-        console.error('❌ passwordCheckOverlay not found');
         return;
     }
 
@@ -280,8 +254,6 @@ function openPasswordCheckModal(pageId, pageName, redirectUrl) {
 }
 
 function closePasswordCheckModal() {
-    console.log('🔵 closePasswordCheckModal called');
-
     const overlay = document.getElementById('passwordCheckOverlay');
     if (!overlay) return;
 
@@ -289,18 +261,11 @@ function closePasswordCheckModal() {
     overlay.style.display = 'none';
     document.body.style.overflow = '';
 
-    // НЕ ОЧИЩАЕМ pending данные при закрытии, чтобы они остались для перехода
-    // pendingPageId = null;
-    // pendingPageName = null;
-    // pendingRedirectUrl = null;
-
     const errorEl = document.getElementById('passwordError');
     if (errorEl) errorEl.classList.remove('show');
 }
 
 async function handlePasswordSubmit(event) {
-    console.log('🔵 handlePasswordSubmit called');
-
     if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -308,7 +273,6 @@ async function handlePasswordSubmit(event) {
 
     // Проверяем, что у нас есть данные для перехода
     if (!pendingPageId) {
-        console.error('❌ No pending page ID');
         showToast('❌ Ошибка: не найдена страница для перехода');
         closePasswordCheckModal();
         return;
@@ -326,13 +290,10 @@ async function handlePasswordSubmit(event) {
     }
 
     if (!pageName) {
-        console.error('❌ No page name found for ID:', pendingPageId);
         showToast('❌ Ошибка: имя страницы не найдено');
         closePasswordCheckModal();
         return;
     }
-
-    console.log('📌 Processing password for page:', { id: pendingPageId, name: pageName });
 
     const passwordInput = document.getElementById('pagePasswordInput');
     const errorEl = document.getElementById('passwordError');
@@ -364,8 +325,6 @@ async function handlePasswordSubmit(event) {
         }
 
         const result = await response.json();
-        console.log('🔐 Password check result:', result);
-
         if (result.valid) {
             // Пароль правильный - запоминаем в сессии
             unlockPage(pendingPageId);
@@ -378,8 +337,6 @@ async function handlePasswordSubmit(event) {
             if (!targetUrl) {
                 targetUrl = '/page/' + encodeURIComponent(pageName);
             }
-
-            console.log('🔀 Redirecting to:', targetUrl);
 
             // Сохраняем последнюю страницу
             if (typeof saveLastPage === 'function') {
@@ -404,7 +361,6 @@ async function handlePasswordSubmit(event) {
             showToast('❌ Неверный пароль');
         }
     } catch (error) {
-        console.error('❌ Password check error:', error);
         if (errorEl) {
             errorEl.textContent = '❌ Ошибка проверки пароля';
             errorEl.classList.add('show');
@@ -425,7 +381,6 @@ async function handlePasswordSubmit(event) {
 function saveLastPage(pageName) {
     try {
         localStorage.setItem('everyweb_last_page', pageName);
-        console.log('💾 Saved last page:', pageName);
     } catch (e) {
         // Игнорируем
     }
@@ -433,17 +388,13 @@ function saveLastPage(pageName) {
 
 // ===== НАВИГАЦИЯ СТРЕЛКАМИ (пропускаем защищенные) =====
 window.navigatePage = function(direction) {
-    console.log('🔵 navigatePage called:', direction);
-
     const currentPageName = document.querySelector('.header .page-title span:last-child')?.textContent;
     if (!currentPageName) {
-        console.warn('⚠️ Current page name not found');
         return;
     }
 
     const pageLinks = document.querySelectorAll('.page-nav a');
     if (!pageLinks || pageLinks.length === 0) {
-        console.warn('⚠️ No page links found');
         return;
     }
 
@@ -459,7 +410,6 @@ window.navigatePage = function(direction) {
     });
 
     if (currentIndex === -1) {
-        console.warn('⚠️ Current page not found in navigation');
         return;
     }
 
@@ -492,9 +442,6 @@ window.navigatePage = function(direction) {
                 foundPage = { name: pageName, id: pageId, link: pageLinks[newIndex] };
                 break;
             }
-
-            // Требуется пароль - продолжаем поиск
-            console.log(`🔒 Page "${pageName}" requires password, skipping...`);
         }
     } while (attempts < maxAttempts && newIndex !== currentIndex);
 
@@ -521,8 +468,6 @@ function handlePageLinkClick(event, link) {
     const pageName = link.textContent.trim();
     const pageId = getPageIdByName(pageName);
     const url = link.getAttribute('href');
-
-    console.log('🔵 Page link clicked:', { pageName, pageId, url });
 
     if (!pageId) {
         // Если не можем определить ID - просто переходим
@@ -553,20 +498,15 @@ async function checkPagePasswordOnLoad() {
     const pageId = parseInt(pageContainer.dataset.pageId);
     if (!pageId) return;
 
-    console.log('🔍 Checking password for page:', pageId);
-
     // Проверяем, есть ли у страницы пароль
     if (Object.keys(pagesInfo).length === 0) {
         await loadPagesInfo();
     }
 
     if (pageHasPassword(pageId) && !isPageUnlocked(pageId)) {
-        console.log('🔒 Page is locked, showing password modal');
 
         const pageNameElement = document.querySelector('.header .page-title span:last-child');
         const pageName = pageNameElement ? pageNameElement.textContent : '';
-
-        console.log('📌 Page name from header:', pageName);
 
         // Получаем текущий URL
         const currentUrl = window.location.href;
@@ -576,7 +516,6 @@ async function checkPagePasswordOnLoad() {
             openPasswordCheckModal(pageId, pageName, currentUrl);
         }, 300);
     } else if (pageHasPassword(pageId) && isPageUnlocked(pageId)) {
-        console.log('🔓 Page is unlocked');
     }
 }
 
@@ -585,8 +524,6 @@ async function checkPagePasswordOnLoad() {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Pages.js initialized');
-
     // Скрываем модальные окна
     const createOverlay = document.getElementById('createPageOverlay');
     if (createOverlay) {
@@ -606,7 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const newForm = createForm.cloneNode(true);
         createForm.parentNode.replaceChild(newForm, createForm);
         newForm.addEventListener('submit', function(e) {
-            console.log('📩 Create form submit');
             handleCreatePageSubmit(e);
         });
     }
@@ -617,7 +553,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const newPasswordForm = passwordForm.cloneNode(true);
         passwordForm.parentNode.replaceChild(newPasswordForm, passwordForm);
         newPasswordForm.addEventListener('submit', function(e) {
-            console.log('📩 Password form submit');
             handlePasswordSubmit(e);
         });
     }
@@ -688,8 +623,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Проверяем пароль текущей страницы
         checkPagePasswordOnLoad();
     });
-
-    console.log('✅ Pages.js initialization complete');
 });
 
 // ============================================================
@@ -713,5 +646,3 @@ window.unlockPage = unlockPage;
 window.lockPage = lockPage;
 window.checkPagePasswordOnLoad = checkPagePasswordOnLoad;
 window.handlePageLinkClick = handlePageLinkClick;
-
-console.log('✅ pages.js 2.3 loaded');
