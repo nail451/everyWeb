@@ -7,7 +7,6 @@ let gridState = {
     isEditing: false,
     gridRows: 4,
     gridCols: 4,
-    // Drag state
     draggedWidget: null,
     dragStartX: 0,
     dragStartY: 0,
@@ -18,7 +17,6 @@ let gridState = {
     highlightCells: [],
     dropTargetRow: -1,
     dropTargetCol: -1,
-    // Resize state
     isResizing: false,
     resizeTarget: null,
     resizeGhost: null,
@@ -44,7 +42,12 @@ function getWidgetIcon(type) {
         'CALENDAR': '📅',
         'RSS': '📰',
         'QUOTE': '💭',
-        'COUNTER': '🔢'
+        'COUNTER': '🔢',
+        'CPU': '📊',
+        'MEMORY': '🧠',
+        'DISK': '💾',
+        'NETWORK': '🌐',
+        'BATTERY': '🔋'
     };
     return icons[type] || '📦';
 }
@@ -130,8 +133,6 @@ async function loadGridData() {
             gridState.gridCols = data.gridCols || 4;
             gridState.widgets = data.widgets || [];
 
-            // ===== ВАЖНО: СНАЧАЛА ЗАГРУЖАЕМ НАСТРОЙКИ ДЛЯ ВСЕХ ВИДЖЕТОВ =====
-            // Это нужно сделать ДО renderGrid(), чтобы виджеты создавались с правильными стилями
             if (gridState.widgets.length > 0) {
                 const loadPromises = gridState.widgets.map(widget => {
                     if (typeof loadWidgetSettings === 'function') {
@@ -142,17 +143,10 @@ async function loadGridData() {
                 await Promise.all(loadPromises);
             }
 
-            // Теперь рендерим с уже загруженными настройками
             renderGrid();
 
-            const editBtn = document.querySelector('.edit-mode-btn');
-            if (editBtn) {
-                editBtn.textContent = gridState.isEditing ? '💾 Сохранить' : '✏️ Редактировать';
-                editBtn.style.background = gridState.isEditing ? 'rgba(76,175,80,0.2)' : 'rgba(33,150,243,0.2)';
-                editBtn.style.borderColor = gridState.isEditing ? 'rgba(76,175,80,0.3)' : 'rgba(33,150,243,0.3)';
-            }
+            updateHeaderButtons();
 
-            // Восстанавливаем настройки после загрузки (для новых виджетов)
             setTimeout(() => {
                 if (typeof restoreAllWidgetSettings === 'function') {
                     restoreAllWidgetSettings();
@@ -172,8 +166,55 @@ async function loadGridData() {
             }, 600);
         }
     } catch (error) {
-
     }
+}
+
+// ===== ОБНОВЛЕНИЕ КНОПОК В ХЕДЕРЕ =====
+function updateHeaderButtons() {
+    const isEditing = gridState.isEditing;
+
+    // Закрываем попап настроек при выходе из режима редактирования
+    if (!isEditing && typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpen()) {
+        WidgetSettingsPopup.close(true);
+    }
+
+    const editBtn = document.querySelector('.edit-mode-btn');
+    const editIcon = editBtn ? editBtn.querySelector('.edit-mode-icon') : null;
+    const addWidgetBtn = document.querySelector('.add-widget-btn');
+    const addPageBtn = document.querySelector('.add-page-btn');
+
+    if (editBtn && editIcon) {
+        editIcon.textContent = isEditing ? '✓' : '✏️';
+        editBtn.title = isEditing ? 'Выйти из редактирования' : 'Режим редактирования';
+        editBtn.classList.toggle('editing', isEditing);
+    }
+
+    if (addWidgetBtn) {
+        addWidgetBtn.style.display = isEditing ? 'inline-flex' : 'none';
+    }
+    if (addPageBtn) {
+        addPageBtn.style.display = isEditing ? 'inline-flex' : 'none';
+    }
+
+    updateNavArrows();
+
+    document.body.classList.toggle('editing-mode', isEditing);
+}
+
+// ===== ОБНОВЛЕНИЕ СТРЕЛОК НАВИГАЦИИ =====
+function updateNavArrows() {
+    const prevArrow = document.getElementById('prevPageArrow');
+    const nextArrow = document.getElementById('nextPageArrow');
+    if (!prevArrow || !nextArrow) return;
+
+    const pageLinks = document.querySelectorAll('.page-nav .nav-pages a');
+    if (pageLinks.length <= 1) {
+        prevArrow.classList.add('disabled');
+        nextArrow.classList.add('disabled');
+        return;
+    }
+    prevArrow.classList.remove('disabled');
+    nextArrow.classList.remove('disabled');
 }
 
 // ===== РЕНДЕРИНГ ГРИДА =====
@@ -189,14 +230,6 @@ function renderGrid() {
 
     container.style.gridTemplateRows = `repeat(${gridState.gridRows}, 1fr)`;
     container.style.gridTemplateColumns = `repeat(${gridState.gridCols}, 1fr)`;
-
-    if (gridState.isEditing) {
-        container.style.gap = '6px';
-        container.style.padding = '6px';
-        container.style.background = 'rgba(255,255,255,0.02)';
-        container.style.borderRadius = '16px';
-        container.style.border = '1px solid rgba(255,255,255,0.04)';
-    }
 
     const sortedWidgets = [...gridState.widgets].sort((a, b) => {
         if (a.row !== b.row) return a.row - b.row;
@@ -235,6 +268,14 @@ function renderGrid() {
         addEmptyCells(container);
     }
 
+    // Если попап был открыт, но виджет пропал — закрыть попап
+    if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpen()) {
+        const activeId = WidgetSettingsPopup.getActiveWidgetId();
+        if (activeId && !document.querySelector(`.widget[data-widget-id="${activeId}"]`)) {
+            WidgetSettingsPopup.close(true);
+        }
+    }
+
     setTimeout(() => {
         if (typeof initializeModules === 'function') {
             initializeModules();
@@ -242,7 +283,7 @@ function renderGrid() {
     }, 100);
 }
 
-/// ===== СОЗДАНИЕ ЭЛЕМЕНТА ВИДЖЕТА =====
+// ===== СОЗДАНИЕ ЭЛЕМЕНТА ВИДЖЕТА =====
 function createWidgetElement(widget) {
     const div = document.createElement('div');
     div.className = `widget ${widget.type.toLowerCase()}-widget`;
@@ -253,12 +294,10 @@ function createWidgetElement(widget) {
     div.dataset.rowSpan = widget.rowSpan;
     div.dataset.colSpan = widget.colSpan;
 
-    // ===== ЗАГРУЖАЕМ НАСТРОЙКИ ИЗ КЭША (УЖЕ ДОЛЖНЫ БЫТЬ ЗАГРУЖЕНЫ) =====
     const cachedSettings = (window.widgetSettingsCache && window.widgetSettingsCache[widget.id]) || {};
     const hideBackground = cachedSettings.hideBackground || false;
     const alignment = cachedSettings.alignment || 'center-center';
 
-    // ===== ПРИМЕНЯЕМ СТИЛИ СРАЗУ ПРИ СОЗДАНИИ =====
     div.style.cssText = `
         display: flex;
         flex-direction: column;
@@ -278,7 +317,6 @@ function createWidgetElement(widget) {
         div.dataset.linkSettings = widget.settings;
     }
 
-    // ===== ПРОВЕРКА НА РЕЖИМ РЕДАКТИРОВАНИЯ =====
     const isEditing = window.gridState ? window.gridState.isEditing : false;
 
     if (isEditing) {
@@ -311,11 +349,22 @@ function createWidgetElement(widget) {
     `;
     header.appendChild(titleSpan);
 
-    // ===== ДЕЙСТВИЯ (только в режиме редактирования) =====
+    div.appendChild(header);
+
+    // ===== ДЕЙСТВИЯ (только в режиме редактирования) — вынесены из header =====
     if (isEditing) {
         const actions = document.createElement('div');
         actions.className = 'widget-actions';
-        actions.style.cssText = 'display:flex; gap:4px; opacity:0.6; transition:opacity 0.3s; flex-shrink:0;';
+        actions.style.cssText = `
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            gap: 4px;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+            z-index: 5;
+        `;
 
         const settingsBtn = document.createElement('button');
         settingsBtn.className = 'widget-settings-btn';
@@ -325,17 +374,21 @@ function createWidgetElement(widget) {
             border: none;
             color: rgba(255,255,255,0.5);
             border-radius: 4px;
-            padding: 2px 6px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.2s;
-            flex-shrink:0;
         `;
         settingsBtn.title = 'Настройки модуля';
         settingsBtn.onclick = function(e) {
             e.stopPropagation();
-            if (typeof toggleModuleSettings === 'function') {
-                toggleModuleSettings(widget.id);
+            if (typeof WidgetSettingsPopup !== 'undefined') {
+                WidgetSettingsPopup.toggle(div);
             }
         };
         actions.appendChild(settingsBtn);
@@ -348,11 +401,15 @@ function createWidgetElement(widget) {
             border: none;
             color: rgba(255,255,255,0.3);
             border-radius: 4px;
-            padding: 2px 6px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
             cursor: pointer;
             font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.2s;
-            flex-shrink:0;
         `;
         removeBtn.title = 'Удалить виджет';
         removeBtn.onclick = function(e) {
@@ -363,10 +420,8 @@ function createWidgetElement(widget) {
         };
         actions.appendChild(removeBtn);
 
-        header.appendChild(actions);
+        div.appendChild(actions);
     }
-
-    div.appendChild(header);
 
     // ===== КОНТЕНТ =====
     const contentWrapper = document.createElement('div');
@@ -376,7 +431,6 @@ function createWidgetElement(widget) {
     const content = document.createElement('div');
     content.className = 'widget-content';
 
-    // ===== ПРИМЕНЯЕМ ВЫРАВНИВАНИЕ СРАЗУ =====
     const [vertical, horizontal] = alignment.split('-');
     content.style.cssText = `
         flex:1; 
@@ -394,12 +448,6 @@ function createWidgetElement(widget) {
     `;
     content.innerHTML = getWidgetContent(widget);
     contentWrapper.appendChild(content);
-
-    // ===== НАСТРОЙКИ =====
-    const settingsDiv = document.createElement('div');
-    settingsDiv.className = 'module-settings';
-    settingsDiv.style.cssText = 'display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); flex-shrink:0;';
-    contentWrapper.appendChild(settingsDiv);
 
     div.appendChild(contentWrapper);
 
@@ -439,7 +487,6 @@ function createWidgetElement(widget) {
         div.appendChild(resizeHandle);
     }
 
-    // ===== ДОБАВЛЯЕМ ОБРАБОТЧИКИ ДЛЯ DRAG & DROP =====
     if (isEditing) {
         div.addEventListener('dragstart', handleDragStart);
         div.addEventListener('dragend', handleDragEnd);
@@ -483,13 +530,18 @@ function addEmptyCells(container) {
     }
 }
 
-// ===== DRAG & DROP - НОВАЯ ВЕРСИЯ С ПЕРЕСЕЧЕНИЕМ =====
+// ===== DRAG & DROP =====
 let dragCounter = 0;
 let lastHighlightTime = 0;
 
 function handleDragStart(e) {
     const widget = e.target.closest('.widget');
     if (!widget) return;
+
+    // Закрываем попап настроек перед началом drag&drop
+    if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpen()) {
+        WidgetSettingsPopup.close(true);
+    }
 
     if (gridState.draggedWidget) {
         e.preventDefault();
@@ -514,7 +566,6 @@ function handleDragStart(e) {
     gridState.dropTargetRow = -1;
     gridState.dropTargetCol = -1;
 
-    // Оверлей
     const overlay = document.createElement('div');
     overlay.id = 'drag-overlay';
     overlay.style.cssText = `
@@ -531,14 +582,11 @@ function handleDragStart(e) {
     document.body.appendChild(overlay);
     gridState.dragOverlay = overlay;
 
-    // Призрак - делаем его полупрозрачным и без лишних элементов
     const ghost = widget.cloneNode(true);
     ghost.id = 'drag-ghost';
-    // Убираем все лишние элементы
     const removeElements = ghost.querySelectorAll('.widget-remove, .widget-resize-handle, .widget-resize-btn, .widget-actions');
     removeElements.forEach(el => el.remove());
 
-    // Делаем призрак больше похожим на призрак
     ghost.style.cssText = `
         position: fixed;
         pointer-events: none;
@@ -556,7 +604,6 @@ function handleDragStart(e) {
     document.body.appendChild(ghost);
     gridState.dragGhost = ghost;
 
-    // Сразу обновляем позицию призрака
     updateGhostPosition(e.clientX, e.clientY);
 
     widget.style.opacity = '0.3';
@@ -572,7 +619,6 @@ function handleDragOver(e) {
 
     if (!gridState.draggedWidget || !gridState.dragGhost) return;
 
-    // Обновляем позицию призрака с привязкой к сетке
     updateGhostPosition(e.clientX, e.clientY);
 }
 
@@ -583,34 +629,27 @@ function updateGhostPosition(clientX, clientY) {
     const grid = document.getElementById('pageGrid');
     const gridRect = grid.getBoundingClientRect();
 
-    // Получаем размер ячейки
     const cellWidth = (gridRect.right - gridRect.left) / gridState.gridCols;
     const cellHeight = (gridRect.bottom - gridRect.top) / gridState.gridRows;
 
     const rowSpan = gridState.draggedWidget.rowSpan;
     const colSpan = gridState.draggedWidget.colSpan;
 
-    // Вычисляем позицию мыши относительно грида
     const mouseX = clientX - gridRect.left;
     const mouseY = clientY - gridRect.top;
 
-    // Находим ячейку под мышью
     let col = Math.floor(mouseX / cellWidth);
     let row = Math.floor(mouseY / cellHeight);
 
-    // Корректируем для больших виджетов
     col = Math.max(0, Math.min(col, gridState.gridCols - colSpan));
     row = Math.max(0, Math.min(row, gridState.gridRows - rowSpan));
 
-    // Проверяем, не занята ли позиция
     if (!isPositionValid(row, col)) {
-        // Ищем ближайшую свободную
         const freePos = findNearestFreePositionOptimized(row, col, rowSpan, colSpan);
         if (freePos) {
             row = freePos.row;
             col = freePos.col;
         } else {
-            // Если ничего не найдено, оставляем текущую позицию
             const currentRow = gridState.draggedWidget.row;
             const currentCol = gridState.draggedWidget.col;
             if (isPositionValid(currentRow, currentCol)) {
@@ -620,18 +659,15 @@ function updateGhostPosition(clientX, clientY) {
         }
     }
 
-    // Вычисляем позицию призрака
     const ghostX = gridRect.left + col * cellWidth;
     const ghostY = gridRect.top + row * cellHeight;
 
-    // Добавляем небольшой отступ для выравнивания
     const padding = 3;
     ghost.style.left = (ghostX + padding) + 'px';
     ghost.style.top = (ghostY + padding) + 'px';
     ghost.style.width = (colSpan * cellWidth - padding * 2) + 'px';
     ghost.style.height = (rowSpan * cellHeight - padding * 2) + 'px';
 
-    // Сохраняем целевую позицию для подсветки
     if (isPositionValid(row, col)) {
         gridState.dropTargetRow = row;
         gridState.dropTargetCol = col;
@@ -643,78 +679,21 @@ function updateGhostPosition(clientX, clientY) {
     }
 }
 
-function checkGhostIntersection() {
-    const ghost = gridState.dragGhost;
-    if (!ghost) return;
-
-    const now = Date.now();
-    if (now - lastHighlightTime < 50) return;
-    lastHighlightTime = now;
-
-    const ghostRect = ghost.getBoundingClientRect();
-    const grid = document.getElementById('pageGrid');
-    const gridRect = grid.getBoundingClientRect();
-
-    const cellWidth = (gridRect.right - gridRect.left) / gridState.gridCols;
-    const cellHeight = (gridRect.bottom - gridRect.top) / gridState.gridRows;
-
-    // Используем ЛЕВЫЙ ВЕРХНИЙ угол призрака, а не центр
-    const ghostLeft = ghostRect.left - gridRect.left;
-    const ghostTop = ghostRect.top - gridRect.top;
-
-    // Вычисляем целевую ячейку по левому верхнему углу
-    let targetCol = Math.floor(ghostLeft / cellWidth);
-    let targetRow = Math.floor(ghostTop / cellHeight);
-
-    const rowSpan = gridState.draggedWidget.rowSpan;
-    const colSpan = gridState.draggedWidget.colSpan;
-
-    // Корректируем позицию, чтобы виджет не выходил за границы
-    targetCol = Math.max(0, Math.min(targetCol, gridState.gridCols - colSpan));
-    targetRow = Math.max(0, Math.min(targetRow, gridState.gridRows - rowSpan));
-
-    // Проверяем, помещается ли виджет в вычисленную позицию
-    if (isPositionValid(targetRow, targetCol)) {
-        gridState.dropTargetRow = targetRow;
-        gridState.dropTargetCol = targetCol;
-        highlightDropZoneOptimized(targetRow, targetCol, rowSpan, colSpan);
-        return;
-    }
-
-    // Если позиция занята, ищем ближайшую свободную
-    const bestMatch = findNearestFreePositionOptimized(targetRow, targetCol, rowSpan, colSpan);
-    if (bestMatch) {
-        gridState.dropTargetRow = bestMatch.row;
-        gridState.dropTargetCol = bestMatch.col;
-        highlightDropZoneOptimized(bestMatch.row, bestMatch.col, rowSpan, colSpan);
-        return;
-    }
-
-    gridState.dropTargetRow = -1;
-    gridState.dropTargetCol = -1;
-    clearHighlightsOptimized();
-}
-
-// ===== ПОИСК БЛИЖАЙШЕЙ СВОБОДНОЙ ПОЗИЦИИ =====
 function findNearestFreePositionOptimized(startRow, startCol, rowSpan, colSpan) {
-    // Проверяем все позиции вокруг по спирали
     const maxRadius = 3;
 
     for (let radius = 0; radius <= maxRadius; radius++) {
         for (let dr = -radius; dr <= radius; dr++) {
             for (let dc = -radius; dc <= radius; dc++) {
-                // Проверяем только крайние точки спирали
                 if (Math.abs(dr) !== radius && Math.abs(dc) !== radius) continue;
 
                 const row = startRow + dr;
                 const col = startCol + dc;
 
-                // Проверяем границы
                 if (row < 0 || col < 0 || row + rowSpan > gridState.gridRows || col + colSpan > gridState.gridCols) {
                     continue;
                 }
 
-                // Проверяем, не занято ли место
                 if (isPositionValid(row, col)) {
                     return { row, col };
                 }
@@ -729,15 +708,12 @@ function isPositionValid(row, col) {
     const rowSpan = gridState.draggedWidget.rowSpan;
     const colSpan = gridState.draggedWidget.colSpan;
 
-    // Проверяем границы
     if (row < 0 || col < 0 || row + rowSpan > gridState.gridRows || col + colSpan > gridState.gridCols) {
         return false;
     }
 
-    // Проверяем, не занято ли место другими виджетами
     for (const w of gridState.widgets) {
         if (w.id === gridState.draggedWidget.id) continue;
-        // Проверка пересечения прямоугольников
         if (row < w.row + w.rowSpan &&
             row + rowSpan > w.row &&
             col < w.col + w.colSpan &&
@@ -793,7 +769,6 @@ function handleDropOnEmpty(e) {
     e.preventDefault();
 }
 
-// ===== ПОДСВЕТКА =====
 function highlightDropZoneOptimized(row, col, rowSpan, colSpan) {
     clearHighlightsOptimized();
 
@@ -825,7 +800,6 @@ function clearHighlightsOptimized() {
     gridState.highlightCells = [];
 }
 
-// ===== ПЕРЕМЕЩЕНИЕ ВИДЖЕТА =====
 async function moveWidgetToPosition(widgetId, newRow, newCol) {
     try {
         const widget = gridState.widgets.find(w => w.id === widgetId);
@@ -1020,6 +994,11 @@ function resizeWidget(widgetId) {
 async function removeWidget(widgetId) {
     if (!confirm('Удалить этот виджет?')) return;
 
+    // Закрываем попап, если он открыт для этого виджета
+    if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(widgetId)) {
+        WidgetSettingsPopup.close(true);
+    }
+
     try {
         const response = await fetch(`/api/pages/${currentPageId}/layout/widget/${widgetId}`, {
             method: 'DELETE'
@@ -1132,3 +1111,5 @@ window.initGrid = initGrid;
 window.moveWidgetToPosition = moveWidgetToPosition;
 window.resizeWidgetTo = resizeWidgetTo;
 window.swapWidgets = swapWidgets;
+window.updateHeaderButtons = updateHeaderButtons;
+window.updateNavArrows = updateNavArrows;

@@ -387,4 +387,46 @@ public class ApiController {
                     .body("Error: " + e.getMessage());
         }
     }
+
+    @PutMapping("/pages/{pageId}")
+    public ResponseEntity<?> updatePage(@PathVariable Long pageId,
+                                        @RequestBody Map<String, Object> request) {
+        try {
+            String name = (String) request.get("name");
+            String password = (String) request.get("password");
+            Boolean removePassword = (Boolean) request.get("removePassword");
+
+            Page updated = pageService.updatePage(
+                    pageId,
+                    name,
+                    password,
+                    removePassword != null && removePassword
+            );
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", updated.getId());
+            response.put("name", updated.getName());
+            response.put("hasPassword", updated.getPassword() != null);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/pages/{pageId}/move")
+    public ResponseEntity<?> movePage(@PathVariable Long pageId,
+                                      @RequestBody Map<String, String> request) {
+        try {
+            String direction = request.get("direction");
+            if (!"left".equals(direction) && !"right".equals(direction)) {
+                return ResponseEntity.badRequest().body("Direction must be 'left' or 'right'");
+            }
+            pageService.movePage(pageId, direction);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
 }

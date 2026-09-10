@@ -49,12 +49,8 @@
 }
 
 /* Кнопки управления видны только в режиме редактирования */
-.widget .widget-actions {
-    display: none !important;
-}
-
 .page-grid.editing .widget .widget-actions {
-    display: flex !important;
+    display: flex;
 }
 
 /* Кнопка удаления */
@@ -254,4 +250,20 @@
 .widget.network-module .system-display::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.2);
     border-radius: 2px;
+}
+
+.page-grid {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    min-height: calc(100vh - 120px);
+    position: relative;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.page-grid.editing {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    margin: -1px;
 }

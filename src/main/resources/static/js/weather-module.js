@@ -218,7 +218,7 @@ async function updateWeatherSettings(moduleId, settingsContainer) {
 
         if (response.ok) {
             const data = await response.json();
-            const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+            const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderWeatherDisplay(moduleElement, data);
             }
@@ -237,3 +237,8 @@ async function updateWeatherSettings(moduleId, settingsContainer) {
         showToast('❌ Ошибка обновления настроек');
     }
 }
+
+window.initWeatherModule = initWeatherModule;
+window.renderWeatherSettings = renderWeatherSettings;
+window.initWeatherSettingsEvents = initWeatherSettingsEvents;
+window.updateWeatherSettings = updateWeatherSettings;

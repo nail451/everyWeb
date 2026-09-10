@@ -13,6 +13,7 @@
     <link rel="stylesheet" th:href="@{/css/settings.css}">
     <link rel="stylesheet" th:href="@{/css/wallpaper.css}">
     <link rel="stylesheet" th:href="@{/css/create-page-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/widget-settings-popup.css}">
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 </head>
@@ -26,31 +27,53 @@
 
 <!-- ХЕДЕР -->
 <div class="header">
-        <span class="page-title">
-            <span class="icon">🏠</span>
-            <span th:text="${page.name}"></span>
-        </span>
-    <div class="header-actions" style="display:flex; gap:8px; align-items:center;">
+    <!-- ЛЕВО: заголовок -->
+    <span class="page-title">
+        <span class="icon">🏠</span>
+        <span th:text="${page.name}"></span>
+    </span>
+
+    <!-- ЦЕНТР: навигация -->
+    <div class="page-nav">
+        <button class="nav-arrow" id="prevPageArrow" title="Предыдущая страница">◀</button>
+        <div class="nav-pages">
+            <div class="page-nav-item" th:each="p : ${pages}">
+                <a th:href="'/page/' + ${p.name}"
+                   th:text="${p.name}"
+                   th:classappend="${p.id == page.id} ? 'active' : ''"></a>
+                <div class="page-nav-actions" th:if="${p.id == page.id}">
+                    <button class="page-move-btn page-move-left"
+                            th:data-page-id="${p.id}"
+                            title="Переместить влево">←</button>
+                    <button class="page-edit-btn"
+                            th:data-page-id="${p.id}"
+                            title="Редактировать">✏️</button>
+                    <button class="page-delete-btn"
+                            th:data-page-id="${p.id}"
+                            title="Удалить">🗑️</button>
+                    <button class="page-move-btn page-move-right"
+                            th:data-page-id="${p.id}"
+                            title="Переместить вправо">→</button>
+                </div>
+            </div>
+        </div>
+        <button class="nav-arrow" id="nextPageArrow" title="Следующая страница">▶</button>
+    </div>
+
+    <!-- ПРАВО: кнопки -->
+    <div class="header-actions">
         <button onclick="toggleEditMode()" class="edit-mode-btn"
-                style="padding:4px 12px; border-radius:6px; background:rgba(33,150,243,0.2); border:1px solid rgba(33,150,243,0.3); color:white; cursor:pointer; font-size:12px;">
-            ✏️ Редактировать
+                title="Режим редактирования">
+            <span class="edit-mode-icon">✏️</span>
         </button>
         <button onclick="window.addWidgetDialog()" class="add-widget-btn"
-                style="padding:4px 12px; border-radius:6px; background:rgba(76,175,80,0.2); border:1px solid rgba(76,175,80,0.3); color:white; cursor:pointer; font-size:12px;">
-            ➕ Добавить виджет
+                title="Добавить виджет">
+            ➕ Виджет
         </button>
-        <!-- Навигация страниц -->
-        <div class="page-nav" style="display:flex; gap:4px; align-items:center;">
-            <a th:each="p : ${pages}"
-               th:href="'/page/' + ${p.name}"
-               th:text="${p.name}"
-               th:classappend="${p.id == page.id} ? 'active' : ''"
-               style="padding:2px 8px; border-radius:4px; text-decoration:none; color:rgba(255,255,255,0.4); font-size:12px;"></a>
-            <button class="add-page-btn" onclick="createPage()"
-                    style="padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.06); color:rgba(255,255,255,0.4); cursor:pointer; font-size:12px;">
-                ➕
-            </button>
-        </div>
+        <button class="add-page-btn" onclick="createPage()"
+                title="Создать страницу">
+            ➕ Страница
+        </button>
     </div>
 </div>
 
@@ -156,6 +179,44 @@
         </form>
     </div>
 </div>
+<div class="create-page-overlay" id="editPageOverlay" style="display:none !important;">
+    <div class="create-page-modal">
+        <div class="modal-header">
+            <h2>✏️ Редактировать страницу</h2>
+            <button class="modal-close" id="editPageCloseBtn">✕</button>
+        </div>
+
+        <form id="editPageForm">
+            <div class="form-group">
+                <label for="editPageName">Название страницы</label>
+                <input type="text" id="editPageName" required autofocus>
+                <span class="hint">Только буквы, цифры, - и _</span>
+            </div>
+
+            <div class="form-group" id="editPagePasswordGroup">
+                <label for="editPagePassword">Пароль</label>
+                <input type="password" id="editPagePassword" placeholder="Оставьте пустым, чтобы не менять">
+                <span class="password-hint" id="editPagePasswordHint">
+                    🔒 Если оставить пустым, пароль не изменится
+                </span>
+            </div>
+
+            <div class="form-group" id="editPageRemovePasswordGroup" style="display:none;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="editPageRemovePassword">
+                    <span>🗑️ Удалить пароль (сделать страницу публичной)</span>
+                </label>
+            </div>
+
+            <div id="editPageError" style="display:none; color:#ff6b6b; font-size:13px; margin-bottom:12px; padding:8px 12px; background:rgba(244,67,54,0.1); border-radius:8px; border:1px solid rgba(244,67,54,0.2);"></div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="editPageCancelBtn">Отмена</button>
+                <button type="submit" class="btn-submit">💾 Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- ===== МОДАЛЬНОЕ ОКНО ПРОВЕРКИ ПАРОЛЯ ===== -->
 <div class="password-check-overlay" id="passwordCheckOverlay" style="display:none !important;">
@@ -190,6 +251,7 @@
 <script th:src="@{/js/grid.js}"></script>
 <script th:src="@{/js/links.js}"></script>
 <script th:src="@{/js/modules.js}"></script>
+<script th:src="@{/js/widget-settings-popup.js}"></script>
 <script th:src="@{/js/links-modal.js}"></script>
 <script th:src="@{/js/clock-module.js}"></script>
 <script th:src="@{/js/weather-module.js}"></script>

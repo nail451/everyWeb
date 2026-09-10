@@ -44,8 +44,7 @@ body.wallpaper-applied::before {
     pointer-events: none;
 }
 
-body.wallpaper-applied .container,
-body.wallpaper-applied .toast {
+body.wallpaper-applied .container {
     position: relative;
     z-index: 1;
 }

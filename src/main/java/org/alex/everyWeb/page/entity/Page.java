@@ -37,6 +37,9 @@ public class Page {
     @Column(name = "password")
     private String password;
 
+    @Column(name = "position")
+    private Integer position;
+
     // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -58,4 +61,7 @@ public class Page {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public Integer getPosition() { return position; }
+    public void setPosition(Integer position) { this.position = position; }
 }

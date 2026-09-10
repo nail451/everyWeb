@@ -1,36 +1,16 @@
 /**
  * MODULES.JS - Общая логика для всех модулей
- * Версия: 2.5 - исправлено сохранение и позиционирование
  */
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 let widgetSettingsCache = {};
-
-// ===== ГЛОБАЛЬНАЯ ОБЁРТКА ДЛЯ НАСТРОЕК (ТЁМНЫЙ СТИЛЬ) =====
-function wrapSettingsInDarkTheme(html) {
-    if (!html || !html.trim()) {
-        return '';
-    }
-    return `
-        <div class="settings-dark-theme" style="
-            background: rgba(30, 30, 50, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 12px;
-            padding: 14px;
-            border: 1px solid rgba(255,255,255,0.06);
-        ">
-            ${html}
-        </div>
-    `;
-}
 
 // ===== РЕНДЕРИНГ ОБЩИХ НАСТРОЕК ВИДЖЕТА =====
 function renderWidgetSettings(moduleId, hideBackground, alignment) {
     const defaultAlignment = alignment || 'center-center';
     const [activeVertical, activeHorizontal] = defaultAlignment.split('-');
 
-    const html = `
+    return `
         <div class="widget-settings-section" data-module-id="${moduleId}">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                 <span style="font-size:12px; font-weight:600; opacity:0.6; color:rgba(255,255,255,0.6); letter-spacing:0.5px; text-transform:uppercase;">
@@ -39,7 +19,6 @@ function renderWidgetSettings(moduleId, hideBackground, alignment) {
                 <span style="font-size:10px; opacity:0.3; color:rgba(255,255,255,0.3);">общие</span>
             </div>
             
-            <!-- Скрыть фон виджета -->
             <div style="display:flex; align-items:center; gap:10px; margin-bottom: 12px;">
                 <input type="checkbox" class="widget-setting-checkbox" 
                        data-module="${moduleId}" data-setting="hideBackground"
@@ -53,7 +32,6 @@ function renderWidgetSettings(moduleId, hideBackground, alignment) {
                 Оставляет только содержимое, убирает фон и заголовок
             </div>
 
-            <!-- ВЫРАВНИВАНИЕ КОНТЕНТА -->
             <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
                 <label style="font-size:12px; opacity:0.6; color:rgba(255,255,255,0.6); display:block; margin-bottom:8px;">
                     🎯 Расположение контента
@@ -93,13 +71,10 @@ function renderWidgetSettings(moduleId, hideBackground, alignment) {
             </div>
         </div>
     `;
-
-    return wrapSettingsInDarkTheme(html);
 }
 
 // ===== УСТАНОВКА ВЫРАВНИВАНИЯ =====
 function setAlignment(moduleId, alignment) {
-    // Обновляем UI в текущих настройках
     const section = document.querySelector(`.widget-settings-section[data-module-id="${moduleId}"]`);
     if (section) {
         const buttons = section.querySelectorAll('.alignment-btn');
@@ -116,7 +91,6 @@ function setAlignment(moduleId, alignment) {
         }
     }
 
-    // Сохраняем и применяем
     saveWidgetSetting(moduleId, 'alignment', alignment);
 }
 
@@ -159,40 +133,32 @@ async function saveWidgetSetting(moduleId, setting, value) {
 
         if (response.ok) {
             const data = await response.json();
-            // Обновляем кэш
+
             if (!widgetSettingsCache[moduleId]) {
                 widgetSettingsCache[moduleId] = {};
             }
             widgetSettingsCache[moduleId][setting] = value;
 
-            // Применяем к виджету сразу
             applyWidgetStyles(moduleId);
 
-            // ===== ВМЕСТО ПЕРЕЗАГРУЗКИ: ОБНОВЛЯЕМ UI НАПРЯМУЮ =====
-            const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-            if (widget) {
-                const settingsDiv = widget.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    // Обновляем чекбокс если это hideBackground
-                    if (setting === 'hideBackground') {
-                        const checkbox = settingsDiv.querySelector('.widget-setting-checkbox[data-setting="hideBackground"]');
-                        if (checkbox) {
-                            checkbox.checked = value;
-                        }
-                    }
-                    // Обновляем кнопки выравнивания если это alignment
-                    if (setting === 'alignment') {
-                        const alignmentBtns = settingsDiv.querySelectorAll('.alignment-btn');
-                        alignmentBtns.forEach(btn => {
-                            const isActive = btn.dataset.alignment === value;
-                            btn.style.borderColor = isActive ? '#4CAF50' : 'rgba(255,255,255,0.08)';
-                            btn.style.background = isActive ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.03)';
-                            btn.style.color = isActive ? '#81C784' : 'rgba(255,255,255,0.3)';
-                        });
-                        const label = settingsDiv.querySelector('.alignment-grid + div');
-                        if (label) {
-                            label.textContent = value.replace('-', ' → ');
-                        }
+            // Обновляем UI в открытом попапе
+            const section = document.querySelector(`.widget-settings-section[data-module-id="${moduleId}"]`);
+            if (section) {
+                if (setting === 'hideBackground') {
+                    const checkbox = section.querySelector('.widget-setting-checkbox[data-setting="hideBackground"]');
+                    if (checkbox) checkbox.checked = value;
+                }
+                if (setting === 'alignment') {
+                    const alignmentBtns = section.querySelectorAll('.alignment-btn');
+                    alignmentBtns.forEach(btn => {
+                        const isActive = btn.dataset.alignment === value;
+                        btn.style.borderColor = isActive ? '#4CAF50' : 'rgba(255,255,255,0.08)';
+                        btn.style.background = isActive ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.03)';
+                        btn.style.color = isActive ? '#81C784' : 'rgba(255,255,255,0.3)';
+                    });
+                    const label = section.querySelector('.alignment-grid + div');
+                    if (label) {
+                        label.textContent = value.replace('-', ' → ');
                     }
                 }
             }
@@ -200,7 +166,6 @@ async function saveWidgetSetting(moduleId, setting, value) {
             showToast('✅ Настройка сохранена');
             return true;
         } else {
-            const errorText = await response.text();
             showToast('❌ Ошибка сохранения настройки');
             return false;
         }
@@ -210,7 +175,7 @@ async function saveWidgetSetting(moduleId, setting, value) {
     }
 }
 
-// ===== ЗАГРУЗКА НАСТРОЕК ВИДЖЕТА =====
+// ===== ЗАГРУЗКА НАСТРОЕК ВИДЖЕТА (общие) =====
 async function loadWidgetSettings(moduleId) {
     try {
         const response = await fetch(`/api/modules/${moduleId}/settings`);
@@ -220,11 +185,8 @@ async function loadWidgetSettings(moduleId) {
             const settings = content.settings || {};
             const linkData = content.linkData || {};
 
-            // ===== ВАЖНО: НЕ ПЕРЕЗАПИСЫВАЕМ КЭШ, ЕСЛИ ТАМ УЖЕ ЕСТЬ ЗНАЧЕНИЯ =====
-            // Если в кэше уже есть настройки, используем их (они самые свежие)
             const cachedSettings = widgetSettingsCache[moduleId] || {};
 
-            // Берем значения из кэша, если они есть, иначе из сервера
             const hideBackground = cachedSettings.hideBackground !== undefined
                 ? cachedSettings.hideBackground
                 : (settings.hideBackground !== undefined
@@ -237,12 +199,9 @@ async function loadWidgetSettings(moduleId) {
                     ? settings.alignment
                     : (linkData.alignment || 'center-center'));
 
-            // Обновляем кэш ТОЛЬКО если там нет значений
             if (!widgetSettingsCache[moduleId]) {
                 widgetSettingsCache[moduleId] = {};
             }
-
-            // НЕ ПЕРЕЗАПИСЫВАЕМ существующие значения!
             if (widgetSettingsCache[moduleId].hideBackground === undefined) {
                 widgetSettingsCache[moduleId].hideBackground = hideBackground;
             }
@@ -250,18 +209,14 @@ async function loadWidgetSettings(moduleId) {
                 widgetSettingsCache[moduleId].alignment = alignment;
             }
 
-            // Применяем стили
             applyWidgetStyles(moduleId);
 
             return {
                 hideBackground: widgetSettingsCache[moduleId].hideBackground,
                 alignment: widgetSettingsCache[moduleId].alignment
             };
-        } else {
-
         }
     } catch (error) {
-
     }
     return null;
 }
@@ -271,13 +226,11 @@ let styleApplyTimeout = {};
 
 function applyWidgetStyles(moduleId) {
     if (moduleId) {
-        // Отменяем предыдущий таймаут для этого модуля
         if (styleApplyTimeout[moduleId]) {
             clearTimeout(styleApplyTimeout[moduleId]);
             delete styleApplyTimeout[moduleId];
         }
 
-        // Откладываем применение стилей на 100ms
         styleApplyTimeout[moduleId] = setTimeout(() => {
             const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (!widget) {
@@ -308,7 +261,7 @@ function applyWidgetStylesToElement(widget) {
     const hideBackground = settings.hideBackground || false;
     const alignment = settings.alignment || 'center-center';
 
-    // ===== ПРИМЕНЯЕМ СКРЫТИЕ ФОНА =====
+    // ===== СКРЫТИЕ ФОНА =====
     if (hideBackground) {
         widget.style.background = 'transparent';
         widget.style.backdropFilter = 'none';
@@ -369,7 +322,7 @@ function applyWidgetStylesToElement(widget) {
         }
     }
 
-    // ===== ПРИМЕНЯЕМ ВЫРАВНИВАНИЕ =====
+    // ===== ВЫРАВНИВАНИЕ =====
     let contentContainer = null;
     contentContainer = widget.querySelector('.link-grid');
 
@@ -441,7 +394,6 @@ function applyWidgetStylesToElement(widget) {
     }
 }
 
-
 // ===== ВОССТАНОВЛЕНИЕ НАСТРОЕК ПОСЛЕ ПЕРЕЗАГРУЗКИ =====
 function restoreAllWidgetSettings() {
     const widgets = document.querySelectorAll('.widget');
@@ -449,22 +401,14 @@ function restoreAllWidgetSettings() {
         return;
     }
 
-    // Загружаем настройки для каждого виджета
-    let pendingRequests = 0;
-    let completedRequests = 0;
-
     widgets.forEach(widget => {
         const moduleId = widget.dataset.widgetId;
         if (moduleId) {
-            pendingRequests++;
-            // Загружаем настройки и применяем
             loadWidgetSettings(moduleId).then(() => {
-                completedRequests++;
             });
         }
     });
 
-    // После загрузки всех настроек, применяем стили повторно
     setTimeout(() => {
         widgets.forEach(widget => {
             const moduleId = widget.dataset.widgetId;
@@ -477,63 +421,43 @@ function restoreAllWidgetSettings() {
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 function initModules() {
-
 }
 
-// ===== ЗАГРУЗКА НАСТРОЕК МОДУЛЯ =====
-async function loadModuleSettings(moduleElement) {
-    const moduleId = moduleElement.dataset.widgetId;
-    const moduleType = moduleElement.dataset.widgetType;
-    const settingsDiv = moduleElement.querySelector('.module-settings');
+// ===== ЗАГРУЗКА НАСТРОЕК В ПРОИЗВОЛЬНЫЙ КОНТЕЙНЕР =====
+async function loadModuleSettingsInto(widgetElement, container) {
+    const moduleId = widgetElement.dataset.widgetId;
+    const moduleType = widgetElement.dataset.widgetType;
 
-    if (!settingsDiv) return;
+    if (!container) return;
 
     try {
         const numericId = parseInt(moduleId);
         if (isNaN(numericId)) {
-            settingsDiv.innerHTML = wrapSettingsInDarkTheme(`
-                <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
-                    ❌ Неверный ID модуля
-                </div>
-            `);
+            container.innerHTML = `<div style="text-align:center;color:#ff6b6b;padding:10px;font-size:13px;">❌ Неверный ID модуля</div>`;
             return;
         }
 
-        // Загружаем настройки с сервера
         await loadWidgetSettings(numericId);
 
         const response = await fetch(`/api/modules/${numericId}/settings`);
 
         if (response.ok) {
             const data = await response.json();
-            const content = data.content || {};
 
-            // ===== БЕРЕМ НАСТРОЙКИ ИЗ КЭША =====
             const cachedSettings = widgetSettingsCache[numericId] || {};
             const hideBackground = cachedSettings.hideBackground || false;
             const alignment = cachedSettings.alignment || 'center-center';
 
-            // Применяем стили к виджету
             applyWidgetStyles(numericId);
 
             let html = '';
 
-            // 1. ОБЩИЕ НАСТРОЙКИ ВИДЖЕТА
             html += renderWidgetSettings(numericId, hideBackground, alignment);
 
-            // 2. СПЕЦИФИЧНЫЕ НАСТРОЙКИ МОДУЛЯ
             let contentHtml = '';
 
-            if (moduleType === 'LINK') {
-                if (typeof window.renderLinkSettings === 'function') {
-                    contentHtml = window.renderLinkSettings(data, numericId);
-                } else {
-                    contentHtml = `
-                        <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
-                            ⚠️ Функция настроек LINK не загружена
-                        </div>
-                    `;
-                }
+            if (moduleType === 'LINK' && typeof window.renderLinkSettings === 'function') {
+                contentHtml = window.renderLinkSettings(data, numericId);
             } else if (moduleType === 'CLOCK' && typeof window.renderClockSettings === 'function') {
                 contentHtml = window.renderClockSettings(data);
             } else if (moduleType === 'WEATHER' && typeof window.renderWeatherSettings === 'function') {
@@ -545,117 +469,60 @@ async function loadModuleSettings(moduleElement) {
                     contentHtml = window.renderSystemSettings(data);
                 } else {
                     contentHtml = `
-                        <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
+                        <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
                             Настройки для системного модуля "${moduleType}" не найдены
                         </div>
                     `;
                 }
             } else {
                 contentHtml = `
-                    <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
+                    <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
                         Настройки для модуля "${moduleType}" не найдены
                     </div>
                 `;
             }
 
             if (contentHtml && contentHtml.trim()) {
-                html += wrapSettingsInDarkTheme(`
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-                        <span style="font-size:12px; font-weight:600; opacity:0.6; color:rgba(255,255,255,0.6); letter-spacing:0.5px; text-transform:uppercase;">
-                            🔧 Настройки контента
-                        </span>
-                        <span style="font-size:10px; opacity:0.3; color:rgba(255,255,255,0.3);">${moduleType}</span>
+                html += `
+                    <div class="widget-settings-section">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                            <span style="font-size:12px; font-weight:600; opacity:0.6; color:rgba(255,255,255,0.6); letter-spacing:0.5px; text-transform:uppercase;">
+                                🔧 Настройки контента
+                            </span>
+                            <span style="font-size:10px; opacity:0.3; color:rgba(255,255,255,0.3);">${moduleType}</span>
+                        </div>
+                        ${contentHtml}
                     </div>
-                    ${contentHtml}
-                `);
+                `;
             }
 
-            settingsDiv.innerHTML = html;
+            container.innerHTML = html;
 
-            // Инициализируем события для общих настроек
-            initWidgetSettingsEvents(numericId, settingsDiv);
+            initWidgetSettingsEvents(numericId, container);
 
-            // Инициализируем события для специфичных настроек
             if (moduleType === 'LINK' && typeof window.initLinkSettingsEvents === 'function') {
-                window.initLinkSettingsEvents(numericId, settingsDiv);
+                window.initLinkSettingsEvents(numericId, container);
             } else if (moduleType === 'CLOCK' && typeof window.initClockSettingsEvents === 'function') {
-                window.initClockSettingsEvents(numericId, settingsDiv);
+                window.initClockSettingsEvents(numericId, container);
             } else if (moduleType === 'WEATHER' && typeof window.initWeatherSettingsEvents === 'function') {
-                window.initWeatherSettingsEvents(numericId, settingsDiv);
+                window.initWeatherSettingsEvents(numericId, container);
             } else if (moduleType === 'NEXTCLOUD' && typeof window.initNextcloudSettingsEvents === 'function') {
-                window.initNextcloudSettingsEvents(numericId, settingsDiv);
+                window.initNextcloudSettingsEvents(numericId, container);
             } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
                 if (typeof window.initSystemSettingsEvents === 'function') {
-                    window.initSystemSettingsEvents(numericId, settingsDiv);
+                    window.initSystemSettingsEvents(numericId, container);
                 }
             }
 
-            // ===== ПРИМЕНЯЕМ СТИЛИ =====
             applyWidgetStyles(numericId);
 
         } else if (response.status === 404) {
-            settingsDiv.innerHTML = wrapSettingsInDarkTheme(`
-                <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px; color:rgba(255,255,255,0.5);">
-                    Настройки не найдены
-                </div>
-            `);
+            container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:10px;font-size:13px;color:rgba(255,255,255,0.5);">Настройки не найдены</div>`;
         } else {
-            settingsDiv.innerHTML = wrapSettingsInDarkTheme(`
-                <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
-                    ❌ Ошибка загрузки настроек (${response.status})
-                </div>
-            `);
+            container.innerHTML = `<div style="text-align:center;color:#ff6b6b;padding:10px;font-size:13px;">❌ Ошибка загрузки настроек (${response.status})</div>`;
         }
     } catch (error) {
-        settingsDiv.innerHTML = wrapSettingsInDarkTheme(`
-            <div style="text-align:center; color:#ff6b6b; padding:10px; font-size:13px;">
-                ❌ Ошибка загрузки настроек: ${error.message}
-            </div>
-        `);
-    }
-}
-
-// ===== ПЕРЕКЛЮЧЕНИЕ НАСТРОЕК МОДУЛЯ =====
-function toggleModuleSettings(moduleId) {
-    const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
-    if (!widget) {
-        showToast('❌ Виджет не найден');
-        return;
-    }
-
-    if (!window.gridState || !window.gridState.isEditing) {
-        showToast('✏️ Включите режим редактирования для доступа к настройкам');
-        return;
-    }
-
-    const wrapper = widget.querySelector('.widget-content-wrapper');
-    if (!wrapper) {
-        showToast('❌ Ошибка: обёртка контента не найдена');
-        return;
-    }
-
-    let settingsDiv = wrapper.querySelector('.module-settings');
-
-    if (!settingsDiv) {
-        settingsDiv = document.createElement('div');
-        settingsDiv.className = 'module-settings';
-        settingsDiv.style.cssText = 'display:none; margin-top:10px; flex-shrink:0;';
-        wrapper.appendChild(settingsDiv);
-    }
-
-    const isOpen = settingsDiv.style.display !== 'none' && settingsDiv.style.display !== '';
-
-    if (isOpen) {
-        settingsDiv.style.display = 'none';
-        if (window.gridState && window.gridState.isEditing) {
-            widget.draggable = true;
-            widget.style.cursor = 'grab';
-        }
-    } else {
-        settingsDiv.style.display = 'block';
-        widget.draggable = false;
-        widget.style.cursor = 'default';
-        loadModuleSettings(widget);
+        container.innerHTML = `<div style="text-align:center;color:#ff6b6b;padding:10px;font-size:13px;">❌ Ошибка загрузки настроек: ${error.message}</div>`;
     }
 }
 
@@ -690,7 +557,6 @@ function initializeModules() {
         }
     });
 
-    // Заметки
     document.querySelectorAll('.note-text').forEach(textarea => {
         const moduleId = textarea.dataset.widgetId;
         const saved = localStorage.getItem('notes_' + moduleId);
@@ -700,7 +566,6 @@ function initializeModules() {
         });
     });
 
-    // TODO
     document.querySelectorAll('.todo-widget').forEach(widget => {
         const list = widget.querySelector('.todo-list');
         if (list) {
@@ -712,7 +577,6 @@ function initializeModules() {
 
 // ===== ОБЩИЕ ФУНКЦИИ ДЛЯ МОДУЛЕЙ =====
 
-// TO-DO
 function addTodo(input, moduleId) {
     const text = input.value.trim();
     if (!text) return;
@@ -771,7 +635,7 @@ function deleteTodo(moduleId, todoId) {
     loadTodos(moduleId);
 }
 
-// ===== ПЕРЕОПРЕДЕЛЯЕМ loadGridData =====
+// ===== ПЕРЕОПРЕДЕЛЯЕМ loadGridData (для восстановления настроек) =====
 const originalLoadGridData = window.loadGridData || function() {};
 
 window.loadGridData = async function() {
@@ -779,7 +643,6 @@ window.loadGridData = async function() {
         await originalLoadGridData();
     }
 
-    // Несколько попыток восстановления
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
             restoreAllWidgetSettings();
@@ -801,15 +664,13 @@ window.loadGridData = async function() {
 
 // ===== ЭКСПОРТ =====
 window.renderWidgetSettings = renderWidgetSettings;
-window.wrapSettingsInDarkTheme = wrapSettingsInDarkTheme;
 window.setAlignment = setAlignment;
 window.initWidgetSettingsEvents = initWidgetSettingsEvents;
 window.saveWidgetSetting = saveWidgetSetting;
 window.loadWidgetSettings = loadWidgetSettings;
 window.applyWidgetStyles = applyWidgetStyles;
 window.restoreAllWidgetSettings = restoreAllWidgetSettings;
-window.toggleModuleSettings = toggleModuleSettings;
-window.loadModuleSettings = loadModuleSettings;
+window.loadModuleSettingsInto = loadModuleSettingsInto;
 window.initializeModules = initializeModules;
 window.widgetSettingsCache = widgetSettingsCache;
 window.initModules = initModules;

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -42,7 +43,7 @@ public class PageService {
     }
 
     public List<Page> getAllPages() {
-        return pageRepository.findAll();
+        return pageRepository.findAllByOrderByPositionAscIdAsc();
     }
 
     /**
@@ -56,15 +57,60 @@ public class PageService {
         Page page = new Page();
         page.setName(name);
 
-        // Шифруем пароль, если он указан
+        List<Page> all = pageRepository.findAllByOrderByPositionAscIdAsc();
+        int maxPos = all.stream()
+                .map(Page::getPosition)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(-1);
+        page.setPosition(maxPos + 1);
+
         if (rawPassword != null && !rawPassword.trim().isEmpty()) {
-            String encryptedPassword = passwordService.encodePassword(rawPassword.trim());
-            page.setPassword(encryptedPassword);
+            page.setPassword(passwordService.encodePassword(rawPassword.trim()));
         } else {
             page.setPassword(null);
         }
 
         return pageRepository.save(page);
+    }
+
+    public void movePage(Long pageId, String direction) {
+        List<Page> pages = pageRepository.findAllByOrderByPositionAscIdAsc();
+
+        int currentIndex = -1;
+        for (int i = 0; i < pages.size(); i++) {
+            if (pages.get(i).getId().equals(pageId)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex == -1) {
+            throw new RuntimeException("Page not found: " + pageId);
+        }
+
+        int newIndex = "left".equals(direction) ? currentIndex - 1 : currentIndex + 1;
+
+        if (newIndex < 0 || newIndex >= pages.size()) {
+            return; // Уже на краю — ничего не делаем
+        }
+
+        // Меняем местами
+        Page current = pages.get(currentIndex);
+        Page other = pages.get(newIndex);
+
+        Integer tempPos = current.getPosition();
+        current.setPosition(other.getPosition());
+        other.setPosition(tempPos);
+
+        // Если позиции одинаковые (например, обе null) — присваиваем индексы
+        if (Objects.equals(current.getPosition(), other.getPosition())) {
+            for (int i = 0; i < pages.size(); i++) {
+                pages.get(i).setPosition(i);
+            }
+        }
+
+        pageRepository.saveAll(pages);
     }
 
     /**
@@ -163,5 +209,26 @@ public class PageService {
             module.setPosition(position);
             modulesRepository.save(module);
         }
+    }
+
+    public Page updatePage(Long pageId, String newName, String newPassword, boolean removePassword) {
+        Page page = getPageById(pageId);
+
+        // Обновление имени
+        if (newName != null && !newName.trim().isEmpty() && !newName.equals(page.getName())) {
+            if (pageRepository.findByName(newName).isPresent()) {
+                throw new RuntimeException("Page with name '" + newName + "' already exists");
+            }
+            page.setName(newName.trim());
+        }
+
+        // Обновление пароля
+        if (removePassword) {
+            page.setPassword(null);
+        } else if (newPassword != null && !newPassword.trim().isEmpty()) {
+            page.setPassword(passwordService.encodePassword(newPassword.trim()));
+        }
+
+        return pageRepository.save(page);
     }
 }

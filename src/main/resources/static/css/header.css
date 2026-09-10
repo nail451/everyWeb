@@ -3,10 +3,11 @@
    ======================================== */
 
 .header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    padding: 8px 12px;
+    gap: 16px;
+    padding: 8px 16px;
     margin-bottom: 24px;
     background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(8px);
@@ -15,34 +16,309 @@
     border: 1px solid rgba(255, 255, 255, 0.04);
     flex-shrink: 0;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    position: relative;
 }
 
+/* ЛЕВАЯ ЗОНА — заголовок */
 .header .page-title {
+    justify-self: start;
     font-size: 14px;
     font-weight: 400;
     opacity: 0.4;
     letter-spacing: 0.3px;
     color: rgba(255, 255, 255, 0.6);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .header .page-title .icon {
-    margin-right: 6px;
     font-size: 12px;
 }
 
-/* Убираем навигацию из хедера */
+/* ЦЕНТРАЛЬНАЯ ЗОНА — навигация со стрелками */
 .header .page-nav {
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header .page-nav .nav-arrow {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.header .page-nav .nav-arrow:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.header .page-nav .nav-arrow.disabled {
+    opacity: 0.2;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Список страниц */
+.header .page-nav .nav-pages {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.header .page-nav a {
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.header .page-nav a:hover {
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.header .page-nav a.active {
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ПРАВАЯ ЗОНА — кнопки управления */
+.header .header-actions {
+    justify-self: end;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* ===== КНОПКА РЕЖИМА РЕДАКТИРОВАНИЯ ===== */
+.header .edit-mode-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.65);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 28px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.header .edit-mode-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.header .edit-mode-btn.editing {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: rgba(76, 175, 80, 0.4);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.header .edit-mode-btn.editing:hover {
+    background: rgba(76, 175, 80, 0.25);
+    border-color: rgba(76, 175, 80, 0.55);
+}
+
+.header .edit-mode-icon {
+    display: inline-block;
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* ===== КНОПКИ, ВИДИМЫЕ ТОЛЬКО В РЕЖИМЕ РЕДАКТИРОВАНИЯ ===== */
+.header .add-widget-btn,
+.header .add-page-btn {
     display: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: rgba(76, 175, 80, 0.15);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.header .add-widget-btn:hover,
+.header .add-page-btn:hover {
+    background: rgba(76, 175, 80, 0.25);
+    border-color: rgba(76, 175, 80, 0.45);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.header .add-page-btn {
+    padding: 4px 8px;
+    min-width: 28px;
+    height: 26px;
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 
 /* ===== АДАПТИВНОСТЬ ===== */
 @media (max-width: 768px) {
     .header {
         padding: 6px 10px;
+        gap: 8px;
     }
 
     .header .page-title {
         font-size: 12px;
     }
+
+    .header .page-nav a {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+
+    .header .page-nav .nav-arrow {
+        width: 22px;
+        height: 22px;
+        font-size: 10px;
+    }
+}
+
+.page-nav-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ===== ВСПЛЫВАЮЩИЙ БЛОК ДЕЙСТВИЙ ПОД АКТИВНОЙ СТРАНИЦЕЙ ===== */
+.page-nav-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Блок действий */
+.page-nav-actions {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 4px;
+    padding: 5px 6px;
+    background: rgba(20, 20, 35, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    white-space: nowrap;
+    animation: pageActionsFadeIn 0.15s ease;
+}
+
+/* Стрелочка вверх */
+.page-nav-actions::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid rgba(20, 20, 35, 0.95);
+    filter: drop-shadow(0 -1px 1px rgba(255, 255, 255, 0.06));
+}
+
+/* Кнопки внутри блока */
+.page-nav-actions button {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.page-edit-btn:hover {
+    background: rgba(33, 150, 243, 0.25);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.page-delete-btn:hover {
+    background: rgba(244, 67, 54, 0.25);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Показываем блок только в режиме редактирования и над активной страницей */
+body.editing-mode .page-nav-item:has(a.active) .page-nav-actions {
+    display: flex;
+}
+
+/* Анимация появления */
+@keyframes pageActionsFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Кнопки перемещения */
+.page-nav-actions .page-move-btn {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.page-nav-actions .page-move-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.page-nav-actions .page-move-btn:disabled,
+.page-nav-actions .page-move-btn.disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
 }

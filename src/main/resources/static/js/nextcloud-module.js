@@ -14,7 +14,6 @@ async function loadNextcloudData(moduleElement, moduleId) {
             renderNextcloudDisplay(moduleElement, data);
         }
     } catch (error) {
-
     }
 }
 
@@ -108,7 +107,6 @@ function renderNextcloudDisplay(moduleElement, data) {
 
 // ===== НАСТРОЙКИ МОДУЛЯ NEXTCLOUD =====
 function renderNextcloudSettings(data) {
-    // Проверяем наличие данных
     if (!data || !data.content) {
         return `
             <div style="text-align:center; opacity:0.5; padding:10px; font-size:13px;">
@@ -211,7 +209,6 @@ function renderNextcloudSettings(data) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ НАСТРОЕК =====
 function initNextcloudSettingsEvents(moduleId, settingsContainer) {
-    // Проверка подключения
     const testBtn = settingsContainer.querySelector('.nc-test-btn');
     if (testBtn) {
         testBtn.addEventListener('click', function() {
@@ -219,7 +216,6 @@ function initNextcloudSettingsEvents(moduleId, settingsContainer) {
         });
     }
 
-    // Сохранение настроек
     const updateBtn = settingsContainer.querySelector('.nc-update-btn');
     if (updateBtn) {
         updateBtn.addEventListener('click', function() {
@@ -263,7 +259,6 @@ async function testNextcloudConnection(moduleId, settingsContainer) {
             const result = await response.json();
             if (result.connected) {
                 showToast('✅ Подключение успешно!');
-                // Автоматически сохраняем настройки
                 await updateNextcloudSettings(moduleId, settingsContainer, true);
             } else {
                 showToast('❌ Ошибка подключения: ' + (result.message || 'Проверьте данные'));
@@ -320,7 +315,7 @@ async function updateNextcloudSettings(moduleId, settingsContainer, silent = fal
 
         if (response.ok) {
             const data = await response.json();
-            const moduleElement = document.querySelector(`.module[data-module-id="${moduleId}"]`);
+            const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderNextcloudDisplay(moduleElement, data);
             }
@@ -339,3 +334,8 @@ async function updateNextcloudSettings(moduleId, settingsContainer, silent = fal
         if (!silent) showToast('❌ Ошибка сохранения настроек');
     }
 }
+
+window.initNextcloudModule = initNextcloudModule;
+window.renderNextcloudSettings = renderNextcloudSettings;
+window.initNextcloudSettingsEvents = initNextcloudSettingsEvents;
+window.updateNextcloudSettings = updateNextcloudSettings;

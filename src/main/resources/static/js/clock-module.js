@@ -1,6 +1,5 @@
 /**
  * CLOCK-MODULE.JS - Логика модуля часов с будильниками
- * Версия 2.5 - ИСПРАВЛЕНА РАБОТА PUSH УВЕДОМЛЕНИЙ
  */
 
 // ===== КЭШ =====
@@ -52,13 +51,11 @@ async function loadClockData(moduleElement, moduleId) {
 
             renderClockDisplay(moduleElement, data);
         } else {
-            console.error(`Failed to load clock data for module ${numericId}:`, response.status);
             if (clockCache[numericId]) {
                 renderClockDisplay(moduleElement, clockCache[numericId]);
             }
         }
     } catch (error) {
-        console.error('Error loading clock data:', error);
         if (clockCache[numericId]) {
             renderClockDisplay(moduleElement, clockCache[numericId]);
         }
@@ -143,10 +140,7 @@ async function updateClockTime(moduleId) {
 
     try {
         const response = await fetch(`/api/modules/${numericId}/data`);
-        if (!response.ok) {
-            console.warn(`Failed to update clock data for ${numericId}:`, response.status);
-            return;
-        }
+        if (!response.ok) return;
 
         const data = await response.json();
 
@@ -160,27 +154,6 @@ async function updateClockTime(moduleId) {
             renderClockDisplay(moduleElement, data);
         }
     } catch (error) {
-        console.error('Error updating clock time:', error);
-    }
-}
-
-// ===== ФОРМАТИРОВАНИЕ ВРЕМЕНИ =====
-function formatTime(date, timezone, format, showSeconds) {
-    try {
-        const options = {
-            timeZone: timezone,
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: format === '12h'
-        };
-
-        if (showSeconds) {
-            options.second = '2-digit';
-        }
-
-        return date.toLocaleTimeString('ru-RU', options);
-    } catch (e) {
-        return '--:--';
     }
 }
 
@@ -392,6 +365,13 @@ function initClockSettingsEvents(moduleId, settingsContainer) {
     });
 }
 
+// ===== ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ НАСТРОЕК (переопределено) =====
+async function refreshSettingsDisplay(moduleId, moduleElement) {
+    if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(moduleId)) {
+        WidgetSettingsPopup.refresh();
+    }
+}
+
 // ===== УДАЛЕНИЕ ЦИФЕРБЛАТА =====
 async function removeClockFace(moduleId, index) {
     const numericId = getNumericId(moduleId);
@@ -428,19 +408,18 @@ async function removeClockFace(moduleId, index) {
             const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
-
-                const settingsDiv = moduleElement.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    await refreshSettingsDisplay(numericId, moduleElement);
-                }
             }
+
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(numericId)) {
+                WidgetSettingsPopup.refresh();
+            }
+
             showToast('✅ Циферблат удален');
         } else {
             const error = await response.text();
             showToast('❌ Ошибка: ' + error);
         }
     } catch (error) {
-        console.error('Error removing clock face:', error);
         showToast('❌ Ошибка удаления циферблата');
     }
 }
@@ -470,16 +449,11 @@ async function updateClockSetting(moduleId, key, value) {
             const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
-
-                const settingsDiv = moduleElement.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    await refreshSettingsDisplay(numericId, moduleElement);
-                }
             }
+
             showToast('✅ Настройки часов обновлены');
         }
     } catch (error) {
-        console.error('Error updating clock settings:', error);
         showToast('❌ Ошибка обновления настроек');
     }
 }
@@ -513,16 +487,15 @@ async function addClockFace(moduleId, name, timezone) {
             const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
-
-                const settingsDiv = moduleElement.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    await refreshSettingsDisplay(numericId, moduleElement);
-                }
             }
+
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(numericId)) {
+                WidgetSettingsPopup.refresh();
+            }
+
             showToast('✅ Циферблат добавлен');
         }
     } catch (error) {
-        console.error('Error adding clock face:', error);
         showToast('❌ Ошибка добавления циферблата');
     }
 }
@@ -547,7 +520,7 @@ function showAddClockFaceModal(moduleId) {
         bottom: 0;
         background: rgba(0,0,0,0.6);
         backdrop-filter: blur(4px);
-        z-index: 10000;
+        z-index: 10001;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -638,59 +611,6 @@ function addClockFaceFromModal(moduleId) {
     addClockFace(numericId, name, timezone);
 }
 
-// ===== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ НАСТРОЕК =====
-async function refreshSettingsDisplay(moduleId, moduleElement) {
-    const numericId = getNumericId(moduleId);
-    if (numericId === null) return;
-
-    try {
-        if (typeof window.loadModuleSettings === 'function') {
-            await window.loadModuleSettings(moduleElement);
-        } else {
-            const response = await fetch(`/api/modules/${numericId}/settings`);
-            if (!response.ok) return;
-
-            const data = await response.json();
-            const settingsDiv = moduleElement.querySelector('.module-settings');
-            if (settingsDiv) {
-                settingsDiv.innerHTML = renderClockSettings(data);
-                initClockSettingsEvents(numericId, settingsDiv);
-            }
-        }
-
-        const cachedSettings = window.widgetSettingsCache ? window.widgetSettingsCache[numericId] : {};
-        const hideBackground = cachedSettings.hideBackground || false;
-        const alignment = cachedSettings.alignment || 'center-center';
-
-        if (typeof window.applyWidgetStyles === 'function') {
-            window.applyWidgetStyles(numericId);
-        }
-
-        const settingsDiv = moduleElement.querySelector('.module-settings');
-        if (settingsDiv) {
-            const checkbox = settingsDiv.querySelector('.widget-setting-checkbox[data-setting="hideBackground"]');
-            if (checkbox) {
-                checkbox.checked = hideBackground;
-            }
-
-            const alignmentBtns = settingsDiv.querySelectorAll('.alignment-btn');
-            alignmentBtns.forEach(btn => {
-                const isActive = btn.dataset.alignment === alignment;
-                btn.style.borderColor = isActive ? '#4CAF50' : 'rgba(255,255,255,0.08)';
-                btn.style.background = isActive ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.03)';
-                btn.style.color = isActive ? '#81C784' : 'rgba(255,255,255,0.3)';
-            });
-
-            const label = settingsDiv.querySelector('.alignment-grid + div');
-            if (label) {
-                label.textContent = alignment.replace('-', ' → ');
-            }
-        }
-    } catch (error) {
-
-    }
-}
-
 // ===== ПРОВЕРКА БУДИЛЬНИКОВ =====
 let alarmCheckInterval = null;
 
@@ -749,7 +669,6 @@ function triggerAlarm(moduleId, alarm, index) {
     const title = `🔔 ${alarm.name || 'Будильник'}`;
     const body = `Время: ${alarm.time}`;
 
-    // 1. Браузерное уведомление
     if (Notification.permission === 'granted') {
         try {
             const notification = new Notification(title, {
@@ -769,16 +688,13 @@ function triggerAlarm(moduleId, alarm, index) {
                 notification.close();
             }, 30000);
         } catch (e) {
-            console.error('Error showing notification:', e);
         }
     } else {
         showToast(`🔔 ${title} - ${body}`, 10000);
     }
 
-    // 2. Toast на странице
     showToast(`🔔 ${title} - ${body}`, 10000);
 
-    // 3. Звук
     try {
         let audioCtx = null;
         try {
@@ -807,7 +723,6 @@ function triggerAlarm(moduleId, alarm, index) {
                         oscillator.stop();
                         audioCtx.close();
                     } catch (e) {
-                        // Игнорируем ошибки закрытия
                     }
                     return;
                 }
@@ -821,7 +736,6 @@ function triggerAlarm(moduleId, alarm, index) {
                     oscillator.stop();
                     audioCtx.close();
                 } catch (e) {
-                    // Игнорируем ошибки закрытия
                 }
             }, 3000);
         }
@@ -849,7 +763,7 @@ function showAddAlarmModal(moduleId) {
         bottom: 0;
         background: rgba(0,0,0,0.7);
         backdrop-filter: blur(6px);
-        z-index: 10001;
+        z-index: 10002;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1069,19 +983,18 @@ async function addAlarm(moduleId, params) {
             const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
-
-                const settingsDiv = moduleElement.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    await refreshSettingsDisplay(numericId, moduleElement);
-                }
             }
+
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(numericId)) {
+                WidgetSettingsPopup.refresh();
+            }
+
             showToast('✅ Будильник добавлен');
         } else {
             const error = await response.text();
             showToast('❌ Ошибка: ' + error);
         }
     } catch (error) {
-        console.error('Error adding alarm:', error);
         showToast('❌ Ошибка добавления будильника');
     }
 }
@@ -1110,31 +1023,18 @@ async function removeAlarm(moduleId, index) {
             }
             clockCache[numericId] = data;
 
-            const currentHideBackground = window.widgetSettingsCache?.[numericId]?.hideBackground || false;
-            const currentAlignment = window.widgetSettingsCache?.[numericId]?.alignment || 'center-center';
-
             const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
-
-                const settingsDiv = moduleElement.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    await refreshSettingsDisplay(numericId, moduleElement);
-                }
-
-                if (typeof window.applyWidgetStyles === 'function') {
-                    if (!window.widgetSettingsCache[numericId]) {
-                        window.widgetSettingsCache[numericId] = {};
-                    }
-                    window.widgetSettingsCache[numericId].hideBackground = currentHideBackground;
-                    window.widgetSettingsCache[numericId].alignment = currentAlignment;
-                    window.applyWidgetStyles(numericId);
-                }
             }
+
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(numericId)) {
+                WidgetSettingsPopup.refresh();
+            }
+
             showToast('✅ Будильник удален');
         }
     } catch (error) {
-        console.error('Error removing alarm:', error);
         showToast('❌ Ошибка удаления будильника');
     }
 }
@@ -1161,39 +1061,21 @@ async function toggleAlarm(moduleId, index) {
             }
             clockCache[numericId] = data;
 
-            const currentHideBackground = window.widgetSettingsCache?.[numericId]?.hideBackground || false;
-            const currentAlignment = window.widgetSettingsCache?.[numericId]?.alignment || 'center-center';
-
             const moduleElement = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
             if (moduleElement) {
                 renderClockDisplay(moduleElement, data);
+            }
 
-                const settingsDiv = moduleElement.querySelector('.module-settings');
-                if (settingsDiv && settingsDiv.style.display !== 'none') {
-                    await refreshSettingsDisplay(numericId, moduleElement);
-                }
-
-                if (typeof window.applyWidgetStyles === 'function') {
-                    if (!window.widgetSettingsCache[numericId]) {
-                        window.widgetSettingsCache[numericId] = {};
-                    }
-                    window.widgetSettingsCache[numericId].hideBackground = currentHideBackground;
-                    window.widgetSettingsCache[numericId].alignment = currentAlignment;
-                    window.applyWidgetStyles(numericId);
-                }
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(numericId)) {
+                WidgetSettingsPopup.refresh();
             }
         }
     } catch (error) {
-        console.error('Error toggling alarm:', error);
         showToast('❌ Ошибка переключения будильника');
     }
 }
 
-// ============================================================
-// PUSH УВЕДОМЛЕНИЯ
-// ============================================================
-
-// ===== ИСПРАВЛЕННАЯ ВЕРСИЯ initPushNotifications =====
+// ===== PUSH УВЕДОМЛЕНИЯ =====
 async function initPushNotifications() {
     if (!('serviceWorker' in navigator)) {
         return;
@@ -1216,7 +1098,6 @@ async function initPushNotifications() {
         let subscription = await registration.pushManager.getSubscription();
 
         if (subscription) {
-            // Проверяем валидность токена через сервер
             try {
                 const testResponse = await fetch('/api/push/test', {
                     method: 'POST',
@@ -1225,11 +1106,9 @@ async function initPushNotifications() {
                 });
 
                 if (!testResponse.ok) {
-                    // Если сервер вернул ошибку - токен невалидный
                     await subscription.unsubscribe();
                     subscription = null;
                 } else {
-                    // Отправляем существующую подписку на сервер
                     await sendSubscriptionToServer(subscription);
                     return;
                 }
@@ -1239,7 +1118,6 @@ async function initPushNotifications() {
             }
         }
 
-        // Если нет подписки или она была удалена - создаем новую
         const response = await fetch('/api/push/public-key');
         if (!response.ok) {
             return;
@@ -1262,7 +1140,6 @@ async function initPushNotifications() {
         await sendSubscriptionToServer(subscription);
 
     } catch (error) {
-
     }
 }
 
@@ -1284,7 +1161,6 @@ async function sendSubscriptionToServer(subscription) {
             const text = await response.text();
         }
     } catch (error) {
-
     }
 }
 

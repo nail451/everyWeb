@@ -1,6 +1,5 @@
 /**
  * PAGES.JS - Управление страницами
- * Версия: 2.3 - исправлена проблема с null при переходе
  */
 
 // ============================================================
@@ -39,7 +38,6 @@ function getPageInfo(pageId) {
 }
 
 function getPageIdByName(name) {
-    // Сначала ищем в кэше
     if (pagesInfo) {
         for (const key in pagesInfo) {
             const page = pagesInfo[key];
@@ -49,8 +47,7 @@ function getPageIdByName(name) {
         }
     }
 
-    // Fallback: ищем в навигации
-    const pageLinks = document.querySelectorAll('.page-nav a');
+    const pageLinks = document.querySelectorAll('.page-nav .nav-pages a');
     for (const link of pageLinks) {
         if (link.textContent.trim() === name) {
             const href = link.getAttribute('href');
@@ -86,7 +83,6 @@ function lockPage(pageId) {
 // ============================================================
 
 function openCreatePageModal() {
-
     const overlay = document.getElementById('createPageOverlay');
     if (!overlay) {
         return;
@@ -150,8 +146,7 @@ async function handleCreatePageSubmit(event) {
         return;
     }
 
-    // Проверяем, что страница с таким именем не существует
-    const pageLinks = document.querySelectorAll('.page-nav a');
+    const pageLinks = document.querySelectorAll('.page-nav .nav-pages a');
     for (const link of pageLinks) {
         if (link.textContent.trim().toLowerCase() === name.toLowerCase()) {
             showToast('❌ Страница с таким именем уже существует');
@@ -190,7 +185,6 @@ async function handleCreatePageSubmit(event) {
 
         closeCreatePageModal();
 
-        // Обновляем информацию о страницах
         await loadPagesInfo();
 
         if (typeof saveLastPage === 'function') {
@@ -217,7 +211,240 @@ async function handleCreatePageSubmit(event) {
 }
 
 // ============================================================
-// 4. ПРОВЕРКА ПАРОЛЯ (МОДАЛЬНОЕ ОКНО)
+// 4. РЕДАКТИРОВАНИЕ СТРАНИЦЫ
+// ============================================================
+
+let editingPageId = null;
+let editingPageHasPassword = false;
+let editingPageOriginalName = null;
+
+function openEditPageModal(pageId, pageName, hasPassword) {
+    editingPageId = pageId;
+    editingPageHasPassword = hasPassword;
+    editingPageOriginalName = pageName;
+
+    const overlay = document.getElementById('editPageOverlay');
+    if (!overlay) return;
+
+    document.getElementById('editPageName').value = pageName;
+    document.getElementById('editPagePassword').value = '';
+    document.getElementById('editPageRemovePassword').checked = false;
+
+    const errorEl = document.getElementById('editPageError');
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+
+    const removeGroup = document.getElementById('editPageRemovePasswordGroup');
+    const passwordInput = document.getElementById('editPagePassword');
+    const passwordHint = document.getElementById('editPagePasswordHint');
+
+    if (hasPassword) {
+        removeGroup.style.display = 'block';
+        passwordInput.placeholder = 'Оставьте пустым, чтобы не менять';
+        passwordHint.textContent = '🔒 У страницы уже есть пароль';
+    } else {
+        removeGroup.style.display = 'none';
+        passwordInput.placeholder = 'Введите пароль (опционально)';
+        passwordHint.textContent = '🔓 Пароля нет, можно установить новый';
+    }
+
+    overlay.classList.add('active');
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    setTimeout(() => document.getElementById('editPageName').focus(), 100);
+}
+
+function closeEditPageModal() {
+    const overlay = document.getElementById('editPageOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    editingPageId = null;
+    editingPageHasPassword = false;
+    editingPageOriginalName = null;
+}
+
+async function handleEditPageSubmit(event) {
+    event.preventDefault();
+    if (!editingPageId) return;
+
+    const nameInput = document.getElementById('editPageName');
+    const passwordInput = document.getElementById('editPagePassword');
+    const removeCheck = document.getElementById('editPageRemovePassword');
+    const errorEl = document.getElementById('editPageError');
+    const submitBtn = document.querySelector('#editPageForm .btn-submit');
+
+    const newName = nameInput.value.trim();
+    const newPassword = passwordInput.value.trim();
+    const removePassword = removeCheck.checked;
+
+    if (!newName) {
+        showToast('❌ Введите название');
+        return;
+    }
+
+    if (!/^[a-zA-Z0-9-_]+$/.test(newName)) {
+        showToast('❌ Только буквы, цифры, - и _');
+        return;
+    }
+
+    submitBtn.textContent = '⏳ Сохранение...';
+    submitBtn.disabled = true;
+    errorEl.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/pages/${editingPageId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: newName,
+                password: newPassword || null,
+                removePassword: removePassword
+            })
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || 'Ошибка обновления');
+        }
+
+        const data = await response.json();
+        showToast('✅ Страница обновлена');
+
+        const nameChanged = newName !== editingPageOriginalName;
+
+        closeEditPageModal();
+
+        if (nameChanged) {
+            setTimeout(() => {
+                window.location.href = '/page/' + encodeURIComponent(data.name);
+            }, 300);
+        } else {
+            setTimeout(() => window.location.reload(), 300);
+        }
+    } catch (error) {
+        errorEl.textContent = '❌ ' + (error.message || 'Неизвестная ошибка');
+        errorEl.style.display = 'block';
+        submitBtn.textContent = '💾 Сохранить';
+        submitBtn.disabled = false;
+    }
+}
+
+// ============================================================
+// 5. УДАЛЕНИЕ СТРАНИЦЫ
+// ============================================================
+
+async function deletePageById(pageId, pageName) {
+    if (!confirm(`Удалить страницу "${pageName}"? Это действие нельзя отменить.`)) return;
+
+    try {
+        const response = await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Ошибка удаления');
+
+        showToast('✅ Страница удалена');
+
+        const remainingPages = [...document.querySelectorAll('.page-nav .nav-pages a')]
+            .filter(a => a.textContent.trim() !== pageName);
+
+        setTimeout(async () => {
+            if (typeof exitEditModeBeforeNavigate === 'function') {
+                await exitEditModeBeforeNavigate();
+            }
+            if (remainingPages.length > 0) {
+                window.location.href = remainingPages[0].getAttribute('href');
+            } else {
+                window.location.href = '/page/main';
+            }
+        }, 500);
+    } catch (error) {
+        showToast('❌ ' + error.message);
+    }
+}
+
+// ============================================================
+// 6. ОБРАБОТЧИКИ КНОПОК РЕДАКТИРОВАНИЯ/УДАЛЕНИЯ СТРАНИЦ
+// ============================================================
+
+function bindPageNavActions() {
+    document.querySelectorAll('.page-edit-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const pageId = parseInt(btn.dataset.pageId);
+            const page = getPageInfo(pageId);
+            if (page) {
+                openEditPageModal(pageId, page.name, page.hasPassword);
+            }
+        };
+    });
+
+    document.querySelectorAll('.page-delete-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const pageId = parseInt(btn.dataset.pageId);
+            const page = getPageInfo(pageId);
+            if (page) {
+                deletePageById(pageId, page.name);
+            }
+        };
+    });
+
+    document.querySelectorAll('.page-move-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const pageId = parseInt(btn.dataset.pageId);
+            const direction = btn.classList.contains('page-move-left') ? 'left' : 'right';
+            movePageById(pageId, direction);
+        };
+    });
+
+    updateMoveButtonsState();
+}
+
+function updateMoveButtonsState() {
+    const navItems = document.querySelectorAll('.page-nav .nav-pages .page-nav-item');
+    const total = navItems.length;
+
+    navItems.forEach((item, index) => {
+        const leftBtn = item.querySelector('.page-move-left');
+        const rightBtn = item.querySelector('.page-move-right');
+
+        if (leftBtn) {
+            leftBtn.classList.toggle('disabled', index === 0);
+        }
+        if (rightBtn) {
+            rightBtn.classList.toggle('disabled', index === total - 1);
+        }
+    });
+}
+
+async function movePageById(pageId, direction) {
+    try {
+        const response = await fetch(`/api/pages/${pageId}/move`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ direction })
+        });
+
+        if (!response.ok) {
+            throw new Error('Ошибка перемещения');
+        }
+
+        showToast('✅ Порядок обновлен');
+        setTimeout(() => {
+            window.location.reload();
+        }, 300);
+    } catch (error) {
+        showToast('❌ ' + error.message);
+    }
+}
+
+// ============================================================
+// 7. ПРОВЕРКА ПАРОЛЯ (МОДАЛЬНОЕ ОКНО)
 // ============================================================
 
 function openPasswordCheckModal(pageId, pageName, redirectUrl) {
@@ -271,17 +498,14 @@ async function handlePasswordSubmit(event) {
         event.stopPropagation();
     }
 
-    // Проверяем, что у нас есть данные для перехода
     if (!pendingPageId) {
         showToast('❌ Ошибка: не найдена страница для перехода');
         closePasswordCheckModal();
         return;
     }
 
-    // Получаем имя страницы из pending данных или из кэша
     let pageName = pendingPageName;
     if (!pageName) {
-        // Пытаемся получить из кэша по ID
         const pageInfo = getPageInfo(pendingPageId);
         if (pageInfo) {
             pageName = pageInfo.name;
@@ -326,30 +550,28 @@ async function handlePasswordSubmit(event) {
 
         const result = await response.json();
         if (result.valid) {
-            // Пароль правильный - запоминаем в сессии
             unlockPage(pendingPageId);
             closePasswordCheckModal();
 
             showToast('✅ Пароль верный, переход...');
 
-            // Формируем URL для перехода
             let targetUrl = pendingRedirectUrl;
             if (!targetUrl) {
                 targetUrl = '/page/' + encodeURIComponent(pageName);
             }
 
-            // Сохраняем последнюю страницу
             if (typeof saveLastPage === 'function') {
                 saveLastPage(pageName);
             }
 
-            // Переходим на страницу
-            setTimeout(() => {
+            // Задержка чтобы тост успел отрисоваться, потом переход с выключением edit
+            setTimeout(async () => {
+                if (typeof exitEditModeBeforeNavigate === 'function') {
+                    await exitEditModeBeforeNavigate();
+                }
                 window.location.href = targetUrl;
             }, 300);
-
         } else {
-            // Неверный пароль
             if (errorEl) {
                 errorEl.textContent = '❌ Неверный пароль';
                 errorEl.classList.add('show');
@@ -375,7 +597,7 @@ async function handlePasswordSubmit(event) {
 }
 
 // ============================================================
-// 5. НАВИГАЦИЯ
+// 8. НАВИГАЦИЯ
 // ============================================================
 
 function saveLastPage(pageName) {
@@ -387,13 +609,13 @@ function saveLastPage(pageName) {
 }
 
 // ===== НАВИГАЦИЯ СТРЕЛКАМИ (пропускаем защищенные) =====
-window.navigatePage = function(direction) {
+window.navigatePage = async function(direction) {
     const currentPageName = document.querySelector('.header .page-title span:last-child')?.textContent;
     if (!currentPageName) {
         return;
     }
 
-    const pageLinks = document.querySelectorAll('.page-nav a');
+    const pageLinks = document.querySelectorAll('.page-nav .nav-pages a');
     if (!pageLinks || pageLinks.length === 0) {
         return;
     }
@@ -413,7 +635,6 @@ window.navigatePage = function(direction) {
         return;
     }
 
-    // Ищем следующую доступную страницу (пропускаем защищенные)
     let newIndex = currentIndex;
     let attempts = 0;
     const maxAttempts = pageNames.length;
@@ -431,13 +652,11 @@ window.navigatePage = function(direction) {
         const pageId = getPageIdByName(pageName);
 
         if (pageId) {
-            // Проверяем, есть ли пароль
             if (!pageHasPassword(pageId)) {
                 foundPage = { name: pageName, id: pageId, link: pageLinks[newIndex] };
                 break;
             }
 
-            // С паролем - проверяем, не введен ли уже
             if (isPageUnlocked(pageId)) {
                 foundPage = { name: pageName, id: pageId, link: pageLinks[newIndex] };
                 break;
@@ -450,19 +669,18 @@ window.navigatePage = function(direction) {
 
         if (pageHasPassword(pageId) && !isPageUnlocked(pageId)) {
             const url = link.getAttribute('href');
-            // ПЕРЕДАЕМ ВСЕ ДАННЫЕ: ID, имя, URL
             openPasswordCheckModal(pageId, pageName, url);
         } else {
             if (typeof saveLastPage === 'function') {
                 saveLastPage(pageName);
             }
-            window.location.href = link.getAttribute('href');
+            await navigateWithEditModeExit(link.getAttribute('href'));
         }
     }
 };
 
 // ===== КЛИК ПО СТРАНИЦЕ В НАВИГАЦИИ =====
-function handlePageLinkClick(event, link) {
+async function handlePageLinkClick(event, link) {
     event.preventDefault();
 
     const pageName = link.textContent.trim();
@@ -470,25 +688,22 @@ function handlePageLinkClick(event, link) {
     const url = link.getAttribute('href');
 
     if (!pageId) {
-        // Если не можем определить ID - просто переходим
-        window.location.href = url;
+        await navigateWithEditModeExit(url);
         return;
     }
 
     if (pageHasPassword(pageId) && !isPageUnlocked(pageId)) {
-        // Требуется пароль - ПЕРЕДАЕМ ВСЕ ДАННЫЕ
         openPasswordCheckModal(pageId, pageName, url);
     } else {
-        // Свободный доступ
         if (typeof saveLastPage === 'function') {
             saveLastPage(pageName);
         }
-        window.location.href = url;
+        await navigateWithEditModeExit(url);
     }
 }
 
 // ============================================================
-// 6. ПРОВЕРКА ПАРОЛЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+// 9. ПРОВЕРКА ПАРОЛЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
 // ============================================================
 
 async function checkPagePasswordOnLoad() {
@@ -498,29 +713,23 @@ async function checkPagePasswordOnLoad() {
     const pageId = parseInt(pageContainer.dataset.pageId);
     if (!pageId) return;
 
-    // Проверяем, есть ли у страницы пароль
     if (Object.keys(pagesInfo).length === 0) {
         await loadPagesInfo();
     }
 
     if (pageHasPassword(pageId) && !isPageUnlocked(pageId)) {
-
         const pageNameElement = document.querySelector('.header .page-title span:last-child');
         const pageName = pageNameElement ? pageNameElement.textContent : '';
-
-        // Получаем текущий URL
         const currentUrl = window.location.href;
 
         setTimeout(() => {
-            // ПЕРЕДАЕМ ВСЕ ДАННЫЕ: ID, имя, URL
             openPasswordCheckModal(pageId, pageName, currentUrl);
         }, 300);
-    } else if (pageHasPassword(pageId) && isPageUnlocked(pageId)) {
     }
 }
 
 // ============================================================
-// 7. ИНИЦИАЛИЗАЦИЯ
+// 10. ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -531,13 +740,19 @@ document.addEventListener('DOMContentLoaded', function() {
         createOverlay.style.display = 'none';
     }
 
+    const editOverlay = document.getElementById('editPageOverlay');
+    if (editOverlay) {
+        editOverlay.classList.remove('active');
+        editOverlay.style.display = 'none';
+    }
+
     const passwordOverlay = document.getElementById('passwordCheckOverlay');
     if (passwordOverlay) {
         passwordOverlay.classList.remove('active');
         passwordOverlay.style.display = 'none';
     }
 
-    // Привязываем обработчик формы создания страницы
+    // Форма создания страницы
     const createForm = document.getElementById('createPageForm');
     if (createForm) {
         const newForm = createForm.cloneNode(true);
@@ -547,7 +762,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Привязываем обработчик формы проверки пароля
+    // Форма редактирования страницы
+    const editForm = document.getElementById('editPageForm');
+    if (editForm) {
+        const newEditForm = editForm.cloneNode(true);
+        editForm.parentNode.replaceChild(newEditForm, editForm);
+        newEditForm.addEventListener('submit', function(e) {
+            handleEditPageSubmit(e);
+        });
+    }
+
+    // Форма проверки пароля
     const passwordForm = document.getElementById('passwordCheckForm');
     if (passwordForm) {
         const newPasswordForm = passwordForm.cloneNode(true);
@@ -557,22 +782,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Кнопки закрытия
+    // Кнопки закрытия — создание
     const createPageCloseBtn = document.getElementById('createPageCloseBtn');
     if (createPageCloseBtn) {
         createPageCloseBtn.addEventListener('click', closeCreatePageModal);
     }
-
     const createPageCancelBtn = document.getElementById('createPageCancelBtn');
     if (createPageCancelBtn) {
         createPageCancelBtn.addEventListener('click', closeCreatePageModal);
     }
 
+    // Кнопки закрытия — редактирование
+    const editPageCloseBtn = document.getElementById('editPageCloseBtn');
+    if (editPageCloseBtn) {
+        editPageCloseBtn.addEventListener('click', closeEditPageModal);
+    }
+    const editPageCancelBtn = document.getElementById('editPageCancelBtn');
+    if (editPageCancelBtn) {
+        editPageCancelBtn.addEventListener('click', closeEditPageModal);
+    }
+
+    // Кнопки закрытия — пароль
     const passwordCheckCloseBtn = document.getElementById('passwordCheckCloseBtn');
     if (passwordCheckCloseBtn) {
         passwordCheckCloseBtn.addEventListener('click', closePasswordCheckModal);
     }
-
     const passwordCheckCancelBtn = document.getElementById('passwordCheckCancelBtn');
     if (passwordCheckCancelBtn) {
         passwordCheckCancelBtn.addEventListener('click', closePasswordCheckModal);
@@ -583,6 +817,14 @@ document.addEventListener('DOMContentLoaded', function() {
         createOverlay.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeCreatePageModal();
+            }
+        });
+    }
+
+    if (editOverlay) {
+        editOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditPageModal();
             }
         });
     }
@@ -604,12 +846,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('createPageOverlay')?.classList.contains('active')) {
                 closeCreatePageModal();
             }
+            if (document.getElementById('editPageOverlay')?.classList.contains('active')) {
+                closeEditPageModal();
+            }
         }
     });
 
     // Обработчики для кликов по страницам в навигации
-    document.querySelectorAll('.page-nav a').forEach(link => {
-        // Удаляем старые обработчики
+    document.querySelectorAll('.page-nav .nav-pages a').forEach(link => {
         const newLink = link.cloneNode(true);
         link.parentNode.replaceChild(newLink, link);
 
@@ -620,13 +864,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Загружаем информацию о страницах
     loadPagesInfo().then(() => {
-        // Проверяем пароль текущей страницы
         checkPagePasswordOnLoad();
+        bindPageNavActions();
     });
 });
 
 // ============================================================
-// 8. ГЛОБАЛЬНЫЕ ФУНКЦИИ
+// ХЕЛПЕР: ПЕРЕХОД С ВЫКЛЮЧЕНИЕМ РЕЖИМА РЕДАКТИРОВАНИЯ
+// ============================================================
+
+async function navigateWithEditModeExit(targetUrl) {
+    // Если функция выключения существует — вызываем
+    if (typeof exitEditModeBeforeNavigate === 'function') {
+        await exitEditModeBeforeNavigate();
+    }
+    window.location.href = targetUrl;
+}
+
+// ============================================================
+// 11. ГЛОБАЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 
 window.createPage = openCreatePageModal;
@@ -646,3 +902,10 @@ window.unlockPage = unlockPage;
 window.lockPage = lockPage;
 window.checkPagePasswordOnLoad = checkPagePasswordOnLoad;
 window.handlePageLinkClick = handlePageLinkClick;
+window.openEditPageModal = openEditPageModal;
+window.closeEditPageModal = closeEditPageModal;
+window.deletePageById = deletePageById;
+window.bindPageNavActions = bindPageNavActions;
+window.navigateWithEditModeExit = navigateWithEditModeExit;
+window.movePageById = movePageById;
+window.updateMoveButtonsState = updateMoveButtonsState;
