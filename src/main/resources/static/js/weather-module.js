@@ -2,29 +2,78 @@
  * WEATHER-MODULE.JS - Логика модуля погоды (Open-Meteo)
  */
 
-const weatherCache = {};
+let weatherCache = {};
+const weatherCacheTime = {};              // ← новое: время последней загрузки
+const WEATHER_CACHE_TTL_MS = 15 * 60 * 1000; // ← 15 минут
+const weatherIntervals = {};              // ← новое: интервалы обновления
 
 function initWeatherModule(moduleElement, moduleId) {
-    loadWeatherData(moduleElement, moduleId);
+    const numericId = parseInt(moduleId);
+    if (isNaN(numericId)) return;
+
+    // Чистим старый интервал, если был
+    if (weatherIntervals[numericId]) {
+        clearInterval(weatherIntervals[numericId]);
+        delete weatherIntervals[numericId];
+    }
+
+    // Загружаем (с учётом кэша)
+    loadWeatherData(moduleElement, numericId);
+
+    // Обновляем раз в 15 минут
+    weatherIntervals[numericId] = setInterval(() => {
+        forceLoadWeatherData(moduleElement, numericId);
+    }, WEATHER_CACHE_TTL_MS);
 }
 
+// ===== ОБЫЧНАЯ ЗАГРУЗКА (с кэшем) =====
 async function loadWeatherData(moduleElement, moduleId) {
+    const numericId = parseInt(moduleId);
+    if (isNaN(numericId)) return;
+
+    const now = Date.now();
+    const lastLoad = weatherCacheTime[numericId] || 0;
+    const isFresh = weatherCache[numericId] && (now - lastLoad < WEATHER_CACHE_TTL_MS);
+
+    if (isFresh) {
+        // Свежий кэш — рендерим без запроса
+        renderWeatherDisplay(moduleElement, weatherCache[numericId]);
+        return;
+    }
+
+    await forceLoadWeatherData(moduleElement, numericId);
+}
+
+// ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА (игнорирует кэш) =====
+async function forceLoadWeatherData(moduleElement, moduleId) {
+    const numericId = parseInt(moduleId);
+    if (isNaN(numericId)) return;
+
     try {
-        const response = await fetch(`/api/modules/${moduleId}/data`);
+        const response = await fetch(`/api/modules/${numericId}/data`);
         if (response.ok) {
             const data = await response.json();
-            weatherCache[moduleId] = data;
+            weatherCache[numericId] = data;
+            weatherCacheTime[numericId] = Date.now();
             renderWeatherDisplay(moduleElement, data);
         } else {
-            if (weatherCache[moduleId]) {
-                renderWeatherDisplay(moduleElement, weatherCache[moduleId]);
+            if (weatherCache[numericId]) {
+                renderWeatherDisplay(moduleElement, weatherCache[numericId]);
             }
         }
     } catch (error) {
-        if (weatherCache[moduleId]) {
-            renderWeatherDisplay(moduleElement, weatherCache[moduleId]);
+        if (weatherCache[numericId]) {
+            renderWeatherDisplay(moduleElement, weatherCache[numericId]);
         }
     }
+}
+
+// ===== ИНВАЛИДАЦИЯ КЭША =====
+function invalidateWeatherCache(moduleId) {
+    const numericId = parseInt(moduleId);
+    if (isNaN(numericId)) return;
+    delete weatherCacheTime[numericId];
+    // Сам weatherCache не удаляем — чтобы при ошибке сети было что показать
 }
 
 function renderWeatherDisplay(moduleElement, data) {
@@ -223,12 +272,17 @@ async function updateWeatherSettings(moduleId, settingsContainer) {
                 renderWeatherDisplay(moduleElement, data);
             }
 
-            if (settingsContainer) {
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(moduleId)) {
+                WidgetSettingsPopup.refresh();
+            } else if (settingsContainer) {
                 settingsContainer.innerHTML = renderWeatherSettings(data);
                 initWeatherSettingsEvents(moduleId, settingsContainer);
             }
 
             showToast('✅ Настройки погоды обновлены');
+            if (typeof invalidateWeatherCache === 'function') {
+                invalidateWeatherCache(moduleId);
+            }
         } else {
             const error = await response.text();
             showToast('❌ Ошибка: ' + error);
@@ -239,6 +293,10 @@ async function updateWeatherSettings(moduleId, settingsContainer) {
 }
 
 window.initWeatherModule = initWeatherModule;
+window.loadWeatherData = loadWeatherData;
+window.forceLoadWeatherData = forceLoadWeatherData;
+window.invalidateWeatherCache = invalidateWeatherCache;
 window.renderWeatherSettings = renderWeatherSettings;
 window.initWeatherSettingsEvents = initWeatherSettingsEvents;
 window.updateWeatherSettings = updateWeatherSettings;
+window.weatherCache = weatherCache;

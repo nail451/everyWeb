@@ -10,6 +10,7 @@ let pagesInfo = {};
 let pendingPageId = null;
 let pendingPageName = null;
 let pendingRedirectUrl = null;
+const PAGE_UNLOCK_TTL_MS = 72 * 60 * 60 * 1000;
 
 // ============================================================
 // 2. ЗАГРУЗКА ИНФОРМАЦИИ О СТРАНИЦАХ
@@ -26,11 +27,35 @@ async function loadPagesInfo() {
                 pagesInfo[page.name] = page;
             });
 
+            updateNoteIndicators(pages);   // ← новое
             return pages;
         }
     } catch (error) {
+        // ...
     }
     return null;
+}
+
+function updateNoteIndicators(pages) {
+    if (!Array.isArray(pages)) return;
+
+    pages.forEach(page => {
+        // Ищем по data-page-name, а не по textContent
+        const link = document.querySelector(`.page-nav-item a[data-page-name="${page.name}"]`);
+        if (!link) return;
+
+        // Удаляем старый индикатор
+        const oldIndicator = link.querySelector('.note-indicator');
+        if (oldIndicator) oldIndicator.remove();
+
+        // Добавляем новый
+        if (page.hasNoteToday) {
+            const indicator = document.createElement('span');
+            indicator.className = 'note-indicator';
+            indicator.textContent = '';
+            link.insertBefore(indicator, link.firstChild);
+        }
+    });
 }
 
 function getPageInfo(pageId) {
@@ -67,15 +92,43 @@ function pageHasPassword(pageId) {
 }
 
 function isPageUnlocked(pageId) {
-    return sessionStorage.getItem('page_unlocked_' + pageId) === 'true';
+    try {
+        const raw = localStorage.getItem('page_unlocked_' + pageId);
+        if (!raw) return false;
+
+        const data = JSON.parse(raw);
+        if (!data || data.unlocked !== true || !data.expires) {
+            localStorage.removeItem('page_unlocked_' + pageId);
+            return false;
+        }
+
+        const now = Date.now();
+        if (now >= data.expires) {
+            localStorage.removeItem('page_unlocked_' + pageId);
+            return false;
+        }
+
+        data.expires = now + PAGE_UNLOCK_TTL_MS;
+        localStorage.setItem('page_unlocked_' + pageId, JSON.stringify(data));
+
+        return true;
+    } catch (e) {
+        localStorage.removeItem('page_unlocked_' + pageId);
+        return false;
+    }
 }
 
 function unlockPage(pageId) {
-    sessionStorage.setItem('page_unlocked_' + pageId, 'true');
+    try {
+        localStorage.setItem('page_unlocked_' + pageId, JSON.stringify({
+            unlocked: true,
+            expires: Date.now() + PAGE_UNLOCK_TTL_MS
+        }));
+    } catch (e) {}
 }
 
 function lockPage(pageId) {
-    sessionStorage.removeItem('page_unlocked_' + pageId);
+    localStorage.removeItem('page_unlocked_' + pageId);
 }
 
 // ============================================================
@@ -909,3 +962,4 @@ window.bindPageNavActions = bindPageNavActions;
 window.navigateWithEditModeExit = navigateWithEditModeExit;
 window.movePageById = movePageById;
 window.updateMoveButtonsState = updateMoveButtonsState;
+window.updateNoteIndicators = updateNoteIndicators;

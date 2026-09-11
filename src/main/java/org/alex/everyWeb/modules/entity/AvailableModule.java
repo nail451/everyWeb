@@ -44,6 +44,12 @@ public class AvailableModule {
     @Column(name = "display_order")
     private Integer displayOrder = 0;
 
+    @Column(name = "default_row_span")
+    private Integer defaultRowSpan = 1;
+
+    @Column(name = "default_col_span")
+    private Integer defaultColSpan = 1;
+
     // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -80,4 +86,14 @@ public class AvailableModule {
 
     public Integer getDisplayOrder() { return displayOrder; }
     public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
+
+    public Integer getDefaultRowSpan() { return defaultRowSpan; }
+    public void setDefaultRowSpan(Integer defaultRowSpan) {
+        this.defaultRowSpan = defaultRowSpan != null ? defaultRowSpan : 1;
+    }
+
+    public Integer getDefaultColSpan() { return defaultColSpan; }
+    public void setDefaultColSpan(Integer defaultColSpan) {
+        this.defaultColSpan = defaultColSpan != null ? defaultColSpan : 1;
+    }
 }

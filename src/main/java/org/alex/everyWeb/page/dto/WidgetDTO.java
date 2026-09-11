@@ -13,31 +13,6 @@ public class WidgetDTO {
     private Boolean isEditing;
     private Boolean isLinkWidget;
 
-    // Предопределенные размеры для типов виджетов
-    public static final int[][] DEFAULT_SIZES = {
-            // type, rowSpan, colSpan
-            {1, 1},  // CLOCK
-            {1, 1},  // WEATHER
-            {2, 2},  // LINK
-            {1, 1},  // NOTE
-            {1, 1},  // TODO
-            {2, 2},  // NEXTCLOUD
-            {1, 1}   // CALENDAR
-    };
-
-    public static int[] getDefaultSize(String type) {
-        switch(type) {
-            case "LINK": return new int[]{2, 2};
-            case "NEXTCLOUD": return new int[]{2, 2};
-            case "WEATHER": return new int[]{1, 1};
-            case "CLOCK": return new int[]{1, 1};
-            case "NOTE": return new int[]{1, 1};
-            case "TODO": return new int[]{1, 1};
-            case "CALENDAR": return new int[]{1, 1};
-            default: return new int[]{1, 1};
-        }
-    }
-
     // Геттеры и сеттеры
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

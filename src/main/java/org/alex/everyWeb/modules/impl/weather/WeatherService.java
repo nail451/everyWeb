@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class WeatherService {
@@ -17,11 +18,37 @@ public class WeatherService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // ===== КЭШ =====
+    private static final long CACHE_TTL_MS = 15 * 60 * 1000; // 15 минут
+    private final Map<String, CachedWeather> cache = new ConcurrentHashMap<>();
+    private final Map<String, CachedCoords> coordsCache = new ConcurrentHashMap<>();
+
     public WeatherService() {
         this.webClient = WebClient.builder().build();
     }
 
     public Map<String, Object> getWeather(String city, String units) {
+        if (city == null || city.trim().isEmpty()) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("error", "Город не указан");
+            return err;
+        }
+
+        String key = city.trim().toLowerCase() + "|" + (units != null ? units : "metric");
+        CachedWeather cached = cache.get(key);
+        long now = System.currentTimeMillis();
+
+        if (cached != null && (now - cached.timestamp) < CACHE_TTL_MS) {
+            return cached.data;
+        }
+
+        // Идём в сеть
+        Map<String, Object> fresh = fetchWeather(city, units);
+        cache.put(key, new CachedWeather(fresh, now));
+        return fresh;
+    }
+
+    private Map<String, Object> fetchWeather(String city, String units) {
         Map<String, Object> result = new HashMap<>();
 
         try {
@@ -84,6 +111,18 @@ public class WeatherService {
     }
 
     private double[] getCoordinates(String city) {
+        String key = city.trim().toLowerCase();
+        CachedCoords cached = coordsCache.get(key);
+        if (cached != null) return cached.coords;
+
+        double[] coords = fetchCoordinates(city);
+        if (coords != null) {
+            coordsCache.put(key, new CachedCoords(coords));
+        }
+        return coords;
+    }
+
+    private double[] fetchCoordinates(String city) {
         try {
             String response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
@@ -111,6 +150,21 @@ public class WeatherService {
             System.err.println("Error getting coordinates for " + city + ": " + e.getMessage());
         }
         return null;
+    }
+
+    // ===== КЛАССЫ ДЛЯ КЭША =====
+    private static class CachedWeather {
+        final Map<String, Object> data;
+        final long timestamp;
+        CachedWeather(Map<String, Object> data, long timestamp) {
+            this.data = data;
+            this.timestamp = timestamp;
+        }
+    }
+
+    private static class CachedCoords {
+        final double[] coords;
+        CachedCoords(double[] coords) { this.coords = coords; }
     }
 
     private Map<String, Object> parseWeatherResponse(JsonNode root, String city, String units) {

@@ -1,0 +1,51 @@
+/* ========================================
+   NOTES MODULE
+   ======================================== */
+
+.note-widget {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: 6px;
+}
+
+.note-date-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0 4px;
+    flex-shrink: 0;
+    display: none; /* показываем только когда есть дата */
+}
+
+.note-date-label:not(:empty) {
+    display: block;
+}
+
+.note-textarea {
+    width: 100%;
+    flex: 1;
+    min-height: 60px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    line-height: 1.4;
+}
+
+.note-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.note-textarea:focus {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+}

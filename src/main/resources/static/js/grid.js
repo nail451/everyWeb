@@ -36,7 +36,7 @@ function getWidgetIcon(type) {
         'LINK': '🔗',
         'CLOCK': '🕐',
         'WEATHER': '🌤️',
-        'NOTE': '📝',
+        'NOTES': '📝',
         'TODO': '✅',
         'NEXTCLOUD': '☁️',
         'CALENDAR': '📅',
@@ -58,7 +58,7 @@ function getWidgetColor(type) {
         'LINK': 'rgba(33, 150, 243, 0.15)',
         'CLOCK': 'rgba(156, 39, 176, 0.15)',
         'WEATHER': 'rgba(255, 193, 7, 0.15)',
-        'NOTE': 'rgba(76, 175, 80, 0.15)',
+        'NOTES': 'rgba(76, 175, 80, 0.15)',
         'TODO': 'rgba(244, 67, 54, 0.15)',
         'NEXTCLOUD': 'rgba(0, 150, 136, 0.15)',
         'CALENDAR': 'rgba(233, 30, 99, 0.15)',
@@ -91,11 +91,13 @@ function getWidgetContent(widget) {
                     </div>
                 </div>
             `;
-        case 'NOTE':
+        case 'NOTES':
             return `
-                <textarea class="note-text" placeholder="Заметка..." 
-                          data-widget-id="${widget.id}"
-                          style="width:100%; min-height:60px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:8px; color:white; padding:8px; font-size:13px; resize:vertical;">${widget.data || ''}</textarea>
+                <div class="note-widget" data-widget-id="${widget.id}">
+                    <div class="note-date-label" style="font-size:12px; opacity:0.6; margin-bottom:6px; font-weight:500;"></div>
+                    <textarea class="note-textarea" placeholder="Введите заметку..." 
+                              data-widget-id="${widget.id}"></textarea>
+                </div>
             `;
         case 'TODO':
             return `
@@ -112,6 +114,8 @@ function getWidgetContent(widget) {
                     <div style="text-align:center; opacity:0.5; padding:10px;">⏳ Загрузка Nextcloud...</div>
                 </div>
             `;
+        case 'CALENDAR':
+            return `<div class="calendar-container" data-widget-id="${widget.id}"></div>`;
         default:
             return `<div style="opacity:0.5;text-align:center;padding:20px;">${widget.type}</div>`;
     }

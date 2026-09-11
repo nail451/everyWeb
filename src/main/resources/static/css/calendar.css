@@ -1,0 +1,186 @@
+/* ========================================
+   CALENDAR MODULE
+   ======================================== */
+
+.calendar-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== ЗАГОЛОВОК ===== */
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 0 2px;
+}
+
+.calendar-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-nav {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    font-family: inherit;
+}
+
+.calendar-nav:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
+}
+
+.calendar-nav:active {
+    transform: scale(0.95);
+}
+
+/* ===== ДНИ НЕДЕЛИ ===== */
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    flex-shrink: 0;
+    padding: 0 2px;
+}
+
+.calendar-weekday {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 0;
+}
+
+/* ===== СЕТКА ДНЕЙ ===== */
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 2px;
+    flex: 1;
+    min-height: 0;
+    padding: 0 2px;
+}
+
+.calendar-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 5px;
+    background: transparent;
+    transition: background 0.15s ease, color 0.15s ease;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
+    cursor: default;
+    user-select: none;
+}
+
+.calendar-day-other {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.calendar-day-weekend {
+    color: rgba(244, 100, 100, 0.85);
+}
+
+.calendar-day-holiday {
+    color: rgba(244, 100, 100, 0.95);
+}
+
+.calendar-day-other.calendar-day-holiday {
+    color: rgba(244, 100, 100, 0.4);
+}
+
+.calendar-day-shortened {
+    color: rgba(255, 200, 100, 0.95);
+    position: relative;
+}
+
+.calendar-day-shortened::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 200, 100, 0.9);
+    border-radius: 50%;
+}
+
+/* ===== ДЕНЬ С ЗАМЕТКОЙ ===== */
+.calendar-day-has-note {
+    background: rgba(255, 152, 0, 0.18);
+    color: rgba(255, 200, 130, 0.95);
+    box-shadow: inset 0 0 0 1px rgba(255, 152, 0, 0.35);
+}
+
+.calendar-day-today {
+    background: rgba(76, 175, 80, 0.3);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px rgba(76, 175, 80, 0.5);
+}
+
+/* ===== ВЫБРАННЫЙ ДЕНЬ ===== */
+.calendar-day-selected {
+    background: rgba(76, 175, 80, 0.35);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1.5px rgba(76, 175, 80, 0.7);
+    font-weight: 600;
+}
+
+/* Порядок: today перебивает selected? Нет — пусть selected перебивает today. */
+.calendar-day-today.calendar-day-selected {
+    background: rgba(76, 175, 80, 0.5);
+    box-shadow: inset 0 0 0 2px rgba(76, 175, 80, 0.9);
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 768px) {
+    .calendar-container {
+        font-size: 11px;
+    }
+    .calendar-title {
+        font-size: 12px;
+    }
+    .calendar-weekday {
+        font-size: 9px;
+    }
+    .calendar-day {
+        font-size: 10px;
+    }
+}

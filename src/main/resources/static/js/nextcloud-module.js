@@ -320,7 +320,9 @@ async function updateNextcloudSettings(moduleId, settingsContainer, silent = fal
                 renderNextcloudDisplay(moduleElement, data);
             }
 
-            if (settingsContainer) {
+            if (typeof WidgetSettingsPopup !== 'undefined' && WidgetSettingsPopup.isOpenFor(moduleId)) {
+                WidgetSettingsPopup.refresh();
+            } else if (settingsContainer) {
                 settingsContainer.innerHTML = renderNextcloudSettings(data);
                 initNextcloudSettingsEvents(moduleId, settingsContainer);
             }

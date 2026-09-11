@@ -322,3 +322,22 @@ body.editing-mode .page-nav-item:has(a.active) .page-nav-actions {
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* ===== ИНДИКАТОР ЗАМЕТКИ НА СЕГОДНЯ ===== */
+.page-nav-item .note-indicator {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    background: #ff9800;
+    border-radius: 50%;
+    margin-right: 5px;
+    margin-top: -3px;
+    vertical-align: middle;
+    box-shadow: 0 0 4px rgba(255, 152, 0, 0.6);
+    animation: noteIndicatorPulse 2s ease-in-out infinite;
+}
+
+@keyframes noteIndicatorPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

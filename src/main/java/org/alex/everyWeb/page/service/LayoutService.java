@@ -2,8 +2,10 @@ package org.alex.everyWeb.page.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.alex.everyWeb.modules.entity.AvailableModule;
 import org.alex.everyWeb.modules.entity.ModuleEntity;
 import org.alex.everyWeb.modules.repository.DTO.ModuleResponseDTO;
+import org.alex.everyWeb.modules.service.AvailableModuleService;
 import org.alex.everyWeb.modules.service.ModulesService;
 import org.alex.everyWeb.page.dto.WidgetDTO;
 import org.alex.everyWeb.page.entity.Page;
@@ -27,6 +29,9 @@ public class LayoutService {
 
     @Autowired
     private ModulesService modulesService;
+
+    @Autowired
+    private AvailableModuleService availableModuleService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int GRID_ROWS = 4;
@@ -72,9 +77,21 @@ public class LayoutService {
     public WidgetDTO addWidget(Long pageId, String type, String title, Integer rowSpan, Integer colSpan) {
         List<WidgetDTO> widgets = getWidgets(pageId);
 
-        int[] defaultSize = WidgetDTO.getDefaultSize(type);
-        int rs = rowSpan != null ? rowSpan : defaultSize[0];
-        int cs = colSpan != null ? colSpan : defaultSize[1];
+        int defaultRowSpan = 1;
+        int defaultColSpan = 1;
+        try {
+            AvailableModule available = availableModuleService.getModuleByType(type);
+            if (available != null) {
+                defaultRowSpan = available.getDefaultRowSpan() != null ? available.getDefaultRowSpan() : 1;
+                defaultColSpan = available.getDefaultColSpan() != null ? available.getDefaultColSpan() : 1;
+            }
+        } catch (Exception e) {
+            // Если модуль не найден в AvailableModule — fallback 1×1
+            System.err.println("AvailableModule not found for type=" + type + ", using 1×1");
+        }
+
+        int rs = rowSpan != null ? rowSpan : defaultRowSpan;
+        int cs = colSpan != null ? colSpan : defaultColSpan;
 
         int[] position = findFreePosition(widgets, rs, cs);
 

@@ -43,12 +43,8 @@
 </div>
 
 <script>
-    // Получаем последнюю сохраненную страницу
     const lastPage = localStorage.getItem('everyweb_last_page');
-    console.log('Redirecting to last page:', lastPage);
-
-    // Если есть сохраненная страница и это не 'main' (или любая другая)
-    if (lastPage && lastPage !== 'main') {
+    if (lastPage && /^[a-zA-Z0-9-_]+$/.test(lastPage)) {
         window.location.href = '/page/' + encodeURIComponent(lastPage);
     } else {
         window.location.href = '/page/main';

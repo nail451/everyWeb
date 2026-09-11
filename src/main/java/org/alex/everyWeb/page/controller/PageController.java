@@ -32,7 +32,7 @@ public class PageController {
 
     @GetMapping("/")
     public String home(Model model) {
-        return "redirect:/page/main";
+        return "redirect";
     }
 
     // ===== ТОЛЬКО ОДИН МЕТОД getPage =====

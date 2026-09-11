@@ -253,6 +253,11 @@ document.addEventListener('DOMContentLoaded', function() {
         currentPageId = parseInt(pageContainer.dataset.pageId);
     }
 
+    const pageNameEl = document.querySelector('.header .page-title span:last-child');
+    if (pageNameEl && typeof saveLastPage === 'function') {
+        saveLastPage(pageNameEl.textContent.trim());
+    }
+
     if (typeof initHeader === 'function') initHeader();
     if (typeof initGrid === 'function') initGrid();
     if (typeof initModules === 'function') initModules();

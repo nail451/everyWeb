@@ -14,6 +14,9 @@
     <link rel="stylesheet" th:href="@{/css/wallpaper.css}">
     <link rel="stylesheet" th:href="@{/css/create-page-modal.css}">
     <link rel="stylesheet" th:href="@{/css/widget-settings-popup.css}">
+    <link rel="stylesheet" th:href="@{/css/widget-add-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/notes.css}">
+    <link rel="stylesheet" th:href="@{/css/calendar.css}">
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 </head>
@@ -39,6 +42,7 @@
         <div class="nav-pages">
             <div class="page-nav-item" th:each="p : ${pages}">
                 <a th:href="'/page/' + ${p.name}"
+                   th:data-page-name="${p.name}"
                    th:text="${p.name}"
                    th:classappend="${p.id == page.id} ? 'active' : ''"></a>
                 <div class="page-nav-actions" th:if="${p.id == page.id}">
@@ -252,49 +256,18 @@
 <script th:src="@{/js/links.js}"></script>
 <script th:src="@{/js/modules.js}"></script>
 <script th:src="@{/js/widget-settings-popup.js}"></script>
+<script th:src="@{/js/widget-add-modal.js}"></script>
 <script th:src="@{/js/links-modal.js}"></script>
 <script th:src="@{/js/clock-module.js}"></script>
 <script th:src="@{/js/weather-module.js}"></script>
+<script th:src="@{/js/notes-module.js}"></script>
 <script th:src="@{/js/nextcloud-module.js}"></script>
 <script th:src="@{/js/system-modules.js}"></script>
 <script th:src="@{/js/settings.js}"></script>
 <script th:src="@{/js/wallpaper.js}"></script>
+<script th:src="@{/js/calendar-module.js}"></script>
 <script th:src="@{/js/pages.js}"></script>
 
-<!-- Добавление виджетов -->
-<script>
-    function addWidgetDialog() {
-        const types = [
-            {type: 'LINK', name: '🔗 Ссылки'},
-            {type: 'CLOCK', name: '🕐 Часы'},
-            {type: 'WEATHER', name: '🌤️ Погода'},
-            {type: 'NOTE', name: '📝 Заметки'},
-            {type: 'TODO', name: '✅ Список дел'},
-            {type: 'NEXTCLOUD', name: '☁️ Nextcloud'},
-            {type: 'CPU', name: '📊 Процессор'},
-            {type: 'MEMORY', name: '🧠 Память'},
-            {type: 'DISK', name: '💾 Диски'},
-            {type: 'NETWORK', name: '🌐 Сеть'},
-            {type: 'BATTERY', name: '🔋 Батарея'}
-        ];
-
-        let message = 'Выберите тип виджета:\n';
-        types.forEach((t, i) => {
-            message += `${i+1}. ${t.name}\n`;
-        });
-
-        const choice = prompt(message);
-        if (!choice) return;
-
-        const index = parseInt(choice) - 1;
-        if (index < 0 || index >= types.length) {
-            showToast('❌ Неверный выбор');
-            return;
-        }
-
-        addWidget(types[index].type);
-    }
-</script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Проверяем, что все модули загружены

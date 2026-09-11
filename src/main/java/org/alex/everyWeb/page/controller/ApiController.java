@@ -1,9 +1,13 @@
 package org.alex.everyWeb.page.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.alex.everyWeb.config.PasswordService;
 import org.alex.everyWeb.link.repository.DTO.LinkDTO;
 import org.alex.everyWeb.link.repository.DTO.LinkRequestDTO;
 import org.alex.everyWeb.link.service.LinksService;
+import org.alex.everyWeb.modules.entity.ModuleEntity;
+import org.alex.everyWeb.modules.impl.notes.CalendarNoteRepository;
+import org.alex.everyWeb.modules.repository.ModuleRepository;
 import org.alex.everyWeb.modules.service.AvailableModuleService;
 import org.alex.everyWeb.modules.service.ModulesService;
 import org.alex.everyWeb.page.dto.WidgetDTO;
@@ -17,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,6 +50,12 @@ public class ApiController {
     @Autowired
     private PasswordService passwordService;
 
+    @Autowired
+    private ModuleRepository moduleRepository;
+
+    @Autowired
+    private CalendarNoteRepository calendarNoteRepository;
+
     // ===== НАСТРОЙКИ =====
     @GetMapping("/settings/{pageId}")
     public ResponseEntity<?> getSettings(@PathVariable Long pageId) {
@@ -65,6 +76,8 @@ public class ApiController {
                         map.put("configurable", module.getIsConfigurable());
                         map.put("jsFile", module.getJsFile());
                         map.put("cssClass", module.getCssClass());
+                        map.put("defaultRowSpan", module.getDefaultRowSpan() != null ? module.getDefaultRowSpan() : 1);
+                        map.put("defaultColSpan", module.getDefaultColSpan() != null ? module.getDefaultColSpan() : 1);
                         return map;
                     })
                     .collect(Collectors.toList());
@@ -122,12 +135,15 @@ public class ApiController {
     public ResponseEntity<?> getPages() {
         try {
             List<Page> pages = pageService.getAllPages();
+            LocalDate today = LocalDate.now();
+
             List<Map<String, Object>> result = pages.stream().map(page -> {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", page.getId());
                 map.put("name", page.getName());
                 // Просто проверяем, есть ли пароль (не показываем сам пароль)
                 map.put("hasPassword", page.getPassword() != null && !page.getPassword().isEmpty());
+                map.put("hasNoteToday", hasNoteTodayOnPage(page.getId(), today));
                 return map;
             }).collect(Collectors.toList());
             return ResponseEntity.ok(result);
@@ -428,5 +444,44 @@ public class ApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
+    }
+
+    private boolean hasNoteTodayOnPage(Long pageId, LocalDate today) {
+        try {
+            // Все CALENDAR-модули на странице
+            List<ModuleEntity> modules = moduleRepository.findByPageIdOrderByPositionAsc(pageId);
+            for (ModuleEntity module : modules) {
+                if (!"CALENDAR".equals(module.getType())) continue;
+
+                // Проверяем, есть ли linkedToNotes: true
+                String settings = module.getSettings();
+                if (settings == null || settings.isEmpty()) continue;
+                // Парсим JSON, ищем linkedToNotes === true
+                // ... (см. ниже парсер)
+                boolean linked = parseLinkedToNotes(settings);
+                if (!linked) continue;
+
+                // Проверяем, есть ли заметка на сегодня
+                boolean hasNote = calendarNoteRepository.existsNoteOnDate(module.getId(), today);
+                if (hasNote) return true;
+            }
+        } catch (Exception e) {
+            // Игнорируем
+        }
+        return false;
+    }
+
+    private boolean parseLinkedToNotes(String settingsJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> map = mapper.readValue(settingsJson,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            Object v = map.get("linkedToNotes");
+            if (v instanceof Boolean) return (Boolean) v;
+            if (v instanceof String) return "true".equalsIgnoreCase((String) v);
+        } catch (Exception e) {
+            // Игнорируем
+        }
+        return false;
     }
 }

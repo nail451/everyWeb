@@ -464,6 +464,10 @@ async function loadModuleSettingsInto(widgetElement, container) {
                 contentHtml = window.renderWeatherSettings(data);
             } else if (moduleType === 'NEXTCLOUD' && typeof window.renderNextcloudSettings === 'function') {
                 contentHtml = window.renderNextcloudSettings(data);
+            } else if (moduleType === 'CALENDAR' && typeof window.renderCalendarSettings === 'function') {
+                contentHtml = window.renderCalendarSettings(data);
+            } else if (moduleType === 'NOTES' && typeof window.renderNotesSettings === 'function') {
+                contentHtml = window.renderNotesSettings(data);
             } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
                 if (typeof window.renderSystemSettings === 'function') {
                     contentHtml = window.renderSystemSettings(data);
@@ -508,6 +512,10 @@ async function loadModuleSettingsInto(widgetElement, container) {
                 window.initWeatherSettingsEvents(numericId, container);
             } else if (moduleType === 'NEXTCLOUD' && typeof window.initNextcloudSettingsEvents === 'function') {
                 window.initNextcloudSettingsEvents(numericId, container);
+            } else if (moduleType === 'CALENDAR' && typeof window.initCalendarSettingsEvents === 'function') {
+                window.initCalendarSettingsEvents(numericId, container);
+            } else if (moduleType === 'NOTES' && typeof window.initNotesSettingsEvents === 'function') {
+                window.initNotesSettingsEvents(numericId, container);
             } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
                 if (typeof window.initSystemSettingsEvents === 'function') {
                     window.initSystemSettingsEvents(numericId, container);
@@ -544,6 +552,14 @@ function initializeModules() {
             initNextcloudModule(widgetElement, moduleId);
         }
 
+        if (moduleType === 'NOTES' && typeof initNotesModule === 'function') {
+            initNotesModule(widgetElement, moduleId);
+        }
+
+        if (moduleType === 'CALENDAR' && typeof initCalendarModule === 'function') {
+            initCalendarModule(widgetElement, moduleId);
+        }
+
         if (moduleType === 'LINK') {
             if (typeof loadLinkWidgetData === 'function') {
                 loadLinkWidgetData(widgetElement);
@@ -555,15 +571,6 @@ function initializeModules() {
                 initSystemModule(widgetElement, moduleId);
             }
         }
-    });
-
-    document.querySelectorAll('.note-text').forEach(textarea => {
-        const moduleId = textarea.dataset.widgetId;
-        const saved = localStorage.getItem('notes_' + moduleId);
-        if (saved) textarea.value = saved;
-        textarea.addEventListener('input', function() {
-            localStorage.setItem('notes_' + moduleId, this.value);
-        });
     });
 
     document.querySelectorAll('.todo-widget').forEach(widget => {

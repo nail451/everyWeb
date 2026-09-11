@@ -3,7 +3,7 @@
  * Плавающая панель настроек виджета
  */
 
-const WidgetSettingsPopup = (function() {
+let WidgetSettingsPopup = (function() {
     let popupEl = null;
     let overlayEl = null;
     let activeWidget = null;

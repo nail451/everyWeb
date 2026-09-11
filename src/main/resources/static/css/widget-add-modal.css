@@ -1,0 +1,321 @@
+/* ========================================
+   WIDGET ADD MODAL - Модальное окно добавления виджета
+   ======================================== */
+
+.widget-add-overlay {
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    z-index: 99999 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 20px !important;
+    animation: fadeIn 0.2s ease !important;
+}
+
+.widget-add-overlay.active {
+    display: flex !important;
+}
+
+.widget-add-modal {
+    background: rgba(30, 30, 50, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 24px !important;
+    padding: 28px !important;
+    max-width: 720px !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    color: #ffffff !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    animation: slideUp 0.3s ease !important;
+    position: relative !important;
+}
+
+.widget-add-modal::-webkit-scrollbar {
+    width: 6px;
+}
+.widget-add-modal::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+/* ===== Заголовок ===== */
+.widget-add-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 22px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.widget-add-header h2 {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+.widget-add-close {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 20px !important;
+    cursor: pointer !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease !important;
+    opacity: 0.6 !important;
+    font-family: inherit !important;
+}
+
+.widget-add-close:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: rotate(90deg) !important;
+}
+
+/* ===== Секции ===== */
+.widget-add-section {
+    margin-bottom: 22px;
+}
+
+.widget-add-section:last-of-type {
+    margin-bottom: 0;
+}
+
+.widget-add-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.4;
+    margin-bottom: 12px;
+    padding-left: 2px;
+}
+
+/* ===== Сетка карточек ===== */
+.widget-add-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+}
+
+/* ===== Карточка ===== */
+.widget-add-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    font-family: inherit;
+    color: inherit;
+    user-select: none;
+}
+
+.widget-add-card:hover:not(.disabled):not(.no-space) {
+    background: rgba(76, 175, 80, 0.12);
+    border-color: rgba(76, 175, 80, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(76, 175, 80, 0.15);
+}
+
+.widget-add-card:active:not(.disabled):not(.no-space) {
+    transform: translateY(0);
+}
+
+.widget-add-card .wa-icon {
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 2px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
+.widget-add-card .wa-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.widget-add-card .wa-desc {
+    font-size: 11px;
+    opacity: 0.45;
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.widget-add-card .wa-size {
+    font-size: 10px;
+    opacity: 0.35;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-top: 2px;
+    letter-spacing: 0.3px;
+}
+
+/* ===== Disabled ===== */
+.widget-add-card.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(0.7);
+}
+
+.widget-add-card.disabled::after {
+    content: 'Недоступен';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 9px;
+    background: rgba(244, 67, 54, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 2px 8px;
+    border-radius: 8px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+/* ===== Нет места ===== */
+.widget-add-card.no-space {
+    cursor: not-allowed;
+    border-color: rgba(244, 67, 54, 0.5) !important;
+    background: rgba(244, 67, 54, 0.08) !important;
+}
+
+.widget-add-card.no-space::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(244, 67, 54, 0.15);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.widget-add-card.no-space::after {
+    content: 'Нет места';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 9px;
+    background: rgba(244, 67, 54, 0.5);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 8px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.widget-add-card.no-space .wa-icon,
+.widget-add-card.no-space .wa-name,
+.widget-add-card.no-space .wa-desc,
+.widget-add-card.no-space .wa-size {
+    opacity: 0.5;
+}
+
+/* ===== Подвал ===== */
+.widget-add-footer {
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    opacity: 0.4;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.widget-add-footer .wa-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ===== Пусто ===== */
+.widget-add-empty {
+    text-align: center;
+    padding: 40px 20px;
+    opacity: 0.5;
+    font-size: 14px;
+}
+
+/* ===== Анимации (переиспользуются из других модалок, но на всякий случай) ===== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ===== Адаптив ===== */
+@media (max-width: 768px) {
+    .widget-add-modal {
+        padding: 20px !important;
+        max-width: 500px !important;
+    }
+    .widget-add-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+    .widget-add-card {
+        padding: 12px 8px;
+    }
+    .widget-add-card .wa-icon {
+        font-size: 26px;
+    }
+    .widget-add-card .wa-name {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .widget-add-modal {
+        padding: 16px !important;
+        border-radius: 16px !important;
+    }
+    .widget-add-header h2 {
+        font-size: 17px !important;
+    }
+    .widget-add-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .widget-add-card {
+        padding: 10px 6px;
+    }
+    .widget-add-card .wa-icon {
+        font-size: 22px;
+    }
+    .widget-add-card .wa-name {
+        font-size: 12px;
+    }
+    .widget-add-card .wa-desc {
+        display: none;
+    }
+}
