@@ -99,6 +99,7 @@ public class ProductionCalendarService {
                             .path("/api/getdata")
                             .queryParam("year", year)
                             .queryParam("cc", "ru")
+                            .queryParam("pre", "1")
                             .build())
                     .retrieve()
                     .bodyToMono(String.class)

@@ -110,7 +110,9 @@ function getWidgetContent(widget) {
             `;
         case 'NEXTCLOUD':
             return `
-                <div class="nextcloud-display" data-widget-id="${widget.id}">
+                <div class="nextcloud-display" data-widget-id="${widget.id}" 
+                     style="width:100%; height:100%; min-height:0; overflow:hidden; 
+                            display:flex; flex-direction:column;">
                     <div style="text-align:center; opacity:0.5; padding:10px;">⏳ Загрузка Nextcloud...</div>
                 </div>
             `;
@@ -155,19 +157,7 @@ async function loadGridData() {
                 if (typeof restoreAllWidgetSettings === 'function') {
                     restoreAllWidgetSettings();
                 }
-            }, 100);
-
-            setTimeout(() => {
-                if (typeof restoreAllWidgetSettings === 'function') {
-                    restoreAllWidgetSettings();
-                }
             }, 300);
-
-            setTimeout(() => {
-                if (typeof restoreAllWidgetSettings === 'function') {
-                    restoreAllWidgetSettings();
-                }
-            }, 600);
         }
     } catch (error) {
     }
@@ -232,8 +222,8 @@ function renderGrid() {
         container.classList.add('editing');
     }
 
-    container.style.gridTemplateRows = `repeat(${gridState.gridRows}, 1fr)`;
-    container.style.gridTemplateColumns = `repeat(${gridState.gridCols}, 1fr)`;
+    container.style.gridTemplateRows = `repeat(${gridState.gridRows}, minmax(0, 1fr))`;
+    container.style.gridTemplateColumns = `repeat(${gridState.gridCols}, minmax(0, 1fr))`;
 
     const sortedWidgets = [...gridState.widgets].sort((a, b) => {
         if (a.row !== b.row) return a.row - b.row;
@@ -313,8 +303,8 @@ function createWidgetElement(widget) {
         border: ${hideBackground ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'};
         transition: all 0.3s ease;
         position: relative;
-        min-height: 80px;
-        overflow: visible !important;
+        min-height: 0;
+        overflow: hidden;
     `;
 
     if (widget.type === 'LINK' && widget.settings) {
@@ -434,22 +424,26 @@ function createWidgetElement(widget) {
 
     const content = document.createElement('div');
     content.className = 'widget-content';
-
-    const [vertical, horizontal] = alignment.split('-');
-    content.style.cssText = `
-        flex:1; 
-        display:flex; 
-        flex-wrap:wrap; 
-        width:100%; 
-        height:100%; 
-        min-height:60px; 
-        gap:10px; 
-        padding:8px; 
-        align-content:center; 
-        box-sizing:border-box;
+    if (widget.type === 'LINK') {
+        // Как было — wrap, для плиток ссылок
+        const [vertical, horizontal] = alignment.split('-');
+        content.style.cssText = `
+        flex:1; display:flex; flex-wrap:wrap; width:100%; height:100%;
+        min-height:0; gap:10px; padding:8px; align-content:center; box-sizing:border-box;
         justify-content: ${horizontal === 'left' ? 'flex-start' : horizontal === 'right' ? 'flex-end' : 'center'};
         align-items: ${vertical === 'top' ? 'flex-start' : vertical === 'bottom' ? 'flex-end' : 'center'};
     `;
+    } else {
+        // Для NEXTCLOUD, CALENDAR, NOTES, CLOCK, WEATHER, системных и т.д.
+        const [vertical, horizontal] = alignment.split('-');
+        content.style.cssText = `
+        flex:1; display:flex; flex-direction:column; flex-wrap:nowrap;
+        width:100%; height:100%; min-height:0; overflow:hidden;
+        gap:0; padding:8px; box-sizing:border-box;
+        justify-content: ${vertical === 'top' ? 'flex-start' : vertical === 'bottom' ? 'flex-end' : 'center'};
+        align-items: ${horizontal === 'left' ? 'flex-start' : horizontal === 'right' ? 'flex-end' : 'stretch'};
+    `;
+    }
     content.innerHTML = getWidgetContent(widget);
     contentWrapper.appendChild(content);
 

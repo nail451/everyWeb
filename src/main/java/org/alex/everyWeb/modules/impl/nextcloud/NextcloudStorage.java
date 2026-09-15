@@ -48,7 +48,12 @@ public class NextcloudStorage {
         return formatSize(free);
     }
 
+    public Boolean isUnlimited() {
+        return quota != null && quota <= 0;
+    }
+
     public int getUsedPercent() {
+        if (isUnlimited()) return 0;
         if (total == null || total == 0) return 0;
         return (int) Math.round((double) used / total * 100);
     }

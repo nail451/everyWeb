@@ -5,7 +5,7 @@ public class NextcloudData {
     private String username = "";
     private String password = "";
     private String path = "/";
-    private int maxFiles = 10;
+    private int maxFiles = 50;
     private boolean showStorage = true;
     private boolean showRecentFiles = true;
 

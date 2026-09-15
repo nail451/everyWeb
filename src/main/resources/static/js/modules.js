@@ -251,6 +251,7 @@ function applyWidgetStylesToElement(widget) {
     if (!widget) return;
 
     const moduleId = widget.dataset.widgetId;
+    const moduleType = widget.dataset.widgetType;
     const settings = widgetSettingsCache[moduleId] || {};
 
     if (Object.keys(settings).length === 0) {
@@ -347,76 +348,93 @@ function applyWidgetStylesToElement(widget) {
     if (contentContainer) {
         const [vertical, horizontal] = alignment.split('-');
 
-        contentContainer.style.display = 'flex';
-        contentContainer.style.flexWrap = 'wrap';
-        contentContainer.style.flex = '1';
-        contentContainer.style.width = '100%';
-        contentContainer.style.height = '100%';
-        contentContainer.style.minHeight = '60px';
-        contentContainer.style.gap = '10px';
-        contentContainer.style.padding = '8px';
-        contentContainer.style.alignContent = 'center';
-        contentContainer.style.boxSizing = 'border-box';
+        // ===== ДЛЯ LINK — старая логика (wrap) =====
+        if (moduleType === 'LINK') {
+            contentContainer.style.display = 'flex';
+            contentContainer.style.flexDirection = 'row';
+            contentContainer.style.flexWrap = 'wrap';
+            contentContainer.style.flex = '1';
+            contentContainer.style.width = '100%';
+            contentContainer.style.height = '100%';
+            contentContainer.style.minHeight = '0';
+            contentContainer.style.gap = '10px';
+            contentContainer.style.padding = '8px';
+            contentContainer.style.alignContent = 'center';
+            contentContainer.style.boxSizing = 'border-box';
+            contentContainer.style.overflow = '';
 
-        switch (horizontal) {
-            case 'left': contentContainer.style.justifyContent = 'flex-start'; break;
-            case 'center': contentContainer.style.justifyContent = 'center'; break;
-            case 'right': contentContainer.style.justifyContent = 'flex-end'; break;
-            default: contentContainer.style.justifyContent = 'center';
-        }
+            switch (horizontal) {
+                case 'left': contentContainer.style.justifyContent = 'flex-start'; break;
+                case 'center': contentContainer.style.justifyContent = 'center'; break;
+                case 'right': contentContainer.style.justifyContent = 'flex-end'; break;
+                default: contentContainer.style.justifyContent = 'center';
+            }
+            switch (vertical) {
+                case 'top': contentContainer.style.alignItems = 'flex-start'; break;
+                case 'center': contentContainer.style.alignItems = 'center'; break;
+                case 'bottom': contentContainer.style.alignItems = 'flex-end'; break;
+                default: contentContainer.style.alignItems = 'center';
+            }
+        } else {
+            // ===== ДЛЯ ОСТАЛЬНЫХ — колонка, nowrap =====
+            contentContainer.style.display = 'flex';
+            contentContainer.style.flexDirection = 'column';
+            contentContainer.style.flexWrap = 'nowrap';
+            contentContainer.style.flex = '1';
+            contentContainer.style.width = '100%';
+            contentContainer.style.height = '100%';
+            contentContainer.style.minHeight = '0';
+            contentContainer.style.gap = '0';
+            contentContainer.style.padding = '8px';
+            contentContainer.style.boxSizing = 'border-box';
+            contentContainer.style.overflow = 'hidden';
+            contentContainer.style.alignContent = '';
 
-        switch (vertical) {
-            case 'top':
-                contentContainer.style.alignItems = 'flex-start';
-                contentContainer.style.alignContent = 'flex-start';
-                break;
-            case 'center':
-                contentContainer.style.alignItems = 'center';
-                contentContainer.style.alignContent = 'center';
-                break;
-            case 'bottom':
-                contentContainer.style.alignItems = 'flex-end';
-                contentContainer.style.alignContent = 'flex-end';
-                break;
-            default:
-                contentContainer.style.alignItems = 'center';
-                contentContainer.style.alignContent = 'center';
+            switch (vertical) {
+                case 'top': contentContainer.style.justifyContent = 'flex-start'; break;
+                case 'center': contentContainer.style.justifyContent = 'center'; break;
+                case 'bottom': contentContainer.style.justifyContent = 'flex-end'; break;
+                default: contentContainer.style.justifyContent = 'center';
+            }
+            switch (horizontal) {
+                case 'left': contentContainer.style.alignItems = 'flex-start'; break;
+                case 'right': contentContainer.style.alignItems = 'flex-end'; break;
+                default: contentContainer.style.alignItems = 'stretch';
+            }
         }
     }
 
+    // ===== WRAPPER =====
     const wrapper = widget.querySelector('.widget-content-wrapper');
     if (wrapper) {
         wrapper.style.display = 'flex';
         wrapper.style.flex = '1';
         wrapper.style.flexDirection = 'column';
         wrapper.style.minHeight = '0';
-        wrapper.style.overflow = 'visible';
+        wrapper.style.overflow = 'hidden';   // ← было visible
     }
 }
 
 // ===== ВОССТАНОВЛЕНИЕ НАСТРОЕК ПОСЛЕ ПЕРЕЗАГРУЗКИ =====
 function restoreAllWidgetSettings() {
     const widgets = document.querySelectorAll('.widget');
-    if (widgets.length === 0) {
-        return;
-    }
+    if (widgets.length === 0) return;
 
     widgets.forEach(widget => {
         const moduleId = widget.dataset.widgetId;
-        if (moduleId) {
-            loadWidgetSettings(moduleId).then(() => {
-            });
-        }
-    });
+        if (!moduleId) return;
 
-    setTimeout(() => {
-        widgets.forEach(widget => {
-            const moduleId = widget.dataset.widgetId;
-            if (moduleId) {
-                applyWidgetStyles(moduleId);
-            }
+        // Если настройки уже в кэше — не грузим снова
+        if (widgetSettingsCache[moduleId] !== undefined &&
+            widgetSettingsCache[moduleId].hideBackground !== undefined) {
+            applyWidgetStyles(moduleId);
+            return;
+        }
+
+        loadWidgetSettings(moduleId).then(() => {
+            applyWidgetStyles(moduleId);
         });
-    }, 500);
+    });
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
@@ -649,24 +667,6 @@ window.loadGridData = async function() {
     if (typeof originalLoadGridData === 'function') {
         await originalLoadGridData();
     }
-
-    setTimeout(() => {
-        if (typeof restoreAllWidgetSettings === 'function') {
-            restoreAllWidgetSettings();
-        }
-    }, 200);
-
-    setTimeout(() => {
-        if (typeof restoreAllWidgetSettings === 'function') {
-            restoreAllWidgetSettings();
-        }
-    }, 500);
-
-    setTimeout(() => {
-        if (typeof restoreAllWidgetSettings === 'function') {
-            restoreAllWidgetSettings();
-        }
-    }, 800);
 };
 
 // ===== ЭКСПОРТ =====

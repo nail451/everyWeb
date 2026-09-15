@@ -83,14 +83,14 @@ function renderWeatherDisplay(moduleElement, data) {
     const content = data.content || {};
     const weatherInfo = content.weatherInfo || {};
 
-    if (weatherInfo.error) {
+    if (weatherInfo.error && !weatherInfo.temperature) {
         weatherDisplay.innerHTML = `
-            <div style="text-align:center; padding:10px; color:#ff6b6b;">
-                <div style="font-size:32px;">⚠️</div>
-                <div style="font-size:14px; margin-top:8px;">${weatherInfo.error}</div>
-                <div style="font-size:12px; opacity:0.5; margin-top:4px;">Город: ${weatherInfo.city || 'не указан'}</div>
-            </div>
-        `;
+        <div style="text-align:center; padding:10px; color:#ff6b6b;">
+            <div style="font-size:32px;">⚠️</div>
+            <div style="font-size:14px; margin-top:8px;">${weatherInfo.error}</div>
+            <div style="font-size:12px; opacity:0.5; margin-top:4px;">Город: ${weatherInfo.city || 'не указан'}</div>
+        </div>
+    `;
         return;
     }
 
@@ -109,14 +109,15 @@ function renderWeatherDisplay(moduleElement, data) {
                 ${weatherInfo.icon || '🌤️'}
             </div>
             <div>
-                <div style="font-size:32px; font-weight:300;">
+                <div style="font-size:32px; font-weight:300; ${weatherInfo.stale ? 'opacity:0.6;' : ''}">
                     ${weatherInfo.temperature}
                 </div>
                 <div style="opacity:0.6; font-size:14px; text-transform:capitalize;">
                     ${weatherInfo.condition || ''}
                 </div>
-                <div style="font-size:12px; opacity:0.4;">
+                <div style="font-size:12px; opacity:0.4; display:flex; align-items:center; gap:4px;">
                     ${weatherInfo.city || ''}
+                    ${renderWeatherErrorBadge(weatherInfo)}
                 </div>
                 ${weatherInfo.tempMin && weatherInfo.tempMax ? `
                     <div style="font-size:11px; opacity:0.3;">
@@ -134,6 +135,23 @@ function renderWeatherDisplay(moduleElement, data) {
             ${weatherInfo.sunset ? `<div>🌇 Закат: ${weatherInfo.sunset}</div>` : ''}
         </div>
     `;
+}
+
+function renderWeatherErrorBadge(weatherInfo) {
+    const failCount = weatherInfo.failCount || 0;
+    if (failCount === 0) return '';
+
+    // 1 — оранжевый (первая неудача), 2+ — красный (повторная)
+    const color = failCount >= 2 ? '#f44336' : '#ff9800';
+    const title = failCount >= 2
+        ? 'Не удалось обновить дважды — проверьте сервер'
+        : 'Временная ошибка, данные могут быть устаревшими';
+
+    return `<span title="${title}" 
+                  style="display:inline-flex; align-items:center; justify-content:center;
+                         width:14px; height:14px; border-radius:50%;
+                         background:${color}; color:white; font-size:10px;
+                         font-weight:bold; cursor:help;">!</span>`;
 }
 
 // ===== НАСТРОЙКИ МОДУЛЯ ПОГОДЫ =====

@@ -270,6 +270,13 @@ document.addEventListener('DOMContentLoaded', function() {
         loadLinkSettingsFromServer();
     }
 
+    // ===== ОДИН вызов восстановления настроек =====
+    setTimeout(() => {
+        if (typeof restoreAllWidgetSettings === 'function') {
+            restoreAllWidgetSettings();
+        }
+    }, 400);
+
     // ===== PUSH УВЕДОМЛЕНИЯ =====
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(() => {
@@ -283,46 +290,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(autoSubscribeToPush, 1000);
             }
         });
-    }
-});
-
-// ===== ИНИЦИАЛИЗАЦИЯ =====
-document.addEventListener('DOMContentLoaded', function() {
-    const pageContainer = document.getElementById('pageContainer');
-    if (pageContainer) {
-        currentPageId = parseInt(pageContainer.dataset.pageId);
-    }
-
-    if (typeof initHeader === 'function') initHeader();
-    if (typeof initGrid === 'function') initGrid();
-    if (typeof initModules === 'function') initModules();
-
-    // ===== ВОССТАНАВЛИВАЕМ НАСТРОЙКИ ПОСЛЕ ЗАГРУЗКИ =====
-    // Несколько попыток для надёжности
-    setTimeout(() => {
-        if (typeof restoreAllWidgetSettings === 'function') {
-            restoreAllWidgetSettings();
-        }
-    }, 300);
-
-    setTimeout(() => {
-        if (typeof restoreAllWidgetSettings === 'function') {
-            restoreAllWidgetSettings();
-        }
-    }, 600);
-
-    setTimeout(() => {
-        if (typeof restoreAllWidgetSettings === 'function') {
-            restoreAllWidgetSettings();
-        }
-    }, 1000);
-
-    if (typeof WallpaperModule !== 'undefined' && currentPageId) {
-        WallpaperModule.init(currentPageId);
-    }
-
-    if (currentPageId) {
-        loadLinkSettingsFromServer();
     }
 });
 

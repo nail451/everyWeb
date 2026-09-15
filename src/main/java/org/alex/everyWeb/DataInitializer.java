@@ -24,7 +24,7 @@ public class DataInitializer implements CommandLineRunner {
                 { "CLOCK",     "Часы",       "Многофункциональные часы",                  "🕐", true, true,  "clock-module",     "clock-module.js",     1, 1 },
                 { "WEATHER",   "Погода",     "Погода в выбранном городе",                 "🌤️", true, true,  "weather-module",   "weather-module.js",   2, 1 },
                 { "NEXTCLOUD", "Nextcloud",  "Интеграция с Nextcloud",                    "☁️", true, true,  "nextcloud-module", "nextcloud-module.js", 2, 1 },
-                { "NOTES",     "Заметки",    "Быстрые заметки",                           "📝", true, false, "notes-module",     "notes-module.js",     1, 1 },
+                { "NOTES",     "Заметки",    "Быстрые заметки",                           "📝", true, true, "notes-module",     "notes-module.js",     1, 1 },
                 { "TODO",      "Список дел", "To-Do список",                              "✅", true, false, "todo-module",      "todo-module.js",      1, 1 },
                 { "CPU",       "Процессор",  "Загрузка процессора и информация о ядрах",  "📊", true, true,  "cpu-module",       "system-modules.js",   2, 1 },
                 { "MEMORY",    "Память",     "Использование оперативной памяти",          "🧠", true, true,  "memory-module",    "system-modules.js",   1, 1 },

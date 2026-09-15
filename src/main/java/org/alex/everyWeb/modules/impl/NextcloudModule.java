@@ -141,19 +141,55 @@ public class NextcloudModule extends Module {
                     nextcloudData.setShowRecentFiles(showRecentFiles);
                 }
 
+                // Инвалидируем кэш при смене настроек
+                nextcloudService.invalidateCache(
+                        nextcloudData.getServerUrl(),
+                        nextcloudData.getUsername()
+                );
+
                 saveNextcloudData(config, nextcloudData);
                 return buildModuleData(nextcloudData, config);
 
             case "testConnection":
-                boolean connected = nextcloudService.testConnection(
+                String testUrl = (String) params.get("serverUrl");
+                String testUser = (String) params.get("username");
+                String testPass = (String) params.get("password");
+
+                if (testUrl == null || testUrl.isEmpty()) testUrl = nextcloudData.getServerUrl();
+                if (testUser == null || testUser.isEmpty()) testUser = nextcloudData.getUsername();
+                if (testPass == null || testPass.isEmpty()) testPass = nextcloudData.getPassword();
+
+                boolean connected = nextcloudService.testConnection(testUrl, testUser, testPass);
+
+                ModuleData testData = new ModuleData("NEXTCLOUD", "Nextcloud");
+                Map<String, Object> testContent = new HashMap<>();
+                testContent.put("connected", connected);
+                testContent.put("message", connected ? "✅ Подключение успешно" : "❌ Ошибка подключения");
+                testData.setContent(testContent);
+                return testData;
+            case "listPath":
+                String subPath = (String) params.get("path");
+                if (subPath == null) subPath = nextcloudData.getPath();
+
+                Map<String, Object> listResult = new HashMap<>();
+                listResult.put("nextcloudData", nextcloudData);
+                listResult.put("files", nextcloudService.getFiles(
                         nextcloudData.getServerUrl(),
                         nextcloudData.getUsername(),
-                        nextcloudData.getPassword()
-                );
-                Map<String, Object> result = new HashMap<>();
-                result.put("connected", connected);
-                result.put("message", connected ? "✅ Подключение успешно" : "❌ Ошибка подключения");
-                return result;
+                        nextcloudData.getPassword(),
+                        subPath,
+                        nextcloudData.getMaxFiles()
+                ));
+                if (nextcloudData.isShowStorage()) {
+                    listResult.put("storage", nextcloudService.getStorage(
+                            nextcloudData.getServerUrl(),
+                            nextcloudData.getUsername(),
+                            nextcloudData.getPassword()
+                    ));
+                }
+                ModuleData listData = new ModuleData("NEXTCLOUD", "Nextcloud");
+                listData.setContent(listResult);
+                return listData;
         }
         return null;
     }

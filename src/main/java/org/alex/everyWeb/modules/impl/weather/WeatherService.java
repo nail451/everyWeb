@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -18,13 +20,14 @@ public class WeatherService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ===== КЭШ =====
-    private static final long CACHE_TTL_MS = 15 * 60 * 1000; // 15 минут
+    private static final long CACHE_TTL_MS = 15 * 60 * 1000;
     private final Map<String, CachedWeather> cache = new ConcurrentHashMap<>();
     private final Map<String, CachedCoords> coordsCache = new ConcurrentHashMap<>();
 
     public WeatherService() {
-        this.webClient = WebClient.builder().build();
+        this.webClient = WebClient.builder()
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(5 * 1024 * 1024))
+                .build();
     }
 
     public Map<String, Object> getWeather(String city, String units) {
@@ -38,14 +41,34 @@ public class WeatherService {
         CachedWeather cached = cache.get(key);
         long now = System.currentTimeMillis();
 
+        // ===== TTL ОТ ПОПЫТКИ (успех или ошибка) =====
         if (cached != null && (now - cached.timestamp) < CACHE_TTL_MS) {
             return cached.data;
         }
 
-        // Идём в сеть
+        // ===== TTL истёк — пробуем обновить =====
         Map<String, Object> fresh = fetchWeather(city, units);
-        cache.put(key, new CachedWeather(fresh, now));
-        return fresh;
+        boolean success = !fresh.containsKey("error");
+
+        if (success) {
+            cache.put(key, new CachedWeather(fresh, now, 0));
+            return fresh;
+        } else {
+            // Ошибка — тоже обновляем timestamp, чтобы не долбить API
+            int newFailCount = (cached != null) ? cached.failCount + 1 : 1;
+
+            Map<String, Object> merged = (cached != null)
+                    ? new HashMap<>(cached.data)
+                    : new HashMap<>();
+
+            merged.put("error", fresh.get("error"));
+            merged.put("failCount", newFailCount);
+            merged.put("stale", cached != null);
+            merged.put("city", city);
+
+            cache.put(key, new CachedWeather(merged, now, newFailCount));
+            return merged;
+        }
     }
 
     private Map<String, Object> fetchWeather(String city, String units) {
@@ -57,7 +80,6 @@ public class WeatherService {
                 return result;
             }
 
-            // 1. Получаем координаты города
             double[] coords = getCoordinates(city.trim());
             if (coords == null) {
                 result.put("error", "Город не найден: " + city);
@@ -70,7 +92,6 @@ public class WeatherService {
 
             System.out.println("Weather for: " + city + " (lat: " + lat + ", lon: " + lon + ")");
 
-            // 2. Получаем погоду по координатам
             String response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .scheme("https")
@@ -85,25 +106,41 @@ public class WeatherService {
                             .queryParam("forecast_days", 1)
                             .build())
                     .retrieve()
-                    .onStatus(status -> status.isError(), clientResponse -> {
-                        return clientResponse.bodyToMono(String.class)
-                                .flatMap(error -> Mono.error(new RuntimeException("Weather API error: " + error)));
-                    })
+                    .onStatus(status -> status.isError(), clientResponse ->
+                            clientResponse.bodyToMono(String.class)
+                                    .defaultIfEmpty("")
+                                    .flatMap(body -> Mono.error(new RuntimeException(
+                                            "HTTP " + clientResponse.statusCode().value() + ": " + body))))
                     .bodyToMono(String.class)
+                    .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
+                            .maxBackoff(Duration.ofSeconds(3))
+                            .filter(throwable -> {
+                                String msg = throwable.getMessage();
+                                if (msg == null) return false;
+                                // Ретраим только временные ошибки
+                                return msg.contains("503")
+                                        || msg.contains("502")
+                                        || msg.contains("504")
+                                        || msg.contains("timeout")
+                                        || msg.contains("Timeout")
+                                        || msg.contains("connection");
+                            })
+                            .doBeforeRetry(signal ->
+                                    System.out.println("Weather retry #" + signal.totalRetries()
+                                            + " after " + signal.failure().getMessage())))
                     .block();
 
             if (response != null) {
                 JsonNode root = objectMapper.readTree(response);
                 result = parseWeatherResponse(root, city, units);
             } else {
-                result.put("error", "Не удалось получить данные о погоде");
+                result.put("error", "Пустой ответ от API");
                 result.put("city", city);
             }
 
         } catch (Exception e) {
             System.err.println("Error getting weather: " + e.getMessage());
-            e.printStackTrace();
-            result.put("error", "Ошибка получения погоды: " + e.getMessage());
+            result.put("error", "Сервис погоды недоступен");
             result.put("city", city);
         }
 
@@ -156,9 +193,11 @@ public class WeatherService {
     private static class CachedWeather {
         final Map<String, Object> data;
         final long timestamp;
-        CachedWeather(Map<String, Object> data, long timestamp) {
+        final int failCount;
+        CachedWeather(Map<String, Object> data, long timestamp, int failCount) {
             this.data = data;
             this.timestamp = timestamp;
+            this.failCount = failCount;
         }
     }
 
