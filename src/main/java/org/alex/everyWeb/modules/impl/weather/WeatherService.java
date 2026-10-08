@@ -8,6 +8,10 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.netty.channel.ChannelOption;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.transport.ProxyProvider;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -29,7 +33,15 @@ public class WeatherService {
     private final Map<String, CachedCoords> coordsCache = new ConcurrentHashMap<>();
 
     public WeatherService() {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+                .proxy(spec -> spec
+                        .type(ProxyProvider.Proxy.SOCKS5)
+                        .host("127.0.0.1")
+                        .port(9050));
+
         this.webClient = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .codecs(c -> c.defaultCodecs().maxInMemorySize(5 * 1024 * 1024))
                 .build();
     }
