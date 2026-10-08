@@ -86,4 +86,9 @@ public class NotesService {
     public boolean hasNoteOnDate(Long calendarModuleId, LocalDate date) {
         return calendarNoteRepository.existsNoteOnDate(calendarModuleId, date);
     }
+
+    public void deleteAllNotesForModule(Long moduleId) {
+        noteRepository.findByModuleId(moduleId).ifPresent(noteRepository::delete);
+        calendarNoteRepository.deleteAllByCalendarModuleId(moduleId);
+    }
 }

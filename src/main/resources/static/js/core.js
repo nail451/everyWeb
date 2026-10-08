@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
         WallpaperModule.init(currentPageId);
     }
 
-    m// ===== ОДИН вызов восстановления настроек =====
+    // ===== ОДИН вызов восстановления настроек =====
     setTimeout(() => {
         if (typeof restoreAllWidgetSettings === 'function') {
             restoreAllWidgetSettings();

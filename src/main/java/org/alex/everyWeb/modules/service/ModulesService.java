@@ -1,6 +1,7 @@
 package org.alex.everyWeb.modules.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.alex.everyWeb.modules.impl.notes.NotesService;
 import org.alex.everyWeb.modules.repository.DTO.ModuleDTO;
 import org.alex.everyWeb.modules.repository.DTO.ModuleResponseDTO;
 import org.alex.everyWeb.modules.entity.ModuleEntity;
@@ -23,6 +24,9 @@ public class ModulesService {
 
     @Autowired
     private PageRepository pageRepository;
+
+    @Autowired
+    private NotesService notesService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -62,7 +66,9 @@ public class ModulesService {
         return convertToResponseDTO(updatedModule);
     }
 
+    @Transactional
     public void deleteModule(Long moduleId) {
+        notesService.deleteAllNotesForModule(moduleId);
         modulesRepository.deleteById(moduleId);
     }
 

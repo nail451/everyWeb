@@ -242,7 +242,6 @@ public class NextcloudModule extends Module {
         try {
             String json = objectMapper.writeValueAsString(nextcloudData);
             config.put("nextcloudData", json);
-            System.out.println("Saved nextcloud data: " + json);
         } catch (Exception e) {
             e.printStackTrace();
         }

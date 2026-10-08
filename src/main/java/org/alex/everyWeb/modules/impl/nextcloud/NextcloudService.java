@@ -64,7 +64,6 @@ public class NextcloudService {
         String prefix = normalizeUrl(serverUrl) + "|" + username + "|";
         filesCache.keySet().removeIf(k -> k.startsWith(prefix));
         storageCache.keySet().removeIf(k -> k.startsWith(prefix));
-        System.out.println("🗑️ Nextcloud cache invalidated for: " + username);
     }
 
     // ===== ФАЙЛЫ =====

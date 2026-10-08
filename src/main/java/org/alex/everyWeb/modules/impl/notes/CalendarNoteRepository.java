@@ -37,4 +37,7 @@ public interface CalendarNoteRepository extends JpaRepository<CalendarNote, Long
             "WHERE cn.calendarModule = m AND cn.date = :date " +
             "AND cn.text IS NOT NULL AND cn.text <> ''")
     List<Long> findPageIdsWithNoteOnDate(@Param("date") LocalDate date);
+
+    List<CalendarNote> findAllByCalendarModuleId(Long calendarModuleId);
+    void deleteAllByCalendarModuleId(Long calendarModuleId);
 }
