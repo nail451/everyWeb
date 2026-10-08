@@ -8,12 +8,17 @@ import org.alex.everyWeb.modules.entity.ModuleEntity;
 import org.alex.everyWeb.modules.repository.ModuleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.alex.everyWeb.common.logging.SafeLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class ModuleContext {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuleContext.class);
 
     @Autowired
     private ModuleRegistry moduleRegistry;
@@ -75,7 +80,7 @@ public class ModuleContext {
                 return widgetSettings;
             }
         } catch (Exception e) {
-            System.err.println("Error reading widget settings: " + e.getMessage());
+            log.error("Error reading widget settings: " + e.getMessage());
         }
         return new HashMap<>();
     }
@@ -108,14 +113,14 @@ public class ModuleContext {
 
         // ===== 1. ПОЛУЧАЕМ ТЕКУЩИЕ НАСТРОЙКИ =====
         Map<String, Object> allSettings = getSettingsMap(moduleEntity);
-        System.out.println("🔵 Current allSettings: " + allSettings);
+        SafeLog.info("🔵 Current allSettings: " + allSettings);
 
         // ===== 2. ОБРАБАТЫВАЕМ ОБЩИЕ НАСТРОЙКИ =====
         if (params.containsKey("hideBackground")) {
             Object value = params.get("hideBackground");
             if (value instanceof Boolean) {
                 allSettings.put("hideBackground", (Boolean) value);
-                System.out.println("✅ Saved hideBackground: " + value);
+                log.debug("✅ Saved hideBackground: " + value);
             }
         }
 
@@ -123,7 +128,7 @@ public class ModuleContext {
             Object value = params.get("alignment");
             if (value instanceof String) {
                 allSettings.put("alignment", (String) value);
-                System.out.println("✅ Saved alignment: " + value);
+                log.debug("✅ Saved alignment: " + value);
             }
         }
 
@@ -132,10 +137,9 @@ public class ModuleContext {
             String updatedSettings = objectMapper.writeValueAsString(allSettings);
             moduleEntity.setSettings(updatedSettings);
             modulesRepository.save(moduleEntity);
-            System.out.println("✅ Settings saved to DB: " + updatedSettings);
+            SafeLog.info("✅ Settings saved to DB: " + updatedSettings);
         } catch (Exception e) {
-            System.err.println("❌ Error saving settings: " + e.getMessage());
-            e.printStackTrace();
+            log.error("❌ Error saving settings: {}", e.getMessage(), e);
         }
 
         // ===== 4. ПЕРЕДАЁМ УПРАВЛЕНИЕ МОДУЛЮ =====
@@ -167,10 +171,9 @@ public class ModuleContext {
             String finalSettingsJson = objectMapper.writeValueAsString(finalSettings);
             moduleEntity.setSettings(finalSettingsJson);
             modulesRepository.save(moduleEntity);
-            System.out.println("✅ Final settings saved to DB: " + finalSettingsJson);
+            SafeLog.info("✅ Final settings saved to DB: " + finalSettingsJson);
         } catch (Exception e) {
-            System.err.println("❌ Error saving final settings: " + e.getMessage());
-            e.printStackTrace();
+            log.error("❌ Error saving final settings: {}", e.getMessage(), e);
         }
 
         if (result instanceof ModuleData) {

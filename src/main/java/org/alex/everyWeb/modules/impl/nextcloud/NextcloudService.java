@@ -7,6 +7,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class NextcloudService {
+
+    private static final Logger log = LoggerFactory.getLogger(NextcloudService.class);
 
     private static final long CACHE_TTL_MS = 5 * 60 * 1000L; // 5 минут
 
@@ -86,7 +90,7 @@ public class NextcloudService {
             String davUrl = baseUrl + "/remote.php/dav/files/" + username;
             String fullUrl = davUrl + encodePath(folderPath);
 
-            System.out.println("Nextcloud DAV URL: " + fullUrl);
+            log.debug("Nextcloud DAV URL: {}", fullUrl);
 
             String auth = Base64.getEncoder()
                     .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
@@ -121,7 +125,7 @@ public class NextcloudService {
             }
 
         } catch (Exception e) {
-            System.err.println("Error getting Nextcloud files: " + e.getMessage());
+            log.error("Error getting Nextcloud files: {}", e.getMessage());
             result.put("error", "Ошибка получения файлов: " + e.getMessage());
         }
 
@@ -230,7 +234,7 @@ public class NextcloudService {
             }
 
         } catch (Exception e) {
-            System.err.println("Error parsing DAV response: " + e.getMessage());
+            log.error("Error parsing DAV response: {}", e.getMessage(), e);
             e.printStackTrace();
         }
 
@@ -290,7 +294,7 @@ public class NextcloudService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error getting storage info: " + e.getMessage());
+            log.error("Error getting storage info: {}", e.getMessage());
         }
         return null;
     }
@@ -300,10 +304,10 @@ public class NextcloudService {
         try {
             Map<String, Object> result = getFiles(serverUrl, username, password, "/", 1);
             boolean ok = result != null && !result.containsKey("error");
-            System.out.println("Connection test: " + (ok ? "SUCCESS" : "FAILED"));
+            log.info("Connection test: {}", ok ? "SUCCESS" : "FAILED");
             return ok;
         } catch (Exception e) {
-            System.err.println("Connection test failed: " + e.getMessage());
+            log.error("Connection test failed: {}", e.getMessage());
             return false;
         }
     }
@@ -331,7 +335,7 @@ public class NextcloudService {
             return new ByteArrayResource(bytes);
 
         } catch (Exception e) {
-            System.err.println("Error downloading file: " + e.getMessage());
+            log.error("Error downloading file: {}", e.getMessage());
             return null;
         }
     }

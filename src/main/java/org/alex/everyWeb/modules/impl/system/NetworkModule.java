@@ -5,6 +5,8 @@ import org.alex.everyWeb.modules.api.ModuleData;
 import org.alex.everyWeb.modules.api.ModuleInfo;
 import org.springframework.stereotype.Component;
 import oshi.hardware.NetworkIF;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 @Component
 public class NetworkModule extends SystemModule {
+
+    private static final Logger log = LoggerFactory.getLogger(NetworkModule.class);
 
     private Map<String, Long> prevRxBytes = new HashMap<>();
     private Map<String, Long> prevTxBytes = new HashMap<>();
@@ -118,7 +122,7 @@ public class NetworkModule extends SystemModule {
             result.put("speed", speed > 0 ? (speed / 1_000_000) + " Mbps" : "N/A");
             result.put("ip", getIpAddress(activeNet));
         } catch (Exception e) {
-            System.out.println("Error getting network data: " + e.getMessage());
+            log.error("Error getting network data: {}", e.getMessage());
             result.put("error", "Ошибка получения данных о сети: " + e.getMessage());
         }
 

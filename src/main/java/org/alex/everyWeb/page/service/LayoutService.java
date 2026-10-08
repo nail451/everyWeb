@@ -14,12 +14,16 @@ import org.alex.everyWeb.page.repository.PageLayoutRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 @Service
 @Transactional
 public class LayoutService {
+
+    private static final Logger log = LoggerFactory.getLogger(LayoutService.class);
 
     @Autowired
     private PageLayoutRepository pageLayoutRepository;
@@ -87,7 +91,7 @@ public class LayoutService {
             }
         } catch (Exception e) {
             // Если модуль не найден в AvailableModule — fallback 1×1
-            System.err.println("AvailableModule not found for type=" + type + ", using 1×1");
+            log.warn("AvailableModule not found for type={}, using 1×1", type);
         }
 
         int rs = rowSpan != null ? rowSpan : defaultRowSpan;

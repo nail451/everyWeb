@@ -9,12 +9,16 @@ import org.alex.everyWeb.modules.impl.weather.WeatherData;
 import org.alex.everyWeb.modules.impl.weather.WeatherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class WeatherModule extends Module {
+
+    private static final Logger log = LoggerFactory.getLogger(WeatherModule.class);
 
     @Autowired
     private WeatherService weatherService;
@@ -112,8 +116,7 @@ public class WeatherModule extends Module {
             try {
                 return objectMapper.readValue(settingsJson, WeatherData.class);
             } catch (Exception e) {
-                System.err.println("Error parsing weather data: " + e.getMessage());
-                e.printStackTrace();
+                log.error("Error parsing weather data: {}", e.getMessage(), e);
             }
         }
         return new WeatherData();
@@ -123,9 +126,9 @@ public class WeatherModule extends Module {
         try {
             String json = objectMapper.writeValueAsString(weatherData);
             config.put("weatherData", json);
-            System.out.println("Saved weather data: " + json);
+            log.debug("Saved weather data: {}", json);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error saving weather data: {}", e.getMessage(), e);
         }
     }
 }

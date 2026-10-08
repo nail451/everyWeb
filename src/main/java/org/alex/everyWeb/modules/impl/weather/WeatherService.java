@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -16,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class WeatherService {
+
+    private static final Logger log = LoggerFactory.getLogger(WeatherService.class);
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -90,7 +94,7 @@ public class WeatherService {
             double lat = coords[0];
             double lon = coords[1];
 
-            System.out.println("Weather for: " + city + " (lat: " + lat + ", lon: " + lon + ")");
+            log.debug("Weather for: {} (lat: {}, lon: {})", city, lat, lon);
 
             String response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
@@ -126,8 +130,7 @@ public class WeatherService {
                                         || msg.contains("connection");
                             })
                             .doBeforeRetry(signal ->
-                                    System.out.println("Weather retry #" + signal.totalRetries()
-                                            + " after " + signal.failure().getMessage())))
+                                    log.warn("Weather retry #{} after {}", signal.totalRetries(), signal.failure().getMessage())))
                     .block();
 
             if (response != null) {
@@ -139,7 +142,7 @@ public class WeatherService {
             }
 
         } catch (Exception e) {
-            System.err.println("Error getting weather: " + e.getMessage());
+            log.error("Error getting weather: {}", e.getMessage());
             result.put("error", "Сервис погоды недоступен");
             result.put("city", city);
         }
@@ -184,7 +187,7 @@ public class WeatherService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error getting coordinates for " + city + ": " + e.getMessage());
+            log.error("Error getting coordinates for {}: {}", city, e.getMessage());
         }
         return null;
     }

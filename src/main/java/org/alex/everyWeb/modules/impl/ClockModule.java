@@ -11,6 +11,8 @@ import org.alex.everyWeb.modules.impl.clock.ClockData;
 import org.alex.everyWeb.modules.repository.ModuleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -21,6 +23,8 @@ import java.util.*;
 
 @Component
 public class ClockModule extends Module {
+
+    private static final Logger log = LoggerFactory.getLogger(ClockModule.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -209,7 +213,7 @@ public class ClockModule extends Module {
 
             return alarm;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error parsing alarm from params: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -231,7 +235,7 @@ public class ClockModule extends Module {
             try {
                 return objectMapper.readValue(settingsJson, ClockData.class);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Error parsing clock data: {}", e.getMessage(), e);
             }
         }
         return new ClockData();
@@ -241,9 +245,9 @@ public class ClockModule extends Module {
         try {
             String json = objectMapper.writeValueAsString(clockData);
             config.put("clockData", json);
-            System.out.println("✅ Clock data saved to config: " + json.substring(0, Math.min(200, json.length())));
+            log.debug("✅ Clock data saved to config: {}", json.length() > 200 ? json.substring(0, 200) + "..." : json);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error saving clock data: {}", e.getMessage(), e);
         }
     }
 
@@ -260,7 +264,7 @@ public class ClockModule extends Module {
                     ZoneId zone = ZoneId.of(face.getTimezone());
                     times.add(createTimeInfo(face.getName(), zone, now, clockData));
                 } catch (Exception e) {
-                    System.err.println("Invalid timezone: " + face.getTimezone());
+                    log.warn("Invalid timezone: {}", face.getTimezone());
                 }
             }
         }

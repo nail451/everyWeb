@@ -6,10 +6,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import org.alex.everyWeb.common.logging.SafeLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/push")
 public class PushController {
+
+    private static final Logger log = LoggerFactory.getLogger(PushController.class);
 
     @Autowired
     private PushNotificationService pushService;
@@ -23,29 +28,26 @@ public class PushController {
             String endpoint = (String) request.get("endpoint");
             Map<String, String> keys = (Map<String, String>) request.get("keys");
 
-            System.out.println("📨 SUBSCRIBE REQUEST RECEIVED:");
-            System.out.println("   Endpoint: " + endpoint);
-            System.out.println("   Keys: " + keys);
+            SafeLog.info("📨 SUBSCRIBE REQUEST RECEIVED: endpoint={}, keys={}", endpoint, keys);
 
             if (endpoint == null || keys == null) {
-                System.err.println("❌ Missing endpoint or keys");
+                log.warn("❌ Missing endpoint or keys");
                 return ResponseEntity.badRequest().body("Missing endpoint or keys");
             }
 
             pushService.subscribe(endpoint, keys);
-            System.out.println("✅ Subscription saved, total: " + pushService.getSubscriptionCount());
+            log.info("✅ Subscription saved, total: {}", pushService.getSubscriptionCount());
 
             // Проверяем, что сохранилось в БД
             int dbCount = pushService.getSubscriptionCount();
-            System.out.println("📊 After save - cache count: " + dbCount);
+            log.debug("📊 After save - cache count: {}", dbCount);
 
             return ResponseEntity.ok(Map.of(
                     "status", "ok",
                     "cacheCount", dbCount
             ));
         } catch (Exception e) {
-            System.err.println("❌ Error in subscribe: " + e.getMessage());
-            e.printStackTrace();
+            log.error("❌ Error in subscribe: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

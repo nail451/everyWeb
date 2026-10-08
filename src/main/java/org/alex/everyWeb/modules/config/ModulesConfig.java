@@ -5,11 +5,15 @@ import org.alex.everyWeb.modules.core.Module;
 import org.alex.everyWeb.modules.core.ModuleRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 @Configuration
 public class ModulesConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(ModulesConfig.class);
 
     @Autowired
     private ModuleRegistry moduleRegistry;
@@ -22,7 +26,7 @@ public class ModulesConfig {
         if (modules != null) {
             for (Module module : modules) {
                 moduleRegistry.register(module);
-                System.out.println("✅ Module registered: " + module.getInfo().getType() + " - " + module.getInfo().getName());
+                log.info("✅ Module registered: {} - {}", module.getInfo().getType(), module.getInfo().getName());
             }
         }
     }

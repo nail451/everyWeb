@@ -10,6 +10,9 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.alex.everyWeb.common.logging.SafeLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -19,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class PushNotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(PushNotificationService.class);
 
     @Autowired
     private PushSubscriptionRepository subscriptionRepository;
@@ -37,38 +42,34 @@ public class PushNotificationService {
     @Transactional(readOnly = true)
     public synchronized void initCache() {
         if (cacheInitialized) {
-            System.out.println("✅ Cache already initialized, skipping...");
+            log.info("✅ Cache already initialized, skipping...");
             return;
         }
 
         try {
             List<PushSubscription> subscriptions = subscriptionRepository.findAll();
-            System.out.println("📊 Found " + subscriptions.size() + " subscriptions in DB");
+            log.info("📊 Found " + subscriptions.size() + " subscriptions in DB");
 
             for (PushSubscription sub : subscriptions) {
                 String token = extractTokenFromEndpoint(sub.getEndpoint());
                 if (token != null && !token.isEmpty()) {
                     fcmTokensCache.put(sub.getEndpoint(), token);
-                    System.out.println("   Loaded token: " + token.substring(0, Math.min(15, token.length())) + "...");
                 }
             }
             cacheInitialized = true;
-            System.out.println("✅ Push cache initialized with " + fcmTokensCache.size() + " subscriptions from DB");
+            log.info("✅ Push cache initialized with " + fcmTokensCache.size() + " subscriptions from DB");
         } catch (Exception e) {
-            System.err.println("❌ Error initializing cache: " + e.getMessage());
-            e.printStackTrace();
+            log.error("❌ Error initializing cache: {}", e.getMessage(), e);
         }
     }
 
     @Transactional
     public synchronized void subscribe(String endpoint, Map<String, String> keys) {
-        System.out.println("📨 SUBSCRIBE CALLED:");
-        System.out.println("   Endpoint: " + endpoint);
-        System.out.println("   Keys: " + keys);
+        SafeLog.info("📨 SUBSCRIBE CALLED: endpoint={}, keys={}", endpoint, keys);
 
         String token = extractTokenFromEndpoint(endpoint);
         if (token == null || token.isEmpty()) {
-            System.out.println("⚠️ Could not extract token from endpoint: " + endpoint);
+            SafeLog.warn("⚠️ Could not extract token from endpoint: " + endpoint);
             return;
         }
 
@@ -83,21 +84,20 @@ public class PushNotificationService {
             subscription.setCreatedAt(System.currentTimeMillis());
 
             PushSubscription saved = subscriptionRepository.save(subscription);
-            System.out.println("✅ Push subscription saved to DB with ID: " + saved.getId());
+            log.info("✅ Push subscription saved to DB with ID: " + saved.getId());
 
             // Проверяем, что сохранилось
             List<PushSubscription> check = subscriptionRepository.findAll();
-            System.out.println("📊 Total subscriptions in DB after save: " + check.size());
+            log.info("📊 Total subscriptions in DB after save: " + check.size());
 
         } catch (Exception e) {
-            System.err.println("❌ Error saving to DB: " + e.getMessage());
-            e.printStackTrace();
+            log.error("❌ Error saving to DB: {}", e.getMessage(), e);
             return;
         }
 
         // Сохраняем в кэш
         fcmTokensCache.put(endpoint, token);
-        System.out.println("✅ FCM token saved, total in cache: " + fcmTokensCache.size());
+        log.info("✅ FCM token saved, total in cache: " + fcmTokensCache.size());
     }
 
     public void sendAlarmNotification(Long moduleId, String alarmName, String alarmTime) {
@@ -107,16 +107,16 @@ public class PushNotificationService {
         }
 
         if (fcmTokensCache.isEmpty()) {
-            System.out.println("⚠️ No FCM tokens to send to");
+            log.warn("⚠️ No FCM tokens to send to");
             return;
         }
 
         String title = "🔔 " + (alarmName != null ? alarmName : "Будильник");
         String body = "Время: " + (alarmTime != null ? alarmTime : "--:--");
 
-        System.out.println("📤 Sending FCM notification to " + fcmTokensCache.size() + " subscribers");
-        System.out.println("   Title: " + title);
-        System.out.println("   Body: " + body);
+        log.info("📤 Sending FCM notification to {} subscribers", fcmTokensCache.size());
+        log.debug("   Title: {}", title);
+        log.debug("   Body: {}", body);
 
         for (Map.Entry<String, String> entry : fcmTokensCache.entrySet()) {
             String endpoint = entry.getKey();
@@ -124,10 +124,10 @@ public class PushNotificationService {
 
             try {
                 sendFcmNotificationV1(token, title, body, moduleId);
-                System.out.println("✅ FCM sent to: " + endpoint);
+                SafeLog.info("✅ FCM sent to: " + endpoint);
             } catch (Exception e) {
                 String errorMsg = e.getMessage();
-                System.err.println("❌ Failed to send FCM to " + endpoint + ": " + errorMsg);
+                SafeLog.error("❌ Failed to send FCM to {}: {}", endpoint, errorMsg);
 
                 if (errorMsg != null && (errorMsg.contains("UNREGISTERED") ||
                         errorMsg.contains("NotRegistered") ||
@@ -135,7 +135,7 @@ public class PushNotificationService {
                     // Удаляем из кэша и БД
                     fcmTokensCache.remove(endpoint);
                     deleteSubscriptionFromDB(endpoint);
-                    System.out.println("🗑️ Removed invalid token: " + endpoint);
+                    SafeLog.info("🗑️ Removed invalid token: " + endpoint);
                 }
             }
         }
@@ -145,7 +145,7 @@ public class PushNotificationService {
     public void deleteSubscriptionFromDB(String endpoint) {
         subscriptionRepository.findByEndpoint(endpoint).ifPresent(sub -> {
             subscriptionRepository.delete(sub);
-            System.out.println("🗑️ Deleted from DB: " + endpoint);
+            SafeLog.info("🗑️ Deleted from DB: " + endpoint);
         });
     }
 
@@ -153,7 +153,7 @@ public class PushNotificationService {
     public void clearSubscriptions() {
         fcmTokensCache.clear();
         subscriptionRepository.deleteAll();
-        System.out.println("🗑️ All subscriptions cleared");
+        SafeLog.info("🗑️ All subscriptions cleared");
     }
 
     private void sendFcmNotificationV1(String token, String title, String body, Long moduleId) throws Exception {
@@ -191,19 +191,19 @@ public class PushNotificationService {
         payload.put("message", message);
 
         String jsonPayload = objectMapper.writeValueAsString(payload);
-        System.out.println("   FCM payload: " + jsonPayload);
+        log.debug("   FCM payload: " + jsonPayload);
 
         HttpEntity<String> request = new HttpEntity<>(jsonPayload, headers);
 
         try {
             String response = restTemplate.postForObject(url, request, String.class);
-            System.out.println("   FCM response: " + response);
+            log.debug("   FCM response: " + response);
         } catch (Exception e) {
             // Логируем детали ошибки
-            System.err.println("❌ FCM error: " + e.getMessage());
+            log.error("❌ FCM error: " + e.getMessage());
             if (e.getMessage().contains("404")) {
-                System.err.println("❌ Token is not registered in Firebase project: " + projectId);
-                System.err.println("   This token was created for a different Firebase project.");
+                log.error("❌ Token is not registered in Firebase project: " + projectId);
+                log.error("   This token was created for a different Firebase project.");
             }
             throw e;
         }
@@ -227,10 +227,10 @@ public class PushNotificationService {
             cachedAccessToken = credentials.getAccessToken().getTokenValue();
             tokenExpiryTime = System.currentTimeMillis() + 3600000;
 
-            System.out.println("✅ OAuth2 token obtained successfully");
+            log.info("✅ OAuth2 token obtained successfully");
             return cachedAccessToken;
         } catch (Exception e) {
-            System.err.println("❌ Failed to get OAuth2 token: " + e.getMessage());
+            log.error("❌ Failed to get OAuth2 token: " + e.getMessage());
             throw e;
         }
     }
@@ -244,7 +244,7 @@ public class PushNotificationService {
                 return projectId;
             }
         } catch (Exception e) {
-            System.err.println("❌ Failed to read project_id: " + e.getMessage());
+            log.error("❌ Failed to read project_id: " + e.getMessage());
         }
         return "everyweb-71176";
     }

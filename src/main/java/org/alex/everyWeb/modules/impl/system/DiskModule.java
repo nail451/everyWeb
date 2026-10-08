@@ -6,12 +6,16 @@ import org.alex.everyWeb.modules.api.ModuleInfo;
 import org.springframework.stereotype.Component;
 import oshi.hardware.HWDiskStore;
 import oshi.hardware.HWPartition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
 
 @Component
 public class DiskModule extends SystemModule {
+
+    private static final Logger log = LoggerFactory.getLogger(DiskModule.class);
 
     public DiskModule() {
         this.updateIntervalMs = 10000;
@@ -164,8 +168,7 @@ public class DiskModule extends SystemModule {
             result.put("diskCount", disks.size());
 
         } catch (Exception e) {
-            System.out.println("Error getting disk data: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error getting disk data: {}", e.getMessage(), e);
             result.put("error", "Ошибка получения данных о дисках: " + e.getMessage());
         }
 
@@ -235,7 +238,7 @@ public class DiskModule extends SystemModule {
                 result.put(path + "\\", info);
             }
         } catch (Exception e) {
-            System.out.println("Error getting file system info: " + e.getMessage());
+            log.error("Error getting file system info: {}", e.getMessage());
         }
 
         return result;

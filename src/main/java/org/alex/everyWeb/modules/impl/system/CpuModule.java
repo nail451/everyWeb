@@ -7,6 +7,8 @@ import org.alex.everyWeb.modules.api.ModuleData;
 import org.alex.everyWeb.modules.api.ModuleInfo;
 import org.springframework.stereotype.Component;
 import oshi.hardware.CentralProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -17,6 +19,8 @@ import java.util.*;
 
 @Component
 public class CpuModule extends SystemModule {
+
+    private static final Logger log = LoggerFactory.getLogger(CpuModule.class);
 
     private long[] previousTicks = new long[CentralProcessor.TickType.values().length];
     private double previousLoad = 0;
@@ -212,8 +216,7 @@ public class CpuModule extends SystemModule {
             }
 
         } catch (Exception e) {
-            System.out.println("Error parsing LHM data: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error parsing LHM data: {}", e.getMessage(), e);
         }
 
         return result;
@@ -258,7 +261,7 @@ public class CpuModule extends SystemModule {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error in findCpuTemperatures: " + e.getMessage());
+            log.error("Error in findCpuTemperatures: {}", e.getMessage());
         }
 
         return result;
@@ -309,7 +312,7 @@ public class CpuModule extends SystemModule {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error in findCpuFans: " + e.getMessage());
+            log.error("Error in findCpuFans: {}", e.getMessage());
         }
 
         return result;

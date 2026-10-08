@@ -9,6 +9,9 @@ import org.alex.everyWeb.push.PushNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.alex.everyWeb.common.logging.SafeLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -18,6 +21,8 @@ import java.util.Map;
 
 @Service
 public class AlarmService {
+
+    private static final Logger log = LoggerFactory.getLogger(AlarmService.class);
 
     @Autowired
     private ModuleRepository moduleRepository;
@@ -37,11 +42,11 @@ public class AlarmService {
                 try {
                     checkAlarmsForModule(entity);
                 } catch (Exception e) {
-                    System.err.println("Error checking alarms for module " + entity.getId() + ": " + e.getMessage());
+                    log.error("Error checking alarms for module {}: {}", entity.getId(), e.getMessage());
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error in alarm check: " + e.getMessage());
+            log.error("Error in alarm check: {}", e.getMessage());
         }
     }
 
@@ -100,23 +105,22 @@ public class AlarmService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error parsing clock data for module " + entity.getId() + ": " + e.getMessage());
+            log.error("Error parsing clock data for module {}: {}", entity.getId(), e.getMessage());
         }
     }
 
     private void triggerAlarm(Long moduleId, ClockData.Alarm alarm) {
-        System.out.println("🔔 ALARM TRIGGERED: " + alarm.getName() + " at " + alarm.getTime());
-        System.out.println("   Module ID: " + moduleId);
-        System.out.println("   Repeat days: " + alarm.getRepeatDaysDisplay());
-        System.out.println("   Interval: " + alarm.getIntervalDisplay());
+        log.info("🔔 ALARM TRIGGERED: {} at {}", alarm.getName(), alarm.getTime());
+        log.debug("   Module ID: {}", moduleId);
+        log.debug("   Repeat days: {}", alarm.getRepeatDaysDisplay());
+        log.debug("   Interval: {}", alarm.getIntervalDisplay());
 
         // ===== ОТПРАВЛЯЕМ PUSH УВЕДОМЛЕНИЕ =====
         try {
             pushNotificationService.sendAlarmNotification(moduleId, alarm.getName(), alarm.getTime());
-            System.out.println("✅ Push notification sent for alarm: " + alarm.getName());
+            log.info("✅ Push notification sent for alarm: {}", alarm.getName());
         } catch (Exception e) {
-            System.err.println("❌ Failed to send push notification: " + e.getMessage());
-            e.printStackTrace();
+            log.error("❌ Failed to send push notification: {}", e.getMessage(), e);
         }
     }
 }

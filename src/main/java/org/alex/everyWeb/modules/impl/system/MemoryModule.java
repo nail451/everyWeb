@@ -7,12 +7,16 @@ import org.springframework.stereotype.Component;
 import oshi.hardware.GlobalMemory;
 import oshi.hardware.HardwareAbstractionLayer;
 import oshi.hardware.VirtualMemory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class MemoryModule extends SystemModule {
+
+    private static final Logger log = LoggerFactory.getLogger(MemoryModule.class);
 
     public MemoryModule() {
         this.updateIntervalMs = 5000;
@@ -85,7 +89,7 @@ public class MemoryModule extends SystemModule {
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Swap info not available: " + e.getMessage());
+                log.warn("Swap info not available: {}", e.getMessage());
             }
 
             // ===== СТАТИСТИКА ПАМЯТИ (если доступна) =====
@@ -99,7 +103,7 @@ public class MemoryModule extends SystemModule {
                 // Игнорируем
             }
         } catch (Exception e) {
-            System.out.println("Error getting memory data: " + e.getMessage());
+            log.error("Error getting memory data: {}", e.getMessage());
             result.put("error", "Ошибка получения данных о памяти: " + e.getMessage());
         }
 

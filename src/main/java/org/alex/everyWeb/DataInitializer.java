@@ -5,9 +5,13 @@ import org.alex.everyWeb.modules.repository.AvailableModuleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     @Autowired
     private AvailableModuleRepository availableModuleRepository;
@@ -55,7 +59,7 @@ public class DataInitializer implements CommandLineRunner {
             if (module.getDisplayOrder() == null) module.setDisplayOrder(0);
 
             availableModuleRepository.save(module);
-            System.out.println("✅ Module registered/updated: " + type + " (" + d[8] + "×" + d[9] + ")");
+            log.info("✅ Module registered/updated: {} ({}×{})", type, d[8], d[9]);
         }
     }
 }

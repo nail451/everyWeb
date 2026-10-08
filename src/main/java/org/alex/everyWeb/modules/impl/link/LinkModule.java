@@ -9,12 +9,16 @@ import org.alex.everyWeb.modules.api.ModuleInfo;
 import org.alex.everyWeb.modules.core.Module;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class LinkModule extends Module {
+
+    private static final Logger log = LoggerFactory.getLogger(LinkModule.class);
 
     @Autowired
     private LinksService linksService;
@@ -137,7 +141,7 @@ public class LinkModule extends Module {
                     return data;
                 }
             } catch (Exception e) {
-                System.err.println("Error parsing link data: " + e.getMessage());
+                log.error("Error parsing link data: {}", e.getMessage());
                 try {
                     Map<String, Object> map = objectMapper.readValue(
                             settingsJson,
@@ -158,7 +162,7 @@ public class LinkModule extends Module {
                     }
                     return data;
                 } catch (Exception ex) {
-                    System.err.println("Error parsing link data as map: " + ex.getMessage());
+                    log.error("Error parsing link data as map: {}", ex.getMessage());
                 }
             }
         }
@@ -170,10 +174,9 @@ public class LinkModule extends Module {
         try {
             String json = objectMapper.writeValueAsString(linkData);
             config.put("linkData", json);
-            System.out.println("Saved link data: " + json);
+            log.debug("Saved link data: {}", json);
         } catch (Exception e) {
-            System.err.println("Error saving link data: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error saving link data: {}", e.getMessage(), e);
         }
     }
 

@@ -5,6 +5,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -15,6 +17,8 @@ import java.util.Map;
 
 @Service
 public class ProductionCalendarService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductionCalendarService.class);
 
     private final WebClient webClient;
     private static final String ISDAYOFF_URL = "https://isdayoff.ru/api/getdata";
@@ -47,11 +51,11 @@ public class ProductionCalendarService {
             return; // Уже загружено
         }
 
-        System.out.println("📅 Loading production calendar for year " + year + "...");
+        log.info("📅 Loading production calendar for year {}...", year);
         Map<LocalDate, String> data = fetchFromIsDayOff(year);
 
         if (data.isEmpty()) {
-            System.out.println("⚠️ isdayoff.ru unavailable, using fallback (weekends only)");
+            log.warn("⚠️ isdayoff.ru unavailable, using fallback (weekends only)");
             data = generateFallback(year);
         }
 
@@ -76,7 +80,7 @@ public class ProductionCalendarService {
             toSave.add(day);
         }
         repository.saveAll(toSave);
-        System.out.println("✅ Loaded " + toSave.size() + " days for year " + year);
+        log.info("✅ Loaded {} days for year {}", toSave.size(), year);
     }
 
     /**
@@ -121,7 +125,7 @@ public class ProductionCalendarService {
                 date = date.plusDays(1);
             }
         } catch (Exception e) {
-            System.err.println("Error fetching production calendar: " + e.getMessage());
+            log.error("Error fetching production calendar: {}", e.getMessage());
         }
 
         return result;

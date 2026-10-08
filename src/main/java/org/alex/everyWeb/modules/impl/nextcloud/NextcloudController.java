@@ -8,6 +8,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -18,6 +20,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/nextcloud")
 public class NextcloudController {
+
+    private static final Logger log = LoggerFactory.getLogger(NextcloudController.class);
 
     @Autowired
     private ModuleRepository moduleRepository;
@@ -60,7 +64,7 @@ public class NextcloudController {
                     .body(resource);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error downloading file: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -77,7 +81,7 @@ public class NextcloudController {
                 return objectMapper.convertValue(ncObj, NextcloudData.class);
             }
         } catch (Exception e) {
-            System.err.println("Error parsing nextcloudData: " + e.getMessage());
+            log.error("Error parsing nextcloudData: {}", e.getMessage());
         }
         return new NextcloudData();
     }

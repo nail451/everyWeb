@@ -10,12 +10,16 @@ import org.alex.everyWeb.modules.impl.nextcloud.NextcloudService;
 import org.alex.everyWeb.modules.impl.nextcloud.NextcloudStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class NextcloudModule extends Module {
+
+    private static final Logger log = LoggerFactory.getLogger(NextcloudModule.class);
 
     @Autowired
     private NextcloudService nextcloudService;
@@ -231,8 +235,7 @@ public class NextcloudModule extends Module {
             try {
                 return objectMapper.readValue(settingsJson, NextcloudData.class);
             } catch (Exception e) {
-                System.err.println("Error parsing nextcloud data: " + e.getMessage());
-                e.printStackTrace();
+                log.error("Error parsing nextcloud data: {}", e.getMessage(), e);
             }
         }
         return new NextcloudData();
@@ -243,7 +246,7 @@ public class NextcloudModule extends Module {
             String json = objectMapper.writeValueAsString(nextcloudData);
             config.put("nextcloudData", json);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error saving nextcloud data: {}", e.getMessage(), e);
         }
     }
 
