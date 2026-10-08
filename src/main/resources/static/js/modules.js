@@ -558,6 +558,14 @@ function initializeModules() {
         const moduleId = widgetElement.dataset.widgetId;
         const moduleType = widgetElement.dataset.widgetType;
 
+        if (!moduleId || moduleId === 'undefined' || moduleId === 'null') {
+            console.warn(`Skipping init for ${moduleType}: invalid moduleId="${moduleId}"`);
+            return;
+        }
+
+        const numericId = parseInt(moduleId);
+        if (isNaN(numericId)) return;
+
         if (moduleType === 'CLOCK' && typeof initClockModule === 'function') {
             initClockModule(widgetElement, moduleId);
         }

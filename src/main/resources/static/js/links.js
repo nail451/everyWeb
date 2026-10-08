@@ -35,6 +35,10 @@ function getLinkSettingsFromWidget(widgetElement) {
 }
 
 async function loadLinkSettingsFromServer(moduleId) {
+    if (!moduleId || moduleId === 'undefined' || moduleId === 'null') {
+        console.warn('loadLinkSettingsFromServer: invalid moduleId', moduleId);
+        return null;
+    }
     try {
         const response = await fetch(`/api/modules/${moduleId}/settings`);
         if (response.ok) {
@@ -246,7 +250,17 @@ async function renderLinksInWidget(widgetElement) {
     try {
         const moduleId = widgetElement.dataset.widgetId;
 
-        let settings = linkModuleSettingsCache[moduleId];
+        // guard
+        let settings;
+        if (!moduleId || moduleId === 'undefined' || moduleId === 'null') {
+            console.warn('renderLinksInWidget: widget has no moduleId, using defaults');
+            settings = { iconSize: 28, fontSize: 12, blurAmount: 15, bgDarkness: 0, hideBackground: false };
+        } else {
+            settings = linkModuleSettingsCache[moduleId];
+            if (!settings) settings = await loadLinkSettingsFromServer(moduleId);
+            if (!settings) settings = { iconSize: 28, fontSize: 12, blurAmount: 15, bgDarkness: 0, hideBackground: false };
+        }
+
         if (!settings) {
             settings = await loadLinkSettingsFromServer(moduleId);
         }

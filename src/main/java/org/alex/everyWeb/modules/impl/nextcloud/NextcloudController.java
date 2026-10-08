@@ -45,7 +45,6 @@ public class NextcloudController {
 
             Resource resource = nextcloudService.downloadFile(
                     data.getServerUrl(), data.getUsername(), data.getPassword(), filePath);
-
             if (resource == null) {
                 return ResponseEntity.notFound().build();
             }
