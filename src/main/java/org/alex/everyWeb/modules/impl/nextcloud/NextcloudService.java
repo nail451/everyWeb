@@ -235,7 +235,6 @@ public class NextcloudService {
 
         } catch (Exception e) {
             log.error("Error parsing DAV response: {}", e.getMessage(), e);
-            e.printStackTrace();
         }
 
         return fileList;

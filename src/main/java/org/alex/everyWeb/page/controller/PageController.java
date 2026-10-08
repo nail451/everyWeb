@@ -11,12 +11,16 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
 public class PageController {
+
+    private static final Logger log = LoggerFactory.getLogger(PageController.class);
 
     @Autowired
     private PageService pageService;
@@ -101,7 +105,7 @@ public class PageController {
             model.addAttribute("modulesJson", mapper.writeValueAsString(modulesData));
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error serializing page data: {}", e.getMessage(), e);
             model.addAttribute("linksJson", "[]");
             model.addAttribute("modulesJson", "[]");
         }
@@ -117,7 +121,7 @@ public class PageController {
             pageService.addModule(page.getId(), "CLOCK", "Часы", "{}");
             pageService.addModule(page.getId(), "WEATHER", "Погода", "{\"city\":\"Moscow\"}");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error adding default content for page {}: {}", page.getId(), e.getMessage(), e);
         }
     }
 }

@@ -8,13 +8,25 @@ import org.alex.everyWeb.link.service.LinksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/links")
 public class LinksController {
+
+    private static final Logger log = LoggerFactory.getLogger(LinksController.class);
 
     @Autowired
     private LinksService linksService;
@@ -55,7 +67,7 @@ public class LinksController {
             );
             return ResponseEntity.ok(link);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error adding link: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -68,7 +80,7 @@ public class LinksController {
             List<LinkDTO> links = linksService.getLinksByPageId(pageId);
             return ResponseEntity.ok(links);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting links for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -99,7 +111,7 @@ public class LinksController {
             );
             return ResponseEntity.ok(link);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating link {}: {}", linkId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -111,7 +123,7 @@ public class LinksController {
             linksService.deleteLink(linkId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error deleting link {}: {}", linkId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -127,7 +139,7 @@ public class LinksController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting favicon for url {}: {}", url, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }

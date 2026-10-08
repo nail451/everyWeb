@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/modules")
 public class ModulesController {
+
+    private static final Logger log = LoggerFactory.getLogger(ModulesController.class);
 
     @Autowired
     private ModulesService modulesService;
@@ -47,7 +51,7 @@ public class ModulesController {
             List<AvailableModule> modules = availableModuleService.getAvailableModules();
             return ResponseEntity.ok(modules);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting available modules: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -60,7 +64,7 @@ public class ModulesController {
             List<AvailableModule> modules = availableModuleService.getAllModules();
             return ResponseEntity.ok(modules);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting all available modules: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -73,7 +77,7 @@ public class ModulesController {
             List<ModuleDTO> modules = modulesService.getModulesByPageId(pageId);
             return ResponseEntity.ok(modules);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting modules for page: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -102,7 +106,7 @@ public class ModulesController {
             );
             return ResponseEntity.ok(module);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error adding module: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -120,7 +124,7 @@ public class ModulesController {
             );
             return ResponseEntity.ok(module);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -133,7 +137,7 @@ public class ModulesController {
             modulesService.deleteModule(moduleId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error deleting module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -146,7 +150,7 @@ public class ModulesController {
             modulesService.reorderModules(pageId, moduleIds);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error reordering modules for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -162,7 +166,7 @@ public class ModulesController {
             }
             return ResponseEntity.ok(module);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -175,7 +179,7 @@ public class ModulesController {
             ModuleData data = moduleContext.getModuleData(moduleId);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting data for module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -196,7 +200,7 @@ public class ModulesController {
             response.put("content", data.getContent());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating data for module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -221,7 +225,7 @@ public class ModulesController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error executing action for module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -240,7 +244,7 @@ public class ModulesController {
             ModuleData data = moduleContext.getModuleData(moduleId);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting settings for module {}: {}", moduleId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }

@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 public class ApiController {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiController.class);
 
     @Autowired
     private PageService pageService;
@@ -123,7 +127,7 @@ public class ApiController {
             return ResponseEntity.ok(settings);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting settings for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -148,7 +152,7 @@ public class ApiController {
             }).collect(Collectors.toList());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting pages: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -177,7 +181,7 @@ public class ApiController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error creating page: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -206,7 +210,7 @@ public class ApiController {
                     "hasPassword", hasPassword
             ));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error verifying password for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
         }
@@ -218,7 +222,7 @@ public class ApiController {
             pageService.deletePage(pageId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error deleting page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -247,7 +251,7 @@ public class ApiController {
             );
             return ResponseEntity.ok(module);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error adding module to page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -265,7 +269,7 @@ public class ApiController {
             response.put("widgets", layoutService.getWidgets(pageId));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting layout for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -285,7 +289,7 @@ public class ApiController {
             WidgetDTO widget = layoutService.addWidget(pageId, type, title, rowSpan, colSpan);
             return ResponseEntity.ok(widget);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error adding widget to page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -298,7 +302,7 @@ public class ApiController {
             layoutService.removeWidget(pageId, widgetId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error removing widget {} from page {}: {}", widgetId, pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -315,7 +319,7 @@ public class ApiController {
             layoutService.updateWidgetPosition(pageId, widgetId, row, col);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error updating widget position on page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -340,7 +344,7 @@ public class ApiController {
             layoutService.saveWidgets(pageId, widgets);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error resizing widget on page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -373,7 +377,7 @@ public class ApiController {
 
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error swapping widgets on page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -385,7 +389,7 @@ public class ApiController {
             layoutService.toggleEditMode(pageId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error toggling edit mode for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -398,7 +402,7 @@ public class ApiController {
             List<LinkDTO> links = linksService.getLinksByPageId(pageId);
             return ResponseEntity.ok(links);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting links for page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
@@ -425,6 +429,7 @@ public class ApiController {
             response.put("hasPassword", updated.getPassword() != null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("Error updating page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Error: " + e.getMessage());
         }
@@ -441,6 +446,7 @@ public class ApiController {
             pageService.movePage(pageId, direction);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            log.error("Error moving page {}: {}", pageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }

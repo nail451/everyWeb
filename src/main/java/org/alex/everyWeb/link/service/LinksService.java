@@ -9,6 +9,8 @@ import org.alex.everyWeb.page.entity.Page;
 import org.alex.everyWeb.page.repository.PageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class LinksService {
+
+    private static final Logger log = LoggerFactory.getLogger(LinksService.class);
 
     @Autowired
     private LinkRepository linksRepository;
@@ -173,7 +177,7 @@ public class LinksService {
 
             return null;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting favicon for {}: {}", domain, e.getMessage(), e);
             return null;
         }
     }
