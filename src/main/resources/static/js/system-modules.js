@@ -415,34 +415,50 @@ function renderDiskDisplay(content) {
 
         // Сортируем партиции: сначала с буквами дисков
         const sortedPartitions = [...partitions].sort((a, b) => {
-            const aHasLetter = a.mountPoint && a.mountPoint.match(/^[A-Z]:/);
-            const bHasLetter = b.mountPoint && b.mountPoint.match(/^[A-Z]:/);
-            if (aHasLetter && !bHasLetter) return -1;
-            if (!aHasLetter && bHasLetter) return 1;
-            return 0;
+            const aMp = a.mountPoint || '';
+            const bMp = b.mountPoint || '';
+            // Сначала те, у кого есть реальный маунт
+            if (aMp && !bMp) return -1;
+            if (!aMp && bMp) return 1;
+            // "/" — самый первый
+            if (aMp === '/' && bMp !== '/') return -1;
+            if (bMp === '/' && aMp !== '/') return 1;
+            // Остальные — по алфавиту
+            return aMp.localeCompare(bMp);
         });
 
-        // Показываем все партиции с буквами дисков
+        // Показываем партиции с реальным маунтом (Linux: "/", "/home"; Windows: "C:", "D:")
         let partitionsHtml = '';
-        const partitionsWithLetters = sortedPartitions.filter(p => p.mountPoint && p.mountPoint.match(/^[A-Z]:/));
+        const realPartitions = sortedPartitions.filter(p => {
+            const mp = p.mountPoint;
+            if (!mp) return false;
+            // Linux: начинается с "/"
+            if (mp.startsWith('/')) return true;
+            // Windows: "C:", "D:\" и т.п.
+            if (/^[A-Z]:/i.test(mp)) return true;
+            return false;
+        });
 
-        if (partitionsWithLetters.length > 0) {
-            partitionsHtml = partitionsWithLetters.map(part => {
+        if (realPartitions.length > 0) {
+            partitionsHtml = realPartitions.map((part, idx) => {
                 const mountPoint = part.mountPoint || '';
                 const freeSpace = part.freeSpace || part.size || '0 B';
                 const totalSpace = part.totalSpace || part.size || '0 B';
                 const usedPercent = part.usedPercent !== undefined ? part.usedPercent : 0;
 
                 const color = usedPercent > 80 ? '#ff6b6b' : usedPercent > 60 ? '#ffd93d' : '#6bcb77';
+                const borderStyle = idx < realPartitions.length - 1
+                    ? 'border-bottom:1px solid rgba(255,255,255,0.03);'
+                    : '';
 
                 return `
-                    <div style="padding:4px 0; ${partitionsWithLetters.indexOf(part) < partitionsWithLetters.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.03);' : ''}">
+                    <div style="padding:4px 0; ${borderStyle}">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-size:12px; opacity:0.7; font-weight:400;">
                                 ${mountPoint}
                             </span>
                             <span style="font-size:12px; opacity:0.4;">
-                                ${freeSpace} из ${totalSpace}
+                                ${freeSpace} свободно из ${totalSpace}
                             </span>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
@@ -461,7 +477,7 @@ function renderDiskDisplay(content) {
             partitionsHtml = `
                 <div style="padding:4px 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:12px; opacity:0.5;">Без буквы</span>
+                        <span style="font-size:12px; opacity:0.5;">Нет точек монтирования</span>
                         <span style="font-size:12px; opacity:0.3;">${size}</span>
                     </div>
                 </div>
@@ -470,11 +486,20 @@ function renderDiskDisplay(content) {
 
         const borderStyle = index < disks.length - 1 ? 'border-bottom:2px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px;' : '';
 
+        // Мета: тип + температура
+        const metaParts = [];
+        if (disk.type && disk.type !== 'Unknown') metaParts.push(disk.type);
+        if (disk.temperature) metaParts.push(`🌡 ${disk.temperature}°C`);
+        const metaLine = metaParts.length > 0
+            ? `<div style="font-size:10px; opacity:0.35; margin-bottom:4px;">${metaParts.join(' · ')}</div>`
+            : '';
+
         return `
             <div style="${borderStyle}">
                 <div style="font-size:13px; font-weight:500; opacity:0.9; margin-bottom:2px;">
                     💾 ${displayName}
                 </div>
+                ${metaLine}
                 ${partitionsHtml}
             </div>
         `;

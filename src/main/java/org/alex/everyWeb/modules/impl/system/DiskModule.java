@@ -109,8 +109,14 @@ public class DiskModule extends SystemModule {
                 diskInfo.put("type", detectDiskType(devName));
 
                 // Температура NVMe (если есть)
-                if (nvmeTemps.containsKey(devName)) {
-                    diskInfo.put("temperature", nvmeTemps.get(devName));
+                Double nvmeTemp = nvmeTemps.get(devName);
+                if (nvmeTemp == null && devName != null) {
+                    // fallback: "nvme0n1" → "nvme0n1" (без /dev/)
+                    String shortDev = devName.replace("/dev/", "");
+                    nvmeTemp = nvmeTemps.get(shortDev);
+                }
+                if (nvmeTemp != null) {
+                    diskInfo.put("temperature", Math.round(nvmeTemp * 10) / 10.0);
                 }
 
                 // === ПАРТИЦИИ ===
@@ -259,7 +265,7 @@ public class DiskModule extends SystemModule {
     /**
      * Температура NVMe из `sensors -j`.
      * Ищем чипы с "nvme" в имени, берём Composite temp.
-     * Возвращает map: nvme0n1 → temp
+     * Ключи: и "nvme0n1", и "/dev/nvme0n1" — чтобы матчинг с disk.getName() сработал.
      */
     private Map<String, Double> readNvmeTemperatures() {
         Map<String, Double> result = new HashMap<>();
@@ -287,8 +293,6 @@ public class DiskModule extends SystemModule {
                 String chipName = e.getKey().toLowerCase();
                 if (!chipName.startsWith("nvme")) continue;
 
-                // Имя чипа: nvme-pci-0100 — не даёт нам device name напрямую.
-                // Берём первое найденное значение Composite.
                 com.fasterxml.jackson.databind.JsonNode chip = e.getValue();
                 com.fasterxml.jackson.databind.JsonNode composite = chip.get("Composite");
                 if (composite != null && composite.isObject()) {
@@ -296,8 +300,10 @@ public class DiskModule extends SystemModule {
                     while (inner.hasNext()) {
                         Map.Entry<String, com.fasterxml.jackson.databind.JsonNode> ie = inner.next();
                         if (ie.getKey().endsWith("_input") && ie.getValue().isNumber()) {
-                            // Привязываем ко всем NVMe-устройствам (у нас один)
-                            result.put("nvme0n1", ie.getValue().asDouble());
+                            double temp = ie.getValue().asDouble();
+                            // Кладём под оба ключа — с /dev/ и без
+                            result.put("nvme0n1", temp);
+                            result.put("/dev/nvme0n1", temp);
                         }
                     }
                 }
