@@ -100,7 +100,7 @@
 		<dependency>
 			<groupId>org.jetbrains.pty4j</groupId>
 			<artifactId>pty4j</artifactId>
-			<version>0.12.13</version>
+			<version>0.13.4</version>
 		</dependency>
 	</dependencies>
 
