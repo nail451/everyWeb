@@ -592,6 +592,10 @@ function initializeModules() {
             }
         }
 
+        if (moduleType === 'CONSOLE' && typeof initConsoleModule === 'function') {
+            initConsoleModule(widgetElement, moduleId);
+        }
+
         if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
             if (typeof initSystemModule === 'function') {
                 initSystemModule(widgetElement, moduleId);

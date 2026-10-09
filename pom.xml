@@ -12,7 +12,7 @@
 
 	<groupId>org.alex</groupId>
 	<artifactId>everyWeb</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1-SNAPSHOT</version>
 	<name>everyWeb</name>
 	<description>Demo project for Spring Boot</description>
 
@@ -90,6 +90,17 @@
 			<groupId>com.google.auth</groupId>
 			<artifactId>google-auth-library-oauth2-http</artifactId>
 			<version>1.23.0</version>
+		</dependency>
+
+		<!-- for console -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jetbrains.pty4j</groupId>
+			<artifactId>pty4j</artifactId>
+			<version>0.12.13</version>
 		</dependency>
 	</dependencies>
 

@@ -604,6 +604,9 @@ async function handlePasswordSubmit(event) {
         const result = await response.json();
         if (result.valid) {
             unlockPage(pendingPageId);
+            try {
+                sessionStorage.setItem('pagePassword_' + pendingPageId, password);
+            } catch (e) {}
             closePasswordCheckModal();
 
             showToast('✅ Пароль верный, переход...');

@@ -35,6 +35,7 @@ public class DataInitializer implements CommandLineRunner {
                 { "DISK",      "Диски",      "Информация о дисках и свободном месте",     "💾", true, true,  "disk-module",      "system-modules.js",   2, 1 },
                 { "NETWORK",   "Сеть",       "Скорость сети и информация об интерфейсах", "🌐", true, true,  "network-module",   "system-modules.js",   1, 1 },
                 { "BATTERY",   "Батарея",    "Состояние батареи и заряд",                 "🔋", true, true,  "battery-module",   "system-modules.js",   1, 1 },
+                { "CONSOLE",   "Консоль",    "Интерактивная bash-консоль",                "⌨️", true, false, "console-module",   "console-module.js",   3, 3 },
                 { "CALENDAR",  "Календарь",  "Месяц с навигацией",                        "📅", true, true,  "calendar-module",  "calendar-module.js",  2, 1 }
         };
 
