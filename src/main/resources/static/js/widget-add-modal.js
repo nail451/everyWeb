@@ -25,7 +25,7 @@ let WidgetAddModal = (function() {
         },
         {
             title: 'Система',
-            types: ['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY']
+            types: ['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY', 'CONSOLE']
         }
     ];
 
