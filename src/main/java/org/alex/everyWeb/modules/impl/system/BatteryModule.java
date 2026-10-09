@@ -5,14 +5,17 @@ import org.alex.everyWeb.modules.api.ModuleData;
 import org.alex.everyWeb.modules.api.ModuleInfo;
 import org.springframework.stereotype.Component;
 import oshi.hardware.PowerSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class BatteryModule extends SystemModule {
+
+    private static final Logger log = LoggerFactory.getLogger(BatteryModule.class);
 
     public BatteryModule() {
         this.updateIntervalMs = 10000;
@@ -25,7 +28,7 @@ public class BatteryModule extends SystemModule {
         info.setName("Батарея");
         info.setDescription("Состояние батареи и заряд");
         info.setIcon("🔋");
-        info.setVersion("1.0.0");
+        info.setVersion("2.0.0");
         info.setAuthor("System");
         info.setEnabled(true);
         info.setConfigurable(true);
@@ -62,32 +65,78 @@ public class BatteryModule extends SystemModule {
                 return result;
             }
 
+            // Берём первую батарею (на ThinkPad — BAT0)
             PowerSource battery = powerSources.get(0);
 
-            // Получаем процент заряда через рефлексию
-            double percent = getBatteryPercent(battery);
+            // === ПРОЦЕНТ ЗАРЯДА (напрямую, без рефлексии) ===
+            double capacity = battery.getRemainingCapacityPercent(); // 0.0 .. 1.0
+            if (capacity < 0 || capacity > 1.0) {
+                // Если OSHI не смог — оставляем 0, но помечаем
+                capacity = 0;
+            }
+            double percent = capacity * 100.0;
+
+            // === СОСТОЯНИЕ ===
+            boolean powerOnLine = battery.isPowerOnLine();
+            boolean charging = battery.isCharging();
+            boolean discharging = battery.isDischarging();
+
+            // === ВРЕМЯ ДО ПОЛНОГО/РАЗРЯДА ===
+            double timeRemainingRaw = battery.getTimeRemainingEstimated(); // секунды, может быть отрицательным
 
             result.put("available", true);
             result.put("name", battery.getName() != null ? battery.getName() : "Батарея");
             result.put("remainingCapacity", Math.round(percent * 10) / 10.0);
-            result.put("isCharging", battery.isCharging());
-            result.put("isDischarging", battery.isDischarging());
+            result.put("isCharging", charging);
+            result.put("isDischarging", discharging);
+            result.put("isPowerOnLine", powerOnLine);
 
-            // Получаем время работы
-            long timeRemaining = getBatteryTimeRemaining(battery);
-            if (timeRemaining > 0 && timeRemaining < Integer.MAX_VALUE) {
+            // === СТАТУС ===
+            String status;
+            if (powerOnLine && charging) {
+                status = "Заряжается";
+            } else if (powerOnLine && percent >= 99) {
+                status = "Питание от сети, заряжено";
+            } else if (powerOnLine) {
+                status = "Питание от сети";
+            } else if (discharging) {
+                status = "Разряжается";
+            } else if (percent > 75) {
+                status = "Отлично";
+            } else if (percent > 50) {
+                status = "Нормально";
+            } else if (percent > 25) {
+                status = "Низкий заряд";
+            } else {
+                status = "Критический заряд";
+            }
+            result.put("status", status);
+
+            // === ВРЕМЯ ===
+            // getTimeRemainingEstimated() возвращает:
+            //   > 0 — секунды (для discharging — до разряда, для charging — до полного)
+            //   -1 — вычисляется / неизвестно
+            //   -2 — бесконечно (на питании, заряжено)
+            if (timeRemainingRaw > 0 && timeRemainingRaw < Integer.MAX_VALUE) {
+                long timeRemaining = (long) timeRemainingRaw;
                 long hours = timeRemaining / 3600;
                 long minutes = (timeRemaining % 3600) / 60;
                 result.put("timeRemainingFormatted", String.format("%02d:%02d", hours, minutes));
+                result.put("timeRemaining", timeRemaining);
+            } else if (timeRemainingRaw == -2) {
+                result.put("timeRemainingFormatted", "—");
+                result.put("timeRemaining", -2);
             } else {
-                result.put("timeRemainingFormatted", "N/A");
+                result.put("timeRemainingFormatted", "—");
+                result.put("timeRemaining", -1);
             }
-            result.put("timeRemaining", timeRemaining);
 
-            // Иконка
+            // === ИКОНКА ===
             String icon;
-            if (battery.isCharging()) {
+            if (charging) {
                 icon = "⚡";
+            } else if (powerOnLine) {
+                icon = "🔌";
             } else if (percent > 75) {
                 icon = "🔋";
             } else if (percent > 50) {
@@ -102,67 +151,11 @@ public class BatteryModule extends SystemModule {
             result.put("icon", icon);
 
         } catch (Exception e) {
+            log.error("Error getting battery data: {}", e.getMessage(), e);
             result.put("available", false);
             result.put("message", "Ошибка получения данных о батарее: " + e.getMessage());
         }
 
         return result;
-    }
-
-    private double getBatteryPercent(PowerSource battery) {
-        try {
-            // Пробуем getRemainingCapacity()
-            Method method = battery.getClass().getMethod("getRemainingCapacity");
-            Double value = (Double) method.invoke(battery);
-            if (value != null && value >= 0 && value <= 1) {
-                return value * 100;
-            }
-        } catch (Exception e1) {
-            try {
-                // Пробуем getRemainingCapacityPercent()
-                Method method = battery.getClass().getMethod("getRemainingCapacityPercent");
-                Double value = (Double) method.invoke(battery);
-                if (value != null && value >= 0 && value <= 100) {
-                    return value;
-                }
-            } catch (Exception e2) {
-                try {
-                    // Пробуем через current/max capacity
-                    Method getCurrent = battery.getClass().getMethod("getCurrentCapacity");
-                    Method getMax = battery.getClass().getMethod("getMaxCapacity");
-                    Double current = (Double) getCurrent.invoke(battery);
-                    Double max = (Double) getMax.invoke(battery);
-                    if (current != null && max != null && max > 0) {
-                        return (current / max) * 100;
-                    }
-                } catch (Exception e3) {
-                    // Все методы не сработали
-                }
-            }
-        }
-        return 0;
-    }
-
-    private long getBatteryTimeRemaining(PowerSource battery) {
-        try {
-            // Пробуем getTimeRemainingEstimated()
-            Method method = battery.getClass().getMethod("getTimeRemainingEstimated");
-            Long value = (Long) method.invoke(battery);
-            if (value != null && value > 0) {
-                return value;
-            }
-        } catch (Exception e1) {
-            try {
-                // Пробуем getTimeRemaining()
-                Method method = battery.getClass().getMethod("getTimeRemaining");
-                Long value = (Long) method.invoke(battery);
-                if (value != null && value > 0) {
-                    return value;
-                }
-            } catch (Exception e2) {
-                // Ни один метод не сработал
-            }
-        }
-        return 0;
     }
 }
