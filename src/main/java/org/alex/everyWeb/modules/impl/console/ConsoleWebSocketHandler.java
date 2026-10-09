@@ -54,8 +54,10 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
         session.getAttributes().put("pty", pty);
         SafeLog.info("Console session opened (active={})", activeSessions.get());
 
+        // Reader thread: PTY stdout → WebSocket
         Thread reader = new Thread(() -> {
-            try (InputStream in = pty.getInputStream()) {
+            try {
+                InputStream in = pty.getInputStream();  // ← НЕ try-with-resources
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = in.read(buf)) != -1) {
@@ -67,6 +69,7 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
                 }
             } catch (Exception e) {
                 // session closed or PTY died — нормально
+                SafeLog.debug("Console reader stopped: {}", e.getMessage());
             } finally {
                 try { session.close(CloseStatus.NORMAL); } catch (Exception ignored) {}
             }
@@ -98,10 +101,10 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
             }
         }
 
-        try (OutputStream out = pty.getOutputStream()) {
-            out.write(payload);
-            out.flush();
-        }
+        // ← НЕ try-with-resources: OutputStream должен жить до destroy PTY
+        OutputStream out = pty.getOutputStream();
+        out.write(payload);
+        out.flush();
     }
 
     @Override
