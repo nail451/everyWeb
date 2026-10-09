@@ -20,7 +20,11 @@ public class NetworkModule extends SystemModule {
     private Map<String, Long> prevRxBytes = new HashMap<>();
     private Map<String, Long> prevTxBytes = new HashMap<>();
     private Map<String, Long> prevTime = new HashMap<>();
-    private String activeInterface = null;
+
+    // Кэш выбранного интерфейса
+    private String cachedInterfaceName = null;
+    private long cachedInterfaceTime = 0;
+    private static final long INTERFACE_CACHE_TTL = 10_000; // 10 секунд
 
     public NetworkModule() {
         this.updateIntervalMs = 2000;
@@ -33,7 +37,7 @@ public class NetworkModule extends SystemModule {
         info.setName("Сеть");
         info.setDescription("Скорость сети");
         info.setIcon("🌐");
-        info.setVersion("1.0.0");
+        info.setVersion("2.0.0");
         info.setAuthor("System");
         info.setEnabled(true);
         info.setConfigurable(true);
@@ -69,7 +73,6 @@ public class NetworkModule extends SystemModule {
                 return result;
             }
 
-            // Находим активный интерфейс
             NetworkIF activeNet = findActiveInterface(netIFs);
 
             if (activeNet == null) {
@@ -77,20 +80,16 @@ public class NetworkModule extends SystemModule {
                 return result;
             }
 
-            // Обновляем статистику
             activeNet.updateAttributes();
 
             String name = activeNet.getName();
             String displayName = activeNet.getDisplayName();
 
-            // Получаем данные
             long rxBytes = activeNet.getBytesRecv();
             long txBytes = activeNet.getBytesSent();
-            long rxPackets = activeNet.getPacketsRecv();
-            long txPackets = activeNet.getPacketsSent();
             long speed = activeNet.getSpeed();
 
-            // Вычисляем скорость передачи
+            // Скорость передачи
             long rxSpeed = 0;
             long txSpeed = 0;
 
@@ -101,18 +100,17 @@ public class NetworkModule extends SystemModule {
                 long timeDiff = System.currentTimeMillis() - prevTimeVal;
 
                 if (timeDiff > 0) {
-                    rxSpeed = (rxBytes - prevRx) * 1000 / timeDiff;
-                    txSpeed = (txBytes - prevTx) * 1000 / timeDiff;
+                    rxSpeed = Math.max(0, (rxBytes - prevRx) * 1000 / timeDiff);
+                    txSpeed = Math.max(0, (txBytes - prevTx) * 1000 / timeDiff);
                 }
             }
 
-            // Сохраняем для следующего вычисления
             prevRxBytes.put(name, rxBytes);
             prevTxBytes.put(name, txBytes);
             prevTime.put(name, System.currentTimeMillis());
 
-            // Форматируем результат
-            result.put("interface", displayName != null ? displayName : name);
+            result.put("interface", displayName != null && !displayName.isBlank() ? displayName : name);
+            result.put("interfaceName", name);
             result.put("rxSpeed", formatSpeed(rxSpeed));
             result.put("rxSpeedBytes", rxSpeed);
             result.put("txSpeed", formatSpeed(txSpeed));
@@ -121,6 +119,7 @@ public class NetworkModule extends SystemModule {
             result.put("txTotal", formatBytes(txBytes));
             result.put("speed", speed > 0 ? (speed / 1_000_000) + " Mbps" : "N/A");
             result.put("ip", getIpAddress(activeNet));
+
         } catch (Exception e) {
             log.error("Error getting network data: {}", e.getMessage());
             result.put("error", "Ошибка получения данных о сети: " + e.getMessage());
@@ -129,10 +128,17 @@ public class NetworkModule extends SystemModule {
         return result;
     }
 
-    /**
-     * Находит активный сетевой интерфейс
-     */
     private NetworkIF findActiveInterface(List<NetworkIF> interfaces) {
+        // Если есть закэшированный интерфейс и он ещё жив — возвращаем его
+        if (cachedInterfaceName != null
+                && System.currentTimeMillis() - cachedInterfaceTime < INTERFACE_CACHE_TTL) {
+            for (NetworkIF net : interfaces) {
+                if (cachedInterfaceName.equals(net.getName())) {
+                    return net;
+                }
+            }
+        }
+
         NetworkIF bestMatch = null;
         long maxBytes = 0;
 
@@ -140,92 +146,97 @@ public class NetworkModule extends SystemModule {
             try {
                 net.updateAttributes();
 
-                // Пропускаем loopback и виртуальные интерфейсы
-                String name = net.getName().toLowerCase();
-                String displayName = net.getDisplayName().toLowerCase();
+                String name = net.getName() != null ? net.getName().toLowerCase() : "";
+                String displayName = net.getDisplayName() != null ? net.getDisplayName().toLowerCase() : "";
 
-                // Пропускаем loopback
-                if (name.contains("loopback") || displayName.contains("loopback")) {
+                if (isExcludedInterface(name, displayName)) {
                     continue;
                 }
 
-                // Пропускаем виртуальные интерфейсы
-                if (name.contains("virtual") || displayName.contains("virtual") ||
-                        name.contains("hyper-v") || displayName.contains("hyper-v") ||
-                        name.contains("vpn") || displayName.contains("vpn") ||
-                        name.contains("tun") || displayName.contains("tun") ||
-                        name.contains("tap") || displayName.contains("tap") ||
-                        name.contains("wsl") || displayName.contains("wsl") ||
-                        name.contains("bluetooth") || displayName.contains("bluetooth")) {
+                // Есть ли IP?
+                String[] ips = net.getIPv4addr();
+                boolean hasIp = false;
+                if (ips != null) {
+                    for (String ip : ips) {
+                        if (ip != null && !ip.isEmpty() && !ip.equals("0.0.0.0") && !ip.startsWith("169.254")) {
+                            hasIp = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hasIp) {
                     continue;
                 }
 
-                // Проверяем, есть ли трафик
+                boolean isPreferred = isPreferredInterface(name, displayName);
                 long totalBytes = net.getBytesRecv() + net.getBytesSent();
 
-                // Если интерфейс имеет IP адрес и трафик - это хороший кандидат
-                String[] ips = net.getIPv4addr();
-                boolean hasIp = ips != null && ips.length > 0 && !ips[0].isEmpty() && !ips[0].equals("0.0.0.0");
+                boolean bestIsPreferred = false;
+                if (bestMatch != null) {
+                    String bestName = bestMatch.getName() != null ? bestMatch.getName().toLowerCase() : "";
+                    String bestDisplay = bestMatch.getDisplayName() != null ? bestMatch.getDisplayName().toLowerCase() : "";
+                    bestIsPreferred = isPreferredInterface(bestName, bestDisplay);
+                }
 
-                if (hasIp && totalBytes > 0) {
-                    // Если уже есть активный интерфейс с таким же именем, используем его
-                    if (activeInterface != null && activeInterface.equals(net.getName())) {
-                        return net;
-                    }
-
-                    // Выбираем интерфейс с наибольшим трафиком
-                    if (totalBytes > maxBytes) {
-                        maxBytes = totalBytes;
-                        bestMatch = net;
-                    }
+                if (bestMatch == null) {
+                    // Первый подходящий
+                    bestMatch = net;
+                    maxBytes = totalBytes;
+                } else if (isPreferred && !bestIsPreferred) {
+                    // Preferred побеждает не-preferred
+                    bestMatch = net;
+                    maxBytes = totalBytes;
+                } else if (isPreferred == bestIsPreferred && totalBytes > maxBytes) {
+                    // Равный приоритет — по трафику
+                    bestMatch = net;
+                    maxBytes = totalBytes;
                 }
             } catch (Exception e) {
-                // Игнорируем ошибки для отдельных интерфейсов
+                // игнорируем отдельные интерфейсы
             }
         }
 
-        // Если нашли по трафику - возвращаем
         if (bestMatch != null) {
-            activeInterface = bestMatch.getName();
-            return bestMatch;
+            cachedInterfaceName = bestMatch.getName();
+            cachedInterfaceTime = System.currentTimeMillis();
         }
-
-        // Если не нашли, берем первый Ethernet интерфейс
-        for (NetworkIF net : interfaces) {
-            try {
-                String name = net.getName().toLowerCase();
-                String displayName = net.getDisplayName().toLowerCase();
-
-                if (name.contains("ethernet") || displayName.contains("ethernet") ||
-                        name.contains("wi-fi") || displayName.contains("wi-fi") ||
-                        name.contains("wireless") || displayName.contains("wireless")) {
-                    activeInterface = net.getName();
-                    return net;
-                }
-            } catch (Exception e) {
-                // Игнорируем
-            }
-        }
-
-        // Если ничего не нашли - берем первый интерфейс (кроме loopback)
-        for (NetworkIF net : interfaces) {
-            String name = net.getName().toLowerCase();
-            if (!name.contains("loopback")) {
-                activeInterface = net.getName();
-                return net;
-            }
-        }
-
-        return null;
+        return bestMatch;
     }
 
     /**
-     * Получение IP адреса интерфейса
+     * Исключаем loopback, docker, veth, br-, virbr, tun, tap, wg, tailscale, zt, wsl, hyper-v
      */
+    private boolean isExcludedInterface(String name, String displayName) {
+        String[] excludedPrefixes = {
+                "lo", "docker", "veth", "br-", "virbr", "tun", "tap", "wg",
+                "tailscale", "zt", "wsl", "hyper-v", "vmnet", "vboxnet", "bluetooth"
+        };
+        for (String p : excludedPrefixes) {
+            if (name.startsWith(p) || displayName.startsWith(p)) return true;
+        }
+        // Точные имена
+        if (name.equals("lo") || displayName.equals("loopback")) return true;
+        // Содержит
+        if (name.contains("virtual") || displayName.contains("virtual")) return true;
+        if (name.contains("vpn") || displayName.contains("vpn")) return true;
+        return false;
+    }
+
+    /**
+     * Приоритетные интерфейсы: en*, eth*, wl*, wlan*
+     */
+    private boolean isPreferredInterface(String name, String displayName) {
+        String[] preferredPrefixes = {"en", "eth", "wl", "wlan"};
+        for (String p : preferredPrefixes) {
+            if (name.startsWith(p)) return true;
+        }
+        return false;
+    }
+
     private String getIpAddress(NetworkIF net) {
         try {
             String[] ips = net.getIPv4addr();
-            if (ips != null && ips.length > 0) {
+            if (ips != null) {
                 for (String ip : ips) {
                     if (ip != null && !ip.isEmpty() && !ip.equals("0.0.0.0") && !ip.startsWith("169.254")) {
                         return ip;
@@ -233,7 +244,7 @@ public class NetworkModule extends SystemModule {
                 }
             }
         } catch (Exception e) {
-            // Игнорируем
+            // игнорируем
         }
         return "N/A";
     }

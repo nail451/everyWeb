@@ -246,7 +246,7 @@ function renderCpuDisplay(content) {
                         <span style="font-size:13px; font-weight:500; color:${cpuTempMax > 80 ? '#ff6b6b' : cpuTempMax > 60 ? '#ffd93d' : '#6bcb77'};">${cpuTempMax}°C</span>
                     </div>
                 ` : ''}
-                <span style="font-size:9px; opacity:0.2; margin-left:auto;">LHM</span>
+                <span style="font-size:9px; opacity:0.2; margin-left:auto;">sensors</span>
             </div>
         `;
     }
@@ -613,11 +613,12 @@ function renderBatteryDisplay(content) {
 
     const percent = content.remainingCapacity || 0;
     const isCharging = content.isCharging || false;
-    const timeRemaining = content.timeRemainingFormatted || 'N/A';
+    const isPowerOnLine = content.isPowerOnLine || false;
+    const timeRemaining = content.timeRemainingFormatted || '—';
     const icon = content.icon || getBatteryIcon(percent, isCharging);
 
     const color = percent > 75 ? '#6bcb77' : percent > 50 ? '#ffd93d' : percent > 25 ? '#ff9f43' : '#ff6b6b';
-    const status = isCharging ? 'Заряжается' : (percent > 75 ? 'Отлично' : percent > 50 ? 'Нормально' : percent > 25 ? 'Низкий заряд' : 'Критический заряд');
+    const status = content.status || (isCharging ? 'Заряжается' : (percent > 75 ? 'Отлично' : percent > 50 ? 'Нормально' : percent > 25 ? 'Низкий заряд' : 'Критический заряд'));
 
     return `
         <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
@@ -630,7 +631,7 @@ function renderBatteryDisplay(content) {
             </div>
             <div style="display:flex; justify-content:space-between; font-size:11px; opacity:0.5;">
                 <span>${status}</span>
-                <span>⏱ ${timeRemaining}</span>
+                 <span>${timeRemaining !== '—' ? '⏱ ' + timeRemaining : ''}</span>
             </div>
             ${content.name ? `<div style="font-size:9px; opacity:0.2;">${content.name}</div>` : ''}
         </div>
