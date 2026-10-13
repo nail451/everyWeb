@@ -1,5 +1,6 @@
 package org.alex.everyWeb.modules.impl.console;
 
+import org.alex.everyWeb.common.logging.SafeLog;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ConsoleTokenService {
 
-    private static final long TTL_MS = 60_000; // 60 секунд
+    private static final long TTL_MS = 24 * 60 * 60 * 1000L; // 24 часа
+
     private final Map<String, Long> tokens = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
 
@@ -23,19 +25,24 @@ public class ConsoleTokenService {
         return token;
     }
 
-    /**
-     * Проверяет и УДАЛЯЕТ токен (one-time use).
-     */
-    public boolean consumeToken(String token) {
+    public boolean isValid(String token) {
         if (token == null || token.isEmpty()) return false;
-        Long expiry = tokens.remove(token);
+        Long expiry = tokens.get(token);
         if (expiry == null) return false;
-        return System.currentTimeMillis() <= expiry;
+        if (System.currentTimeMillis() > expiry) {
+            tokens.remove(token);
+            return false;
+        }
+        return true;
     }
 
-    @Scheduled(fixedRate = 30_000)
-    public void cleanupExpired() {
-        long now = System.currentTimeMillis();
-        tokens.entrySet().removeIf(e -> e.getValue() < now);
+    /**
+     * Ночная уборка: 05:00 по Самаре (UTC+4).
+     */
+    @Scheduled(cron = "0 0 5 * * *", zone = "Europe/Samara")
+    public void nightlyCleanup() {
+        int count = tokens.size();
+        tokens.clear();
+        SafeLog.info("Console: revoked {} tokens (nightly cleanup at 05:00 Samara)", count);
     }
 }

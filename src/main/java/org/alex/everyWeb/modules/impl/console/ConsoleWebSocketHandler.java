@@ -4,6 +4,7 @@ import com.pty4j.PtyProcess;
 import com.pty4j.PtyProcessBuilder;
 import com.pty4j.WinSize;
 import org.alex.everyWeb.common.logging.SafeLog;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
@@ -12,24 +13,29 @@ import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
 
     private static final AtomicInteger activeSessions = new AtomicInteger(0);
+    private static final Map<String, WebSocketSession> activeSessionsMap = new ConcurrentHashMap<>();
+
+    public Collection<WebSocketSession> getActiveSessions() {
+        return activeSessionsMap.values();
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        if (activeSessions.incrementAndGet() > 1) {
-            activeSessions.decrementAndGet();
-            session.close(CloseStatus.POLICY_VIOLATION.withReason("Only one console session allowed"));
-            return;
-        }
+        // Лимита нет. Просто инкремент для статистики.
+        int active = activeSessions.incrementAndGet();
 
         PtyProcess pty;
         try {
@@ -52,12 +58,19 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
         }
 
         session.getAttributes().put("pty", pty);
-        SafeLog.info("Console session opened (active={})", activeSessions.get());
+        session.getAttributes().put("lastHeartbeat", System.currentTimeMillis());
+        activeSessionsMap.put(session.getId(), session);
+
+        // Логируем подключение: id, IP, активных сессий
+        String remote = extractRemoteAddress(session);
+        SafeLog.info("Console session opened: id={}, remote={}, active={}",
+                session.getId(), remote, active);
 
         // Reader thread: PTY stdout → WebSocket
-        Thread reader = new Thread(() -> {
+        // Стек 256 КБ вместо 1 МБ (экономия native-памяти при 1000+ сессий)
+        Runnable readerTask = () -> {
             try {
-                InputStream in = pty.getInputStream();  // ← НЕ try-with-resources
+                InputStream in = pty.getInputStream();
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = in.read(buf)) != -1) {
@@ -68,25 +81,29 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
                     }
                 }
             } catch (Exception e) {
-                // session closed or PTY died — нормально
                 SafeLog.debug("Console reader stopped: {}", e.getMessage());
             } finally {
                 try { session.close(CloseStatus.NORMAL); } catch (Exception ignored) {}
             }
-        }, "console-reader-" + session.getId());
+        };
+
+        Thread reader = new Thread(null, readerTask, "console-reader-" + session.getId(), 256 * 1024);
         reader.setDaemon(true);
         reader.start();
     }
 
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
+        // Heartbeat: обновляем время последней активности с фронта
+        session.getAttributes().put("lastHeartbeat", System.currentTimeMillis());
+
         PtyProcess pty = (PtyProcess) session.getAttributes().get("pty");
         if (pty == null) return;
 
         byte[] payload = new byte[message.getPayload().remaining()];
         message.getPayload().get(payload);
 
-        // resize-сообщение? (текстовый JSON)
+        // resize-сообщение?
         if (payload.length > 0 && payload[0] == '{') {
             String text = new String(payload, StandardCharsets.UTF_8);
             if (text.contains("\"type\":\"resize\"")) {
@@ -101,7 +118,7 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
             }
         }
 
-        // ← НЕ try-with-resources: OutputStream должен жить до destroy PTY
+        // Обычный ввод в PTY
         OutputStream out = pty.getOutputStream();
         out.write(payload);
         out.flush();
@@ -113,8 +130,39 @@ public class ConsoleWebSocketHandler extends BinaryWebSocketHandler {
         if (pty != null) {
             try { pty.destroy(); } catch (Exception ignored) {}
         }
+        activeSessionsMap.remove(session.getId());
         int remaining = activeSessions.decrementAndGet();
-        SafeLog.info("Console session closed (status={}, active={})", status, Math.max(0, remaining));
+
+        String remote = extractRemoteAddress(session);
+        SafeLog.info("Console session closed: id={}, remote={}, status={}, active={}",
+                session.getId(), remote, status, Math.max(0, remaining));
+    }
+
+    /**
+     * Ночная уборка: 05:00 по Самаре. Убиваем все активные сессии.
+     * (Токены отзывает ConsoleTokenService.nightlyCleanup в то же время.)
+     */
+    @Scheduled(cron = "0 0 5 * * *", zone = "Europe/Samara")
+    public void killAllSessions() {
+        int count = 0;
+        for (WebSocketSession session : activeSessionsMap.values()) {
+            try {
+                session.close(CloseStatus.NORMAL.withReason("Nightly cleanup"));
+                count++;
+            } catch (Exception e) {
+                SafeLog.debug("Failed to close session {}: {}", session.getId(), e.getMessage());
+            }
+        }
+        SafeLog.info("Console: killed {} sessions (nightly cleanup at 05:00 Samara)", count);
+    }
+
+    private String extractRemoteAddress(WebSocketSession session) {
+        try {
+            InetSocketAddress addr = session.getRemoteAddress();
+            return addr != null ? addr.getAddress().getHostAddress() : "unknown";
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
 
     private int extractInt(String json, String key) {

@@ -31,7 +31,7 @@ public class ConsoleHandshakeInterceptor implements HandshakeInterceptor {
             }
         }
 
-        if (!tokenService.consumeToken(token)) {
+        if (!tokenService.isValid(token)) {
             SafeLog.warn("Console WebSocket handshake rejected: invalid/expired token");
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
