@@ -554,65 +554,40 @@ async function loadModuleSettingsInto(widgetElement, container) {
 
 // ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
 function initializeModules() {
+    const initializers = {
+        'CLOCK':     { fn: 'initClockModule',     arg: 'normal' },
+        'WEATHER':   { fn: 'initWeatherModule',   arg: 'normal' },
+        'NEXTCLOUD': { fn: 'initNextcloudModule', arg: 'normal' },
+        'NOTES':     { fn: 'initNotesModule',     arg: 'normal' },
+        'CALENDAR':  { fn: 'initCalendarModule',  arg: 'normal' },
+        'CONSOLE':   { fn: 'initConsoleModule',   arg: 'normal' },
+        'FILES':     { fn: 'initFileManagerModule', arg: 'normal' },
+    };
+
     document.querySelectorAll('.widget').forEach(widgetElement => {
         const moduleId = widgetElement.dataset.widgetId;
         const moduleType = widgetElement.dataset.widgetType;
+        if (!moduleId || moduleId === 'undefined' || moduleId === 'null') return;
+        if (isNaN(parseInt(moduleId))) return;
 
-        if (!moduleId || moduleId === 'undefined' || moduleId === 'null') {
-            console.warn(`Skipping init for ${moduleType}: invalid moduleId="${moduleId}"`);
-            return;
+        const cfg = initializers[moduleType];
+        if (cfg && typeof window[cfg.fn] === 'function') {
+            window[cfg.fn](widgetElement, moduleId);
         }
 
-        const numericId = parseInt(moduleId);
-        if (isNaN(numericId)) return;
-
-        if (moduleType === 'CLOCK' && typeof initClockModule === 'function') {
-            initClockModule(widgetElement, moduleId);
+        if (moduleType === 'LINK' && typeof loadLinkWidgetData === 'function') {
+            loadLinkWidgetData(widgetElement);
         }
 
-        if (moduleType === 'WEATHER' && typeof initWeatherModule === 'function') {
-            initWeatherModule(widgetElement, moduleId);
-        }
-
-        if (moduleType === 'NEXTCLOUD' && typeof initNextcloudModule === 'function') {
-            initNextcloudModule(widgetElement, moduleId);
-        }
-
-        if (moduleType === 'NOTES' && typeof initNotesModule === 'function') {
-            initNotesModule(widgetElement, moduleId);
-        }
-
-        if (moduleType === 'CALENDAR' && typeof initCalendarModule === 'function') {
-            initCalendarModule(widgetElement, moduleId);
-        }
-
-        if (moduleType === 'LINK') {
-            if (typeof loadLinkWidgetData === 'function') {
-                loadLinkWidgetData(widgetElement);
-            }
-        }
-
-        if (moduleType === 'CONSOLE' && typeof initConsoleModule === 'function') {
-            initConsoleModule(widgetElement, moduleId);
-        }
-
-        if (moduleType === 'FILES' && typeof initFileManagerModule === 'function') {
-            initFileManagerModule(widgetElement, moduleId);
-        }
-
-        if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
-            if (typeof initSystemModule === 'function') {
-                initSystemModule(widgetElement, moduleId);
-            }
+        if (['CPU','MEMORY','DISK','NETWORK','BATTERY'].includes(moduleType)
+            && typeof initSystemModule === 'function') {
+            initSystemModule(widgetElement, moduleId);
         }
     });
 
     document.querySelectorAll('.todo-widget').forEach(widget => {
         const list = widget.querySelector('.todo-list');
-        if (list) {
-            const moduleId = widget.dataset.widgetId;
-            loadTodos(moduleId);
-        }
+        if (list) loadTodos(widget.dataset.widgetId);
     });
 }
 

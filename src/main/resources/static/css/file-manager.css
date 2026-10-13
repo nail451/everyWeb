@@ -171,11 +171,18 @@
 .fm-entry-selected {
     background: rgba(76,175,80,0.15) !important;
 }
+/* По умолчанию чекбокс скрыт */
 .fm-entry-check input {
     accent-color: #4CAF50;
     width: 13px;
     height: 13px;
     cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.fm-root.selection-mode .fm-entry-check input,
+.fm-entry:hover .fm-entry-check input {
+    opacity: 1;
 }
 .fm-entry-icon { font-size: 15px; text-align: center; }
 .fm-entry-name {

@@ -39,10 +39,24 @@ async function initFileManagerModule(moduleElement, moduleId) {
         showProperties: false,       // toggle: клик по элементу → модалка свойств
         renameMode: false,           // toggle: клик по элементу → модалка переименования
         sidebarPath: '/home/alsa',   // для дерева
-        sidebarOpen: {},             // Set раскрытых путей в дереве
+        sidebarOpen: buildSidebarOpenPaths(initialPath), // Set раскрытых путей в дереве
         sortBy: 'name',              // 'name' | 'size' | 'modified'
         sortAsc: true
     };
+
+    function buildSidebarOpenPaths(currentPath) {
+        // /home/alsa/everyWeb/src → ['/home', '/home/alsa', '/home/alsa/everyWeb', '/home/alsa/everyWeb/src']
+        const result = {};
+        if (!currentPath || currentPath === '/') return result;
+
+        const parts = currentPath.split('/').filter(Boolean);
+        let acc = '';
+        for (const part of parts) {
+            acc += '/' + part;
+            result[acc] = true;
+        }
+        return result;
+    }
 
     moduleElement.dataset.moduleId = numericId;
     renderFileManagerShell(moduleElement, numericId);
@@ -128,6 +142,11 @@ function renderToolbar(moduleElement, moduleId) {
     });
     el.innerHTML = html;
 
+    const root = moduleElement.querySelector('.fm-root');
+    if (root) {
+        root.classList.toggle('selection-mode', ['copy', 'cut', 'delete', 'download'].includes(state.mode));
+    }
+
     el.querySelectorAll('.fm-btn').forEach(btn => {
         if (btn.disabled) return;
         btn.addEventListener('click', (e) => {
@@ -140,6 +159,9 @@ function renderToolbar(moduleElement, moduleId) {
 // ============================================================
 // SIDEBAR (дерево папок)
 // ============================================================
+
+const FM_TREE_ROOT = '/home/alsa';
+
 async function renderSidebar(moduleElement, moduleId) {
     const state = fileManagerState[moduleId];
     const el = moduleElement.querySelector(`#fm-sidebar-${moduleId}`);
@@ -148,15 +170,22 @@ async function renderSidebar(moduleElement, moduleId) {
     el.innerHTML = `<div class="fm-tree-loading">⏳ Загрузка...</div>`;
 
     try {
-        const tree = await fetchTree('/home/alsa');
+        // Загружаем корень
+        const rootChildren = await fetchTree(FM_TREE_ROOT);
         el.innerHTML = '';
-        el.appendChild(buildTreeNode('/home/alsa', 'alsa', tree, moduleId, 0));
+
+        // Корневой узел — «alsa» (или basename пути)
+        const rootName = FM_TREE_ROOT.split('/').filter(Boolean).pop() || FM_TREE_ROOT;
+        el.appendChild(
+            await buildTreeNode(moduleElement, moduleId, FM_TREE_ROOT, rootName, rootChildren, 0)
+        );
     } catch (e) {
+        console.error('[FM] tree load error:', e);
         el.innerHTML = `<div class="fm-tree-error">❌ Ошибка загрузки дерева</div>`;
     }
 }
 
-function buildTreeNode(path, name, children, moduleId, depth) {
+async function buildTreeNode(moduleElement, moduleId, path, name, children, depth) {
     const state = fileManagerState[moduleId];
     const isOpen = state.sidebarOpen[path] === true;
     const isCurrent = state.currentPath === path;
@@ -170,15 +199,17 @@ function buildTreeNode(path, name, children, moduleId, depth) {
     if (isCurrent) row.classList.add('current');
     row.style.paddingLeft = (8 + depth * 14) + 'px';
 
-    const hasChildren = children && children.length > 0;
+    const hasChildren = Array.isArray(children) && children.length > 0;
+
     row.innerHTML = `
         <span class="fm-tree-toggle">${hasChildren ? (isOpen ? '▾' : '▸') : ' '}</span>
         <span class="fm-tree-icon">${FM_ICON_FOLDER}</span>
         <span class="fm-tree-name">${escapeHtml(name)}</span>
     `;
 
-    // Клик по toggle — раскрыть/закрыть
-    row.querySelector('.fm-tree-toggle').addEventListener('click', async (e) => {
+    // Toggle: раскрыть/закрыть
+    const toggleEl = row.querySelector('.fm-tree-toggle');
+    toggleEl.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!hasChildren) return;
         state.sidebarOpen[path] = !state.sidebarOpen[path];
@@ -193,14 +224,23 @@ function buildTreeNode(path, name, children, moduleId, depth) {
 
     wrapper.appendChild(row);
 
+    // Дети — если раскрыто
     if (isOpen && hasChildren) {
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'fm-tree-children';
+
         for (const child of children) {
-            // Ленивая загрузка: если не знаем hasChildren — подгружаем при клике на toggle
-            childrenContainer.appendChild(buildTreeNode(
-                child.path, child.name, child.hasChildren ? null : [], moduleId, depth + 1
-            ));
+            let grandChildren = [];
+            if (child.hasChildren) {
+                try {
+                    grandChildren = await fetchTree(child.path);
+                } catch (e) {
+                    grandChildren = [];
+                }
+            }
+            childrenContainer.appendChild(
+                await buildTreeNode(moduleElement, moduleId, child.path, child.name, grandChildren, depth + 1)
+            );
         }
         wrapper.appendChild(childrenContainer);
     }
