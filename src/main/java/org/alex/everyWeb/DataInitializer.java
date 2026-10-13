@@ -24,19 +24,20 @@ public class DataInitializer implements CommandLineRunner {
     private void initializeAvailableModules() {
         // type, name, description, icon, enabled, configurable, cssClass, jsFile, rowSpan, colSpan
         Object[][] defs = {
-                { "LINK",      "Ссылки",     "Отображение ссылок",                        "🔗", true, true,  "link-widget",      "link-module.js",      2, 2 },
-                { "CLOCK",     "Часы",       "Многофункциональные часы",                  "🕐", true, true,  "clock-module",     "clock-module.js",     1, 1 },
-                { "WEATHER",   "Погода",     "Погода в выбранном городе",                 "🌤️", true, true,  "weather-module",   "weather-module.js",   2, 1 },
-                { "NEXTCLOUD", "Nextcloud",  "Интеграция с Nextcloud",                    "☁️", true, true,  "nextcloud-module", "nextcloud-module.js", 2, 1 },
-                { "NOTES",     "Заметки",    "Быстрые заметки",                           "📝", true, true,  "notes-module",     "notes-module.js",     1, 1 },
-                { "TODO",      "Список дел", "To-Do список",                              "✅", true, false, "todo-module",      "todo-module.js",      1, 1 },
-                { "CPU",       "Процессор",  "Загрузка процессора и информация о ядрах",  "📊", true, true,  "cpu-module",       "system-modules.js",   2, 1 },
-                { "MEMORY",    "Память",     "Использование оперативной памяти",          "🧠", true, true,  "memory-module",    "system-modules.js",   1, 1 },
-                { "DISK",      "Диски",      "Информация о дисках и свободном месте",     "💾", true, true,  "disk-module",      "system-modules.js",   2, 1 },
-                { "NETWORK",   "Сеть",       "Скорость сети и информация об интерфейсах", "🌐", true, true,  "network-module",   "system-modules.js",   1, 1 },
-                { "BATTERY",   "Батарея",    "Состояние батареи и заряд",                 "🔋", true, true,  "battery-module",   "system-modules.js",   1, 1 },
-                { "CONSOLE",   "Консоль",    "Интерактивная bash-консоль",                "⌨️", true, false, "console-module",   "console-module.js",   3, 3 },
-                { "CALENDAR",  "Календарь",  "Месяц с навигацией",                        "📅", true, true,  "calendar-module",  "calendar-module.js",  2, 1 }
+                { "LINK",      "Ссылки",     "Отображение ссылок",                        "🔗", true, true,  "link-widget",         "link-module.js",      2, 2 },
+                { "CLOCK",     "Часы",       "Многофункциональные часы",                  "🕐", true, true,  "clock-module",        "clock-module.js",     1, 1 },
+                { "WEATHER",   "Погода",     "Погода в выбранном городе",                 "🌤️", true, true,  "weather-module",      "weather-module.js",   2, 1 },
+                { "NEXTCLOUD", "Nextcloud",  "Интеграция с Nextcloud",                    "☁️", true, true,  "nextcloud-module",    "nextcloud-module.js", 2, 1 },
+                { "NOTES",     "Заметки",    "Быстрые заметки",                           "📝", true, true,  "notes-module",        "notes-module.js",     1, 1 },
+                { "TODO",      "Список дел", "To-Do список",                              "✅", true, false, "todo-module",         "todo-module.js",      1, 1 },
+                { "CPU",       "Процессор",  "Загрузка процессора и информация о ядрах",  "📊", true, true,  "cpu-module",          "system-modules.js",   2, 1 },
+                { "MEMORY",    "Память",     "Использование оперативной памяти",          "🧠", true, true,  "memory-module",       "system-modules.js",   1, 1 },
+                { "DISK",      "Диски",      "Информация о дисках и свободном месте",     "💾", true, true,  "disk-module",         "system-modules.js",   2, 1 },
+                { "NETWORK",   "Сеть",       "Скорость сети и информация об интерфейсах", "🌐", true, true,  "network-module",      "system-modules.js",   1, 1 },
+                { "BATTERY",   "Батарея",    "Состояние батареи и заряд",                 "🔋", true, true,  "battery-module",      "system-modules.js",   1, 1 },
+                { "CONSOLE",   "Консоль",    "Интерактивная bash-консоль",                "⌨️", true, false, "console-module",      "console-module.js",   3, 3 },
+                { "FILES",     "Файлы",      "Файловый менеджер",                         "📁", true, false, "file-manager-module", "file-manager.js",     2, 2 },
+                { "CALENDAR",  "Календарь",  "Месяц с навигацией",                        "📅", true, true,  "calendar-module",     "calendar-module.js",  2, 1 }
         };
 
         for (Object[] d : defs) {

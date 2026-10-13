@@ -1,0 +1,363 @@
+/* FILE-MANAGER.CSS */
+
+.fm-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    font-size: 13px;
+    color: #e0e0e0;
+}
+
+/* ===== HEADER (breadcrumb) ===== */
+.fm-header {
+    padding: 4px 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.fm-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    font-size: 12px;
+}
+.fm-crumb {
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: background 0.15s, opacity 0.15s;
+}
+.fm-crumb:hover {
+    background: rgba(255,255,255,0.08);
+    opacity: 1;
+}
+.fm-crumb-sep {
+    opacity: 0.3;
+    padding: 0 2px;
+}
+
+/* ===== TOOLBAR ===== */
+.fm-toolbar {
+    display: flex;
+    gap: 2px;
+    padding: 4px 6px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    overflow-x: auto;
+}
+.fm-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: rgba(255,255,255,0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.fm-btn:hover:not(.disabled) {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
+}
+.fm-btn.active {
+    background: rgba(76,175,80,0.2);
+    border-color: rgba(76,175,80,0.4);
+    color: #81C784;
+}
+.fm-btn.disabled,
+.fm-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+/* ===== MAIN ===== */
+.fm-main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ===== SIDEBAR (дерево) ===== */
+.fm-sidebar {
+    width: 30%;
+    min-width: 140px;
+    max-width: 240px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    overflow-y: auto;
+    padding: 4px 0;
+    flex-shrink: 0;
+}
+.fm-tree-node { user-select: none; }
+.fm-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: background 0.1s;
+}
+.fm-tree-row:hover { background: rgba(255,255,255,0.06); }
+.fm-tree-row.current { background: rgba(76,175,80,0.15); color: #81C784; }
+.fm-tree-toggle {
+    width: 12px;
+    text-align: center;
+    font-size: 10px;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+.fm-tree-icon { flex-shrink: 0; }
+.fm-tree-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fm-tree-loading, .fm-tree-error {
+    padding: 8px;
+    font-size: 11px;
+    opacity: 0.5;
+    text-align: center;
+}
+
+/* ===== СПИСОК ===== */
+.fm-list-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+.fm-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2px 0;
+}
+.fm-list-header,
+.fm-entry {
+    display: grid;
+    grid-template-columns: 20px 24px 1fr 80px 120px;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 12px;
+}
+.fm-list-header {
+    position: sticky;
+    top: 0;
+    background: rgba(20,20,30,0.8);
+    backdrop-filter: blur(4px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-weight: 500;
+    opacity: 0.6;
+    z-index: 1;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.fm-sortable { cursor: pointer; }
+.fm-sortable:hover { color: #81C784; }
+
+.fm-entry {
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+.fm-entry:hover { background: rgba(255,255,255,0.05); }
+.fm-entry-selected {
+    background: rgba(76,175,80,0.15) !important;
+}
+.fm-entry-check input {
+    accent-color: #4CAF50;
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+}
+.fm-entry-icon { font-size: 15px; text-align: center; }
+.fm-entry-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fm-entry-size, .fm-entry-date {
+    font-size: 11px;
+    opacity: 0.55;
+    text-align: right;
+    white-space: nowrap;
+}
+.fm-entry-hidden { opacity: 0.55; }
+.fm-entry-symlink .fm-entry-name { color: #7dd3fc; }
+.fm-entry-hidden .fm-entry-name { color: rgba(255,255,255,0.4); }
+
+.fm-loading, .fm-empty, .fm-error {
+    padding: 20px;
+    text-align: center;
+    opacity: 0.5;
+    font-size: 12px;
+}
+.fm-error { color: #ff6b6b; opacity: 0.8; }
+
+/* ===== STATUS ===== */
+.fm-status {
+    padding: 3px 8px;
+    font-size: 11px;
+    opacity: 0.5;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+.fm-status-active {
+    opacity: 0.9;
+    color: #81C784;
+}
+
+/* ===== МОДАЛКИ ===== */
+.fm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    padding: 20px;
+}
+.fm-modal {
+    background: rgba(30,30,50,0.96);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    min-width: 320px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    color: white;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+.fm-modal-wide { max-width: 560px; }
+.fm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 15px;
+    font-weight: 500;
+}
+.fm-modal-close {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+}
+.fm-modal-close:hover { color: white; }
+.fm-modal-body {
+    padding: 16px 18px;
+    overflow-y: auto;
+    flex: 1;
+    font-size: 13px;
+}
+.fm-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 18px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.fm-modal-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.fm-modal-btn:hover { background: rgba(255,255,255,0.12); }
+.fm-modal-btn.primary {
+    background: rgba(76,175,80,0.3);
+    border-color: rgba(76,175,80,0.4);
+    color: #81C784;
+}
+.fm-modal-btn.primary:hover { background: rgba(76,175,80,0.4); }
+.fm-modal-btn.danger {
+    background: rgba(244,67,54,0.25);
+    border-color: rgba(244,67,54,0.4);
+    color: #ff8a80;
+}
+.fm-modal-btn.danger:hover { background: rgba(244,67,54,0.4); }
+
+/* ===== ФОРМА ===== */
+.fm-form-label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.6;
+    margin-bottom: 6px;
+}
+.fm-input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: white;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+.fm-input:focus {
+    outline: none;
+    border-color: rgba(76,175,80,0.5);
+    background: rgba(255,255,255,0.08);
+}
+
+/* ===== СВОЙСТВА ===== */
+.fm-props { display: flex; flex-direction: column; gap: 8px; }
+.fm-prop-row { display: flex; gap: 12px; font-size: 12px; }
+.fm-prop-key {
+    width: 90px;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+.fm-prop-val { flex: 1; word-break: break-all; }
+.fm-prop-path { font-family: monospace; font-size: 11px; opacity: 0.8; }
+.fm-prop-size-loading { opacity: 0.5; }
+.fm-size-calc-btn {
+    margin-left: 8px;
+    background: rgba(33,150,243,0.2);
+    border: 1px solid rgba(33,150,243,0.3);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+}
+.fm-size-calc-btn:hover { background: rgba(33,150,243,0.3); }
+
+/* ===== УДАЛЕНИЕ ===== */
+.fm-delete-list {
+    max-height: 150px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: monospace;
+    word-break: break-all;
+    opacity: 0.85;
+}
+
+/* ===== UPLOAD ===== */
+.fm-upload-progress {
+    margin-top: 12px;
+    font-size: 12px;
+    opacity: 0.7;
+    min-height: 16px;
+}

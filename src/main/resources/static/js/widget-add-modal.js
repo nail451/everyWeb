@@ -17,7 +17,7 @@ let WidgetAddModal = (function() {
     const SECTIONS = [
         {
             title: 'Контент',
-            types: ['LINK', 'WEATHER', 'NEXTCLOUD']
+            types: ['LINK', 'WEATHER', 'NEXTCLOUD', 'FILES']
         },
         {
             title: 'Продуктивность',
