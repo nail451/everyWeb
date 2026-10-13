@@ -212,7 +212,7 @@ public class FileController {
 
             try (ZipOutputStream zos = new ZipOutputStream(
                     new BufferedOutputStream(response.getOutputStream()))) {
-                zos.setLevel(Deflater.DEFAULT_COMPRESSION);
+                zos.setLevel(Deflater.NO_COMPRESSION);
 
                 byte[] buffer = new byte[8192];
                 Set<String> writtenDirs = new HashSet<>();
