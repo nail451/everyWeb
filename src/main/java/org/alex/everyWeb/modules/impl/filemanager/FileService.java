@@ -450,4 +450,59 @@ public class FileService {
         // Фолбэк — с timestamp
         return dir.resolve(base + "_" + System.currentTimeMillis() + ext);
     }
+
+    // ===== СБОР ФАЙЛОВ ДЛЯ ZIP (рекурсивно) =====
+    public List<ZipEntryInfo> collectForZip(List<String> paths) throws IOException {
+        List<ZipEntryInfo> result = new ArrayList<>();
+        for (String pathStr : paths) {
+            Path path = normalize(pathStr);
+            if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) continue;
+
+            // Если путь — файл, добавляем как есть
+            if (!Files.isDirectory(path) || Files.isSymbolicLink(path)) {
+                result.add(new ZipEntryInfo(path, path.getFileName().toString()));
+                continue;
+            }
+
+            // Папка — обходим рекурсивно
+            Path root = path;
+            String rootName = path.getFileName() != null ? path.getFileName().toString() : "root";
+            try (Stream<Path> s = Files.walk(root)) {
+                s.forEach(p -> {
+                    if (Files.isSymbolicLink(p)) return;  // пропускаем симлинки
+                    if (Files.isDirectory(p)) return;      // папки добавляем как записи с /
+                    // файл
+                    try {
+                        String relative = rootName + "/" + root.relativize(p).toString().replace('\\', '/');
+                        result.add(new ZipEntryInfo(p, relative));
+                    } catch (Exception ignored) {}
+                });
+            }
+        }
+        return result;
+    }
+
+    // ===== ОБЩИЙ РОДИТЕЛЬ ПУТЕЙ (для имени архива) =====
+    public String commonParentName(List<String> paths) {
+        if (paths.isEmpty()) return "files";
+        try {
+            Path first = normalize(paths.get(0));
+            Path parent = first.getParent();
+            if (parent == null) return "files";
+            String name = parent.getFileName() != null ? parent.getFileName().toString() : "files";
+            return name.isEmpty() ? "files" : name;
+        } catch (Exception e) {
+            return "files";
+        }
+    }
+
+    // Вспомогательный класс
+    public static class ZipEntryInfo {
+        public final Path path;
+        public final String entryName;
+        public ZipEntryInfo(Path path, String entryName) {
+            this.path = path;
+            this.entryName = entryName;
+        }
+    }
 }

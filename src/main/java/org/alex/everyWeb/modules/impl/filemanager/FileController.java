@@ -11,12 +11,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedOutputStream;
+import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @RestController
 @RequestMapping("/api/files")
@@ -170,6 +179,88 @@ public class FileController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/download-zip")
+    public void downloadZip(@RequestBody Map<String, Object> req,
+                            HttpServletResponse response) throws IOException {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> paths = (List<String>) req.get("paths");
+            if (paths == null || paths.isEmpty()) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.getWriter().write("{\"error\":\"paths required\"}");
+                return;
+            }
+
+            List<FileService.ZipEntryInfo> entries = fileService.collectForZip(paths);
+            if (entries.isEmpty()) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.getWriter().write("{\"error\":\"nothing to download\"}");
+                return;
+            }
+
+            String archiveName = fileService.commonParentName(paths);
+            String encoded = URLEncoder.encode(archiveName + ".zip", StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+
+            response.setContentType("application/zip");
+            response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + archiveName + ".zip\"; filename*=UTF-8''" + encoded);
+            response.setHeader("X-Archive-Name", archiveName + ".zip");
+
+            try (ZipOutputStream zos = new ZipOutputStream(
+                    new BufferedOutputStream(response.getOutputStream()))) {
+                zos.setLevel(Deflater.DEFAULT_COMPRESSION);
+
+                byte[] buffer = new byte[8192];
+                Set<String> writtenDirs = new HashSet<>();
+
+                for (FileService.ZipEntryInfo entry : entries) {
+                    try {
+                        // Создаём записи для всех родительских папок (чтобы пустые папки тоже были)
+                        String entryName = entry.entryName;
+                        int lastSlash = entryName.lastIndexOf('/');
+                        if (lastSlash > 0) {
+                            String dirPath = entryName.substring(0, lastSlash + 1);
+                            // Создаём все промежуточные папки
+                            StringBuilder acc = new StringBuilder();
+                            for (String seg : dirPath.split("/")) {
+                                if (seg.isEmpty()) continue;
+                                acc.append(seg).append('/');
+                                String dirEntry = acc.toString();
+                                if (writtenDirs.add(dirEntry)) {
+                                    ZipEntry dirZip = new ZipEntry(dirEntry);
+                                    zos.putNextEntry(dirZip);
+                                    zos.closeEntry();
+                                }
+                            }
+                        }
+
+                        ZipEntry zipEntry = new ZipEntry(entryName);
+                        zipEntry.setTime(Files.getLastModifiedTime(entry.path).toMillis());
+                        zos.putNextEntry(zipEntry);
+
+                        try (InputStream in = Files.newInputStream(entry.path)) {
+                            int n;
+                            while ((n = in.read(buffer)) != -1) {
+                                zos.write(buffer, 0, n);
+                            }
+                        }
+                        zos.closeEntry();
+                    } catch (Exception e) {
+                        SafeLog.warn("Skipping zip entry {}: {}", entry.entryName, e.getMessage());
+                        // пропускаем проблемный файл
+                    }
+                }
+                zos.finish();
+            }
+        } catch (Exception e) {
+            SafeLog.error("download-zip error: {}", e.getMessage(), e);
+            if (!response.isCommitted()) {
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            }
         }
     }
 }

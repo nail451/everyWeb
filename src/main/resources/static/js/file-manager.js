@@ -1053,13 +1053,84 @@ function downloadSingle(path) {
 }
 
 async function downloadSelected(moduleElement, moduleId) {
-    // Фаза 2: реализуем FS Access API + zip. Пока — скачиваем файлы по одному.
     const state = fileManagerState[moduleId];
-    for (const path of state.selected) {
+    if (state.selected.size === 0) return;
+
+    const selectedPaths = [...state.selected];
+
+    // Разделяем на файлы и папки
+    const files = [];
+    const folders = [];
+    for (const path of selectedPaths) {
         const entry = state.entries.find(e => e.path === path);
-        if (entry && !entry.directory) downloadSingle(path);
+        if (entry) {
+            if (entry.directory) folders.push(path);
+            else files.push(path);
+        }
     }
-    showToast('ℹ️ Скачивание папок — в разработке (Фаза 2)');
+
+    // Случай 1: только файлы (без папок) — скачиваем по одному
+    if (folders.length === 0) {
+        for (const path of files) {
+            downloadSingle(path);
+            // небольшая пауза, чтобы браузер не заблокировал множественные скачивания
+            await sleep(150);
+        }
+        state.selected.clear();
+        state.mode = 'normal';
+        renderToolbar(moduleElement, moduleId);
+        renderFileList(moduleElement, moduleId);
+        renderStatus(moduleElement, moduleId);
+        return;
+    }
+
+    // Случай 2: есть папки — zip
+    showToast('⏳ Подготовка архива...');
+
+    try {
+        const resp = await fetch('/api/files/download-zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths: selectedPaths })
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast('❌ ' + (err.error || 'Ошибка архивации'));
+            return;
+        }
+
+        // Скачиваем blob
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+
+        // Имя архива — из заголовка X-Archive-Name (если есть) или из Content-Disposition
+        let archiveName = 'files.zip';
+        const xName = resp.headers.get('X-Archive-Name');
+        if (xName) archiveName = xName;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = archiveName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast(`✅ ${archiveName}`);
+
+        state.selected.clear();
+        state.mode = 'normal';
+        renderToolbar(moduleElement, moduleId);
+        renderFileList(moduleElement, moduleId);
+        renderStatus(moduleElement, moduleId);
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // ============================================================
