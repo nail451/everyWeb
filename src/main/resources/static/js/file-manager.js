@@ -12,6 +12,20 @@ const fileManagerState = {}; // moduleId → { currentPath, entries, sidebarPath
 const FM_ICON_FOLDER = '📁';
 const FM_ICON_SYMLINK = '🔗';
 
+function buildSidebarOpenPaths(currentPath) {
+    // /home/alsa/everyWeb/src → ['/home', '/home/alsa', '/home/alsa/everyWeb', '/home/alsa/everyWeb/src']
+    const result = {};
+    if (!currentPath || currentPath === '/') return result;
+
+    const parts = currentPath.split('/').filter(Boolean);
+    let acc = '';
+    for (const part of parts) {
+        acc += '/' + part;
+        result[acc] = true;
+    }
+    return result;
+}
+
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
@@ -43,20 +57,6 @@ async function initFileManagerModule(moduleElement, moduleId) {
         sortBy: 'name',              // 'name' | 'size' | 'modified'
         sortAsc: true
     };
-
-    function buildSidebarOpenPaths(currentPath) {
-        // /home/alsa/everyWeb/src → ['/home', '/home/alsa', '/home/alsa/everyWeb', '/home/alsa/everyWeb/src']
-        const result = {};
-        if (!currentPath || currentPath === '/') return result;
-
-        const parts = currentPath.split('/').filter(Boolean);
-        let acc = '';
-        for (const part of parts) {
-            acc += '/' + part;
-            result[acc] = true;
-        }
-        return result;
-    }
 
     moduleElement.dataset.moduleId = numericId;
     renderFileManagerShell(moduleElement, numericId);
@@ -160,8 +160,6 @@ function renderToolbar(moduleElement, moduleId) {
 // SIDEBAR (дерево папок)
 // ============================================================
 async function renderSidebar(moduleElement, moduleId) {
-    const rootPath = '/';
-    const rootName = '/';
     const state = fileManagerState[moduleId];
     const el = moduleElement.querySelector(`#fm-sidebar-${moduleId}`);
     if (!el) return;
@@ -169,14 +167,13 @@ async function renderSidebar(moduleElement, moduleId) {
     el.innerHTML = `<div class="fm-tree-loading">⏳ Загрузка...</div>`;
 
     try {
-        // Загружаем корень
-        const rootChildren = await fetchTree(FM_TREE_ROOT);
+        const rootPath = '/';
+        const rootChildren = await fetchTree(rootPath);
         el.innerHTML = '';
 
-        // Корневой узел — «alsa» (или basename пути)
-        const rootName = FM_TREE_ROOT.split('/').filter(Boolean).pop() || FM_TREE_ROOT;
+        // Корневой узел — "/" (отображается как "/")
         el.appendChild(
-            await buildTreeNode(moduleElement, moduleId, FM_TREE_ROOT, rootName, rootChildren, 0)
+            await buildTreeNode(moduleElement, moduleId, rootPath, '/', rootChildren, 0)
         );
     } catch (e) {
         console.error('[FM] tree load error:', e);

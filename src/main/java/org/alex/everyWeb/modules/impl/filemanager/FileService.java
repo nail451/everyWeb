@@ -60,11 +60,12 @@ public class FileService {
         Path path = normalize(pathStr);
         if (!Files.isDirectory(path)) return Collections.emptyList();
 
+        boolean isRoot = path.toString().equals("/");
         List<TreeEntryDTO> result = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(path)) {
             for (Path p : ds) {
                 String name = p.getFileName().toString();
-                if (pathStr.equals("/") && HIDDEN_AT_ROOT.contains(name.toLowerCase())) continue;
+                if (isRoot && HIDDEN_AT_ROOT.contains(name.toLowerCase())) continue;
                 if (!Files.isDirectory(p)) continue;
                 if (Files.isSymbolicLink(p)) continue;
                 TreeEntryDTO dto = new TreeEntryDTO();
