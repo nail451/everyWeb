@@ -159,10 +159,9 @@ function renderToolbar(moduleElement, moduleId) {
 // ============================================================
 // SIDEBAR (дерево папок)
 // ============================================================
-
-const FM_TREE_ROOT = '/home/alsa';
-
 async function renderSidebar(moduleElement, moduleId) {
+    const rootPath = '/';
+    const rootName = '/';
     const state = fileManagerState[moduleId];
     const el = moduleElement.querySelector(`#fm-sidebar-${moduleId}`);
     if (!el) return;
@@ -294,8 +293,12 @@ async function navigateTo(moduleElement, moduleId, path) {
     const state = fileManagerState[moduleId];
     state.selected.clear();
     state.mode = 'normal';
+
+    // Раскрыть все родительские узлы
+    Object.assign(state.sidebarOpen, buildSidebarOpenPaths(path));
+
     await loadDirectory(moduleElement, moduleId, path);
-    // Сохраняем lastPath на сервере
+    renderSidebar(moduleElement, moduleId);
     saveLastPath(moduleId, path);
 }
 
@@ -337,6 +340,9 @@ async function loadDirectory(moduleElement, moduleId, path) {
         renderStatus(moduleElement, moduleId);
     } catch (e) {
         if (listEl) listEl.innerHTML = `<div class="fm-error">❌ ${escapeHtml(e.message)}</div>`;
+    }
+    if (moduleElement.querySelector(`#fm-sidebar-${moduleId}`)) {
+        renderSidebar(moduleElement, moduleId);
     }
 }
 

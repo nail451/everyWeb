@@ -28,6 +28,9 @@ public class FileService {
 
     private static final DateTimeFormatter ISO =
             DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault());
+    private static final Set<String> HIDDEN_AT_ROOT = Set.of(
+            "proc", "sys", "dev", "run", "tmp", "boot", "lost+found", "snap"
+    );
 
     // ===== ЛИСТИНГ =====
     public FileListDTO list(String pathStr) throws IOException {
@@ -60,6 +63,8 @@ public class FileService {
         List<TreeEntryDTO> result = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(path)) {
             for (Path p : ds) {
+                String name = p.getFileName().toString();
+                if (pathStr.equals("/") && HIDDEN_AT_ROOT.contains(name.toLowerCase())) continue;
                 if (!Files.isDirectory(p)) continue;
                 if (Files.isSymbolicLink(p)) continue;
                 TreeEntryDTO dto = new TreeEntryDTO();
