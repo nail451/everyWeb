@@ -336,4 +336,67 @@ public class FileService {
             default: return "📄";
         }
     }
+
+    // ===== КОПИРОВАНИЕ =====
+    public void copy(List<String> sources, String destinationDir) throws IOException {
+        Path destDir = normalize(destinationDir);
+        if (!Files.isDirectory(destDir)) throw new IOException("Не директория: " + destDir);
+
+        for (String srcStr : sources) {
+            Path src = normalize(srcStr);
+            if (!Files.exists(src, LinkOption.NOFOLLOW_LINKS)) continue;
+
+            String name = src.getFileName().toString();
+            Path target = destDir.resolve(name);
+
+            // Нельзя копировать папку в саму себя
+            if (Files.isDirectory(src) && destDir.startsWith(src)) {
+                throw new IOException("Нельзя копировать папку в саму себя: " + name);
+            }
+
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                // Конфликт — не перезаписываем молча, вернём ошибку для клиента
+                throw new FileConflictException(name, target);
+            }
+
+            copyRecursive(src, target);
+        }
+    }
+
+    private void copyRecursive(Path src, Path target) throws IOException {
+        if (Files.isDirectory(src) && !Files.isSymbolicLink(src)) {
+            Files.createDirectories(target);
+            try (DirectoryStream<Path> ds = Files.newDirectoryStream(src)) {
+                for (Path child : ds) {
+                    copyRecursive(child, target.resolve(child.getFileName().toString()));
+                }
+            }
+        } else {
+            Files.copy(src, target, StandardCopyOption.COPY_ATTRIBUTES, LinkOption.NOFOLLOW_LINKS);
+        }
+    }
+
+    // ===== ПЕРЕМЕЩЕНИЕ =====
+    public void move(List<String> sources, String destinationDir) throws IOException {
+        Path destDir = normalize(destinationDir);
+        if (!Files.isDirectory(destDir)) throw new IOException("Не директория: " + destDir);
+
+        for (String srcStr : sources) {
+            Path src = normalize(srcStr);
+            if (!Files.exists(src, LinkOption.NOFOLLOW_LINKS)) continue;
+
+            String name = src.getFileName().toString();
+            Path target = destDir.resolve(name);
+
+            if (Files.isDirectory(src) && destDir.startsWith(src)) {
+                throw new IOException("Нельзя переместить папку в саму себя: " + name);
+            }
+
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                throw new FileConflictException(name, target);
+            }
+
+            Files.move(src, target, StandardCopyOption.ATOMIC_MOVE);
+        }
+    }
 }

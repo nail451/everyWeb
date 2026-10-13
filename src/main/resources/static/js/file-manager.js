@@ -120,6 +120,7 @@ function renderToolbar(moduleElement, moduleId) {
     const buttons = [
         { id: 'create',  icon: '📄', title: 'Создать файл',       active: false },
         { id: 'mkdir',   icon: '📁', title: 'Создать папку',      active: false },
+        { id: 'refresh', icon: '🔄', title: 'Обновить папку',     active: false },
         { id: 'copy',    icon: '📋', title: 'Копировать',         active: state.mode === 'copy' },
         { id: 'cut',     icon: '✂️', title: 'Вырезать',           active: state.mode === 'cut' },
         { id: 'paste',   icon: '📥', title: 'Вставить',           disabled: !hasClipboard },
@@ -546,6 +547,9 @@ async function handleToolbarClick(moduleElement, moduleId, action) {
         case 'create':   openCreateModal(moduleElement, moduleId, false); break;
         case 'mkdir':    openCreateModal(moduleElement, moduleId, true); break;
 
+        case 'refresh':
+            await loadDirectory(moduleElement, moduleId, path, { skipSidebar: true });
+            break;
         case 'copy':
             if (state.mode === 'copy') {
                 // Подтверждение — в буфер
@@ -902,10 +906,62 @@ function openUploadModal(moduleElement, moduleId) {
 // ============================================================
 async function pasteFromClipboard(moduleElement, moduleId) {
     const state = fileManagerState[moduleId];
-    if (!state.clipboard) return;
+    if (!state.clipboard || state.clipboard.paths.length === 0) return;
 
-    showToast('⏳ Копирование...'); // Фаза 2: реально реализуем копирование.
-    // Заглушка — Фаза 2.
+    const { action, paths } = state.clipboard;
+    const endpoint = action === 'copy' ? '/api/files/copy' : '/api/files/move';
+
+    try {
+        const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sources: paths, destination: state.currentPath })
+        });
+
+        if (resp.ok) {
+            showToast(action === 'copy' ? '✅ Скопировано' : '✅ Перемещено');
+            state.clipboard = null;
+            await loadDirectory(moduleElement, moduleId, state.currentPath);
+        } else if (resp.status === 409) {
+            const data = await resp.json();
+            const conflictName = data.conflictingName || '?';
+            // Показываем модалку конфликта
+            await handleConflict(moduleElement, moduleId, action, paths, state.currentPath, conflictName);
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            showToast('❌ ' + (err.error || 'Ошибка'));
+        }
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+async function handleConflict(moduleElement, moduleId, action, sources, destination, conflictName) {
+    return new Promise((resolve) => {
+        showFMModal({
+            title: '⚠️ Конфликт имён',
+            body: `
+                <p>В целевой папке уже есть <b>${escapeHtml(conflictName)}</b>.</p>
+                <p style="opacity:0.7;font-size:12px;">Что сделать с конфликтующим файлом?</p>
+            `,
+            buttons: [
+                { text: 'Отмена', cls: 'cancel', onClick: (close) => { close(); resolve(false); } },
+                { text: 'Переименовать новый', cls: 'primary', onClick: async (close) => {
+                        close();
+                        // Здесь нужно реализовать переименование на "file(N).ext".
+                        // Пока — заглушка, добавим отдельным запросом.
+                        showToast('⚠️ Переименование — в разработке');
+                        resolve(false);
+                    }},
+                { text: 'Заменить', cls: 'danger', onClick: async (close) => {
+                        close();
+                        // Нужен отдельный эндпоинт с флагом overwrite=true
+                        showToast('⚠️ Замена — в разработке');
+                        resolve(false);
+                    }}
+            ]
+        });
+    });
 }
 
 // ============================================================

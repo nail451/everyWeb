@@ -126,4 +126,44 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/copy")
+    public ResponseEntity<?> copy(@RequestBody Map<String, Object> req) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> sources = (List<String>) req.get("sources");
+            String destination = (String) req.get("destination");
+            fileService.copy(sources, destination);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (FileConflictException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", "conflict",
+                    "conflictingName", e.getConflictingName(),
+                    "existingPath", e.getExistingPath()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/move")
+    public ResponseEntity<?> move(@RequestBody Map<String, Object> req) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> sources = (List<String>) req.get("sources");
+            String destination = (String) req.get("destination");
+            fileService.move(sources, destination);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (FileConflictException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", "conflict",
+                    "conflictingName", e.getConflictingName(),
+                    "existingPath", e.getExistingPath()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 }
