@@ -913,14 +913,14 @@ async function pasteFromClipboard(moduleElement, moduleId) {
     const destination = state.currentPath;
 
     // «Применить ко всем» — запоминаем выбор пользователя
-    let applyToAll = null; // null | 'overwrite' | 'rename'
+    let applyToAll = null; // null | 'overwrite' | 'rename' | 'cancel'
 
-    // Копируем/перемещаем по одному, чтобы обрабатывать конфликты индивидуально
     let successCount = 0;
-    let conflictCount = 0;
+    let skippedCount = 0;
     let errors = [];
 
     for (const srcPath of paths) {
+        // Формируем payload с учётом applyToAll
         const payload = {
             sources: [srcPath],
             destination,
@@ -941,27 +941,34 @@ async function pasteFromClipboard(moduleElement, moduleId) {
             }
 
             if (resp.status === 409) {
-                const data = await resp.json();
-                const conflictName = data.conflictingName || srcPath.split('/').pop();
-
-                // Если уже «применить ко всем» — применяем без вопроса
+                // Если пользователь уже выбрал «применить ко всем» — не спрашиваем
+                // (но сюда мы не должны попасть, потому что payload уже с overwrite/autoRename,
+                //  и backend не вернёт 409 — он применит действие)
                 if (applyToAll === 'overwrite' || applyToAll === 'rename') {
-                    // не должно случиться (см. payload), но на всякий
-                    conflictCount++;
+                    // На всякий случай — если всё же 409, пробуем ещё раз
+                    // (например, гонка — файл появился между запросами)
+                    skippedCount++;
                     continue;
                 }
 
                 // Спрашиваем пользователя
+                const data = await resp.json();
+                const conflictName = data.conflictingName || srcPath.split('/').pop();
                 const choice = await showConflictDialog(conflictName);
 
                 if (choice === 'cancel') {
-                    // Отменяем всё — прекращаем
                     showToast('❌ Отменено');
+                    state.clipboard = null;
+                    // Не перезагружаем — часть файлов уже скопирована
+                    await loadDirectory(moduleElement, moduleId, state.currentPath);
                     return;
                 }
 
                 if (choice === 'overwrite' || choice === 'rename') {
-                    if (choice === 'overwrite') applyToAll = choice;  // TODO: если нужна галочка «применить ко всем»
+                    // Запоминаем выбор для всех последующих
+                    applyToAll = choice;
+
+                    // Retry с нужным флагом
                     const retryPayload = {
                         sources: [srcPath],
                         destination,
@@ -976,7 +983,8 @@ async function pasteFromClipboard(moduleElement, moduleId) {
                     if (retry.ok) {
                         successCount++;
                     } else {
-                        conflictCount++;
+                        const err = await retry.json().catch(() => ({}));
+                        errors.push(err.error || 'Ошибка retry');
                     }
                 }
                 continue;
@@ -992,11 +1000,18 @@ async function pasteFromClipboard(moduleElement, moduleId) {
 
     // Итог
     if (successCount > 0) {
-        showToast(`✅ Готово: ${successCount}${conflictCount > 0 ? `, конфликтов: ${conflictCount}` : ''}`);
+        let msg = `✅ Готово: ${successCount}`;
+        if (skippedCount > 0) msg += `, пропущено: ${skippedCount}`;
+        if (errors.length > 0) msg += `, ошибок: ${errors.length}`;
+        showToast(msg);
         state.clipboard = null;
         await loadDirectory(moduleElement, moduleId, state.currentPath);
     } else if (errors.length > 0) {
         showToast('❌ ' + errors[0]);
+    } else if (skippedCount > 0) {
+        showToast(`⚠️ Пропущено: ${skippedCount}`);
+        state.clipboard = null;
+        await loadDirectory(moduleElement, moduleId, state.currentPath);
     }
 }
 
