@@ -505,4 +505,53 @@ public class FileService {
             this.entryName = entryName;
         }
     }
+
+    // ===== ПЛОСКИЙ СПИСОК ФАЙЛОВ ДЛЯ FS ACCESS API =====
+    public RecursiveListDTO listRecursive(List<String> paths) throws IOException {
+        RecursiveListDTO result = new RecursiveListDTO();
+        List<RecursiveFileDTO> files = new ArrayList<>();
+        List<String> emptyDirs = new ArrayList<>();
+
+        for (String pathStr : paths) {
+            Path path = normalize(pathStr);
+            if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) continue;
+
+            if (!Files.isDirectory(path) || Files.isSymbolicLink(path)) {
+                // Файл
+                RecursiveFileDTO dto = new RecursiveFileDTO();
+                dto.setRelativePath(path.getFileName().toString());
+                dto.setFullPath(path.toString());
+                dto.setSize(Files.size(path));
+                files.add(dto);
+                continue;
+            }
+
+            // Папка — обход рекурсивно
+            Path root = path;
+            String rootName = path.getFileName() != null ? path.getFileName().toString() : "root";
+            try (Stream<Path> s = Files.walk(root)) {
+                s.forEach(p -> {
+                    if (Files.isSymbolicLink(p)) return;
+                    try {
+                        String relative = rootName + "/" + root.relativize(p).toString().replace('\\', '/');
+                        if (Files.isDirectory(p)) {
+                            // Запоминаем все папки — включая пустые
+                            emptyDirs.add(relative);
+                        } else {
+                            RecursiveFileDTO dto = new RecursiveFileDTO();
+                            dto.setRelativePath(relative);
+                            dto.setFullPath(p.toString());
+                            dto.setSize(Files.size(p));
+                            files.add(dto);
+                        }
+                    } catch (Exception ignored) {}
+                });
+            }
+        }
+
+        result.setFiles(files);
+        result.setDirectories(emptyDirs);
+        result.setArchiveName(commonParentName(paths));
+        return result;
+    }
 }

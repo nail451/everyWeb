@@ -263,4 +263,20 @@ public class FileController {
             }
         }
     }
+
+    @PostMapping("/list-recursive")
+    public ResponseEntity<?> listRecursive(@RequestBody Map<String, Object> req) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> paths = (List<String>) req.get("paths");
+            if (paths == null || paths.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "paths required"));
+            }
+            return ResponseEntity.ok(fileService.listRecursive(paths));
+        } catch (Exception e) {
+            SafeLog.error("list-recursive error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 }

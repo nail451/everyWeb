@@ -1058,7 +1058,6 @@ async function downloadSelected(moduleElement, moduleId) {
 
     const selectedPaths = [...state.selected];
 
-    // Разделяем на файлы и папки
     const files = [];
     const folders = [];
     for (const path of selectedPaths) {
@@ -1069,64 +1068,45 @@ async function downloadSelected(moduleElement, moduleId) {
         }
     }
 
-    // Случай 1: только файлы (без папок) — скачиваем по одному
+    // Случай 1: только файлы — по одному
     if (folders.length === 0) {
         for (const path of files) {
             downloadSingle(path);
-            // небольшая пауза, чтобы браузер не заблокировал множественные скачивания
             await sleep(150);
         }
-        state.selected.clear();
-        state.mode = 'normal';
-        renderToolbar(moduleElement, moduleId);
-        renderFileList(moduleElement, moduleId);
-        renderStatus(moduleElement, moduleId);
+        clearDownloadState(moduleElement, moduleId);
         return;
     }
 
-    // Случай 2: есть папки — zip
-    showToast('⏳ Подготовка архива...');
+    // Случай 2: есть папки — выбор стратегии
+    const supportsFS = typeof window.showDirectoryPicker === 'function';
 
-    try {
-        const resp = await fetch('/api/files/download-zip', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paths: selectedPaths })
-        });
-
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            showToast('❌ ' + (err.error || 'Ошибка архивации'));
+    if (supportsFS) {
+        // FS Access API: пробуем, при отказе — fallback на zip
+        const useFS = await askForFsOrZip(selectedPaths);
+        if (useFS === 'cancel') return;
+        if (useFS === 'fs') {
+            await downloadViaFs(moduleElement, moduleId, selectedPaths);
             return;
         }
-
-        // Скачиваем blob
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-
-        // Имя архива — из заголовка X-Archive-Name (если есть) или из Content-Disposition
-        let archiveName = 'files.zip';
-        const xName = resp.headers.get('X-Archive-Name');
-        if (xName) archiveName = xName;
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = archiveName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        showToast(`✅ ${archiveName}`);
-
-        state.selected.clear();
-        state.mode = 'normal';
-        renderToolbar(moduleElement, moduleId);
-        renderFileList(moduleElement, moduleId);
-        renderStatus(moduleElement, moduleId);
-    } catch (e) {
-        showToast('❌ ' + e.message);
+        // useFS === 'zip' → идём в zip-ветку
+    } else {
+        // Не поддерживается — предупреждение и zip
+        const proceed = await confirmZipFallback();
+        if (!proceed) return;
     }
+
+    // Zip-ветка (как в Шаге 3.1)
+    await downloadViaZip(moduleElement, moduleId, selectedPaths);
+}
+
+function clearDownloadState(moduleElement, moduleId) {
+    const state = fileManagerState[moduleId];
+    state.selected.clear();
+    state.mode = 'normal';
+    renderToolbar(moduleElement, moduleId);
+    renderFileList(moduleElement, moduleId);
+    renderStatus(moduleElement, moduleId);
 }
 
 function sleep(ms) {
@@ -1172,6 +1152,237 @@ function showFMModal({ title, body, buttons, wide }) {
         const input = overlay.querySelector('input.fm-input');
         if (input) input.focus();
     }, 50);
+}
+
+function askForFsOrZip() {
+    return new Promise((resolve) => {
+        showFMModal({
+            title: '💾 Куда сохранить?',
+            body: `
+                <p style="margin:0 0 12px 0;">Выберите способ сохранения папок:</p>
+                <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+                    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:10px; border-radius:8px; background:rgba(76,175,80,0.1); border:1px solid rgba(76,175,80,0.2);">
+                        <input type="radio" name="fs-choice" value="fs" checked style="margin-top:3px; accent-color:#4CAF50;">
+                        <div>
+                            <div style="font-weight:500;">📂 Сохранить в папку (структура сохранится)</div>
+                            <div style="font-size:11px; opacity:0.6; margin-top:2px;">Браузер спросит куда сохранить. Файлы появятся как есть, без архива.</div>
+                        </div>
+                    </label>
+                    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:10px; border-radius:8px; background:rgba(33,150,243,0.08); border:1px solid rgba(33,150,243,0.15);">
+                        <input type="radio" name="fs-choice" value="zip" style="margin-top:3px; accent-color:#4CAF50;">
+                        <div>
+                            <div style="font-weight:500;">🗜️ Скачать zip-архив</div>
+                            <div style="font-size:11px; opacity:0.6; margin-top:2px;">Один файл, распаковать вручную.</div>
+                        </div>
+                    </label>
+                </div>
+            `,
+            buttons: [
+                { text: 'Отмена', cls: 'cancel', onClick: (close) => { close(); resolve('cancel'); } },
+                { text: 'Продолжить', cls: 'primary', onClick: (close) => {
+                        const checked = document.querySelector('input[name="fs-choice"]:checked');
+                        const value = checked ? checked.value : 'zip';
+                        close();
+                        resolve(value);
+                    }}
+            ]
+        });
+    });
+}
+
+function confirmZipFallback() {
+    return new Promise((resolve) => {
+        const warned = localStorage.getItem('fm_zip_fallback_warned');
+        if (warned === 'true') {
+            resolve(true);
+            return;
+        }
+
+        showFMModal({
+            title: '⚠️ Браузер не поддерживает прямую запись',
+            body: `
+                <p style="margin:0 0 12px 0;">
+                    Ваш браузер не поддерживает File System Access API.
+                    Папки будут скачаны <b>как zip-архив</b>.
+                </p>
+                <p style="margin:0; font-size:12px; opacity:0.6;">
+                    Для прямой записи папок используйте Chrome, Edge или Opera.
+                </p>
+                <label style="display:flex; align-items:center; gap:8px; margin-top:16px; font-size:12px; cursor:pointer;">
+                    <input type="checkbox" id="fm-dont-show-again" style="accent-color:#4CAF50;">
+                    Больше не показывать
+                </label>
+            `,
+            buttons: [
+                { text: 'Отмена', cls: 'cancel', onClick: (close) => { close(); resolve(false); } },
+                { text: 'Скачать zip', cls: 'primary', onClick: (close) => {
+                        const cb = document.getElementById('fm-dont-show-again');
+                        if (cb && cb.checked) {
+                            try { localStorage.setItem('fm_zip_fallback_warned', 'true'); } catch (e) {}
+                        }
+                        close();
+                        resolve(true);
+                    }}
+            ]
+        });
+    });
+}
+
+async function downloadViaFs(moduleElement, moduleId, paths) {
+    let dirHandle;
+    try {
+        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    } catch (e) {
+        // Пользователь отменил выбор директории
+        if (e.name === 'AbortError') return;
+        showToast('❌ Не удалось открыть директорию: ' + e.message);
+        return;
+    }
+
+    showToast('⏳ Подготовка списка файлов...');
+
+    let list;
+    try {
+        const resp = await fetch('/api/files/list-recursive', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast('❌ ' + (err.error || 'Ошибка получения списка'));
+            return;
+        }
+        list = await resp.json();
+    } catch (e) {
+        showToast('❌ ' + e.message);
+        return;
+    }
+
+    // Создаём все папки (включая пустые)
+    const createdDirs = new Map(); // path → dirHandle
+    createdDirs.set('', dirHandle);
+
+    // Сортируем папки по длине пути (чтобы родители создались раньше детей)
+    const allDirs = [...(list.directories || [])].sort((a, b) => a.length - b.length);
+
+    for (const dirPath of allDirs) {
+        try {
+            await getDirHandle(createdDirs, dirHandle, dirPath);
+        } catch (e) {
+            console.warn('[FM] Не удалось создать папку', dirPath, e);
+        }
+    }
+
+    // Скачиваем файлы
+    const total = list.files.length;
+    let done = 0;
+    let errors = 0;
+
+    // Прогресс-индикатор в тосте (через текст)
+    const progressEl = document.getElementById('toast');
+
+    for (const file of list.files) {
+        try {
+            // Создаём родительские папки
+            const relPath = file.relativePath;
+            const lastSlash = relPath.lastIndexOf('/');
+            const dirPath = lastSlash > 0 ? relPath.substring(0, lastSlash) : '';
+            const fileName = lastSlash > 0 ? relPath.substring(lastSlash + 1) : relPath;
+
+            const targetDir = await getDirHandle(createdDirs, dirHandle, dirPath);
+
+            // Скачиваем файл как blob
+            const fileResp = await fetch(`/api/files/download?path=${encodeURIComponent(file.fullPath)}`);
+            if (!fileResp.ok) {
+                errors++;
+                continue;
+            }
+            const blob = await fileResp.blob();
+
+            // Пишем файл
+            const fileHandle = await targetDir.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+
+            done++;
+            if (progressEl) {
+                progressEl.textContent = `⏳ Скачивание: ${done} / ${total}`;
+                progressEl.classList.add('show');
+            }
+        } catch (e) {
+            console.error('[FM] Ошибка файла', file.relativePath, e);
+            errors++;
+        }
+    }
+
+    // Итог
+    if (errors > 0) {
+        showToast(`⚠️ Готово: ${done}/${total}, ошибок: ${errors}`);
+    } else {
+        showToast(`✅ Скачано: ${done} файлов`);
+    }
+
+    clearDownloadState(moduleElement, moduleId);
+}
+
+// Получить/создать handle директории по относительному пути
+async function getDirHandle(cache, rootHandle, relativePath) {
+    if (!relativePath) return rootHandle;
+    if (cache.has(relativePath)) return cache.get(relativePath);
+
+    const parts = relativePath.split('/').filter(Boolean);
+    let current = rootHandle;
+
+    for (let i = 0; i < parts.length; i++) {
+        const acc = parts.slice(0, i + 1).join('/');
+        if (cache.has(acc)) {
+            current = cache.get(acc);
+            continue;
+        }
+        current = await current.getDirectoryHandle(parts[i], { create: true });
+        cache.set(acc, current);
+    }
+    return current;
+}
+
+async function downloadViaZip(moduleElement, moduleId, selectedPaths) {
+    showToast('⏳ Подготовка архива...');
+
+    try {
+        const resp = await fetch('/api/files/download-zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths: selectedPaths })
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast('❌ ' + (err.error || 'Ошибка архивации'));
+            return;
+        }
+
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+
+        let archiveName = 'files.zip';
+        const xName = resp.headers.get('X-Archive-Name');
+        if (xName) archiveName = xName;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = archiveName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast(`✅ ${archiveName}`);
+        clearDownloadState(moduleElement, moduleId);
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
 }
 
 // Глобальная функция (вызывается из inline onclick в модалке свойств)
