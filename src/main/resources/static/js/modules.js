@@ -596,8 +596,8 @@ function initializeModules() {
             initConsoleModule(widgetElement, moduleId);
         }
 
-        if (moduleType === 'FILES' && typeof initCalendarModule === 'function') {
-            initCalendarModule(widgetElement, moduleId);
+        if (moduleType === 'FILES' && typeof initFileManagerModule === 'function') {
+            initFileManagerModule(widgetElement, moduleId);
         }
 
         if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {

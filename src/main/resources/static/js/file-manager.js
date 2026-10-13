@@ -895,6 +895,32 @@ function showFMModal({ title, body, buttons, wide }) {
     }, 50);
 }
 
+// Автоинициализация всех виджетов FILES на странице
+(function autoInitFileManager() {
+    function tryInit() {
+        document.querySelectorAll('.widget[data-widget-type="FILES"]').forEach(widget => {
+            const id = widget.dataset.widgetId;
+            if (!id) return;
+            // Не инициализируем дважды
+            if (widget.querySelector('.fm-root')) return;
+            console.log('[FM] auto-init widget', id);
+            try {
+                initFileManagerModule(widget, id);
+            } catch (e) {
+                console.error('[FM] init failed for', id, e);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(tryInit, 500);
+        });
+    } else {
+        setTimeout(tryInit, 500);
+    }
+})();
+
 // Глобальная функция (вызывается из inline onclick в модалке свойств)
 window.fmCalcFolderSize = fmCalcFolderSize;
 
