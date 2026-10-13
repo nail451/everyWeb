@@ -338,7 +338,7 @@ public class FileService {
     }
 
     // ===== КОПИРОВАНИЕ =====
-    public void copy(List<String> sources, String destinationDir) throws IOException {
+    public void copy(List<String> sources, String destinationDir, boolean overwrite, boolean autoRename) throws IOException {
         Path destDir = normalize(destinationDir);
         if (!Files.isDirectory(destDir)) throw new IOException("Не директория: " + destDir);
 
@@ -349,17 +349,55 @@ public class FileService {
             String name = src.getFileName().toString();
             Path target = destDir.resolve(name);
 
-            // Нельзя копировать папку в саму себя
-            if (Files.isDirectory(src) && destDir.startsWith(src)) {
+            if (Files.isDirectory(src) && !Files.isSymbolicLink(src) && destDir.startsWith(src)) {
                 throw new IOException("Нельзя копировать папку в саму себя: " + name);
             }
 
             if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
-                // Конфликт — не перезаписываем молча, вернём ошибку для клиента
-                throw new FileConflictException(name, target);
+                if (overwrite) {
+                    deleteRecursive(target);
+                } else if (autoRename) {
+                    target = findAvailableName(destDir, name);
+                } else {
+                    throw new FileConflictException(name, target);
+                }
             }
 
             copyRecursive(src, target);
+        }
+    }
+
+    public void move(List<String> sources, String destinationDir, boolean overwrite, boolean autoRename) throws IOException {
+        Path destDir = normalize(destinationDir);
+        if (!Files.isDirectory(destDir)) throw new IOException("Не директория: " + destDir);
+
+        for (String srcStr : sources) {
+            Path src = normalize(srcStr);
+            if (!Files.exists(src, LinkOption.NOFOLLOW_LINKS)) continue;
+
+            String name = src.getFileName().toString();
+            Path target = destDir.resolve(name);
+
+            if (Files.isDirectory(src) && !Files.isSymbolicLink(src) && destDir.startsWith(src)) {
+                throw new IOException("Нельзя переместить папку в саму себя: " + name);
+            }
+
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                if (overwrite) {
+                    deleteRecursive(target);
+                } else if (autoRename) {
+                    target = findAvailableName(destDir, name);
+                } else {
+                    throw new FileConflictException(name, target);
+                }
+            }
+
+            try {
+                Files.move(src, target, StandardCopyOption.ATOMIC_MOVE);
+            } catch (Exception e) {
+                // ATOMIC_MOVE может не работать между разными ФС — fallback
+                Files.move(src, target);
+            }
         }
     }
 
@@ -376,27 +414,40 @@ public class FileService {
         }
     }
 
-    // ===== ПЕРЕМЕЩЕНИЕ =====
-    public void move(List<String> sources, String destinationDir) throws IOException {
-        Path destDir = normalize(destinationDir);
-        if (!Files.isDirectory(destDir)) throw new IOException("Не директория: " + destDir);
-
-        for (String srcStr : sources) {
-            Path src = normalize(srcStr);
-            if (!Files.exists(src, LinkOption.NOFOLLOW_LINKS)) continue;
-
-            String name = src.getFileName().toString();
-            Path target = destDir.resolve(name);
-
-            if (Files.isDirectory(src) && destDir.startsWith(src)) {
-                throw new IOException("Нельзя переместить папку в саму себя: " + name);
+    // Рекурсивное удаление — для overwrite
+    private void deleteRecursive(Path path) throws IOException {
+        if (Files.isDirectory(path) && !Files.isSymbolicLink(path)) {
+            try (Stream<Path> s = Files.walk(path)) {
+                List<Path> toDelete = s.sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+                for (Path p : toDelete) Files.deleteIfExists(p);
             }
-
-            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
-                throw new FileConflictException(name, target);
-            }
-
-            Files.move(src, target, StandardCopyOption.ATOMIC_MOVE);
+        } else {
+            Files.deleteIfExists(path);
         }
+    }
+
+    // Поиск свободного имени: file(1).ext, file(2).ext, ...
+    private Path findAvailableName(Path dir, String originalName) {
+        String base;
+        String ext;
+        int dot = originalName.lastIndexOf('.');
+        if (dot > 0) {
+            base = originalName.substring(0, dot);
+            ext = originalName.substring(dot);  // вместе с точкой
+        } else {
+            base = originalName;
+            ext = "";
+        }
+
+        int counter = 1;
+        while (counter < 10000) {
+            Path candidate = dir.resolve(base + "(" + counter + ")" + ext);
+            if (!Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+                return candidate;
+            }
+            counter++;
+        }
+        // Фолбэк — с timestamp
+        return dir.resolve(base + "_" + System.currentTimeMillis() + ext);
     }
 }

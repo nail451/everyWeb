@@ -133,7 +133,10 @@ public class FileController {
             @SuppressWarnings("unchecked")
             List<String> sources = (List<String>) req.get("sources");
             String destination = (String) req.get("destination");
-            fileService.copy(sources, destination);
+            boolean overwrite = Boolean.TRUE.equals(req.get("overwrite"));
+            boolean autoRename = Boolean.TRUE.equals(req.get("autoRename"));
+
+            fileService.copy(sources, destination, overwrite, autoRename);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (FileConflictException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
@@ -153,7 +156,10 @@ public class FileController {
             @SuppressWarnings("unchecked")
             List<String> sources = (List<String>) req.get("sources");
             String destination = (String) req.get("destination");
-            fileService.move(sources, destination);
+            boolean overwrite = Boolean.TRUE.equals(req.get("overwrite"));
+            boolean autoRename = Boolean.TRUE.equals(req.get("autoRename"));
+
+            fileService.move(sources, destination, overwrite, autoRename);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (FileConflictException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(

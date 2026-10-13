@@ -910,55 +910,115 @@ async function pasteFromClipboard(moduleElement, moduleId) {
 
     const { action, paths } = state.clipboard;
     const endpoint = action === 'copy' ? '/api/files/copy' : '/api/files/move';
+    const destination = state.currentPath;
 
-    try {
-        const resp = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sources: paths, destination: state.currentPath })
-        });
+    // «Применить ко всем» — запоминаем выбор пользователя
+    let applyToAll = null; // null | 'overwrite' | 'rename'
 
-        if (resp.ok) {
-            showToast(action === 'copy' ? '✅ Скопировано' : '✅ Перемещено');
-            state.clipboard = null;
-            await loadDirectory(moduleElement, moduleId, state.currentPath);
-        } else if (resp.status === 409) {
-            const data = await resp.json();
-            const conflictName = data.conflictingName || '?';
-            // Показываем модалку конфликта
-            await handleConflict(moduleElement, moduleId, action, paths, state.currentPath, conflictName);
-        } else {
+    // Копируем/перемещаем по одному, чтобы обрабатывать конфликты индивидуально
+    let successCount = 0;
+    let conflictCount = 0;
+    let errors = [];
+
+    for (const srcPath of paths) {
+        const payload = {
+            sources: [srcPath],
+            destination,
+            overwrite: applyToAll === 'overwrite',
+            autoRename: applyToAll === 'rename'
+        };
+
+        try {
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                successCount++;
+                continue;
+            }
+
+            if (resp.status === 409) {
+                const data = await resp.json();
+                const conflictName = data.conflictingName || srcPath.split('/').pop();
+
+                // Если уже «применить ко всем» — применяем без вопроса
+                if (applyToAll === 'overwrite' || applyToAll === 'rename') {
+                    // не должно случиться (см. payload), но на всякий
+                    conflictCount++;
+                    continue;
+                }
+
+                // Спрашиваем пользователя
+                const choice = await showConflictDialog(conflictName);
+
+                if (choice === 'cancel') {
+                    // Отменяем всё — прекращаем
+                    showToast('❌ Отменено');
+                    return;
+                }
+
+                if (choice === 'overwrite' || choice === 'rename') {
+                    if (choice === 'overwrite') applyToAll = choice;  // TODO: если нужна галочка «применить ко всем»
+                    const retryPayload = {
+                        sources: [srcPath],
+                        destination,
+                        overwrite: choice === 'overwrite',
+                        autoRename: choice === 'rename'
+                    };
+                    const retry = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(retryPayload)
+                    });
+                    if (retry.ok) {
+                        successCount++;
+                    } else {
+                        conflictCount++;
+                    }
+                }
+                continue;
+            }
+
+            // Другая ошибка
             const err = await resp.json().catch(() => ({}));
-            showToast('❌ ' + (err.error || 'Ошибка'));
+            errors.push(err.error || 'Ошибка');
+        } catch (e) {
+            errors.push(e.message);
         }
-    } catch (e) {
-        showToast('❌ ' + e.message);
+    }
+
+    // Итог
+    if (successCount > 0) {
+        showToast(`✅ Готово: ${successCount}${conflictCount > 0 ? `, конфликтов: ${conflictCount}` : ''}`);
+        state.clipboard = null;
+        await loadDirectory(moduleElement, moduleId, state.currentPath);
+    } else if (errors.length > 0) {
+        showToast('❌ ' + errors[0]);
     }
 }
 
-async function handleConflict(moduleElement, moduleId, action, sources, destination, conflictName) {
+function showConflictDialog(conflictName) {
     return new Promise((resolve) => {
         showFMModal({
-            title: '⚠️ Конфликт имён',
+            title: '⚠️ Файл уже существует',
             body: `
-                <p>В целевой папке уже есть <b>${escapeHtml(conflictName)}</b>.</p>
-                <p style="opacity:0.7;font-size:12px;">Что сделать с конфликтующим файлом?</p>
+                <p style="margin:0 0 12px 0;">
+                    В целевой папке уже есть <b>${escapeHtml(conflictName)}</b>.
+                </p>
+                <p style="margin:0 0 16px 0; font-size:12px; opacity:0.6;">
+                    Что сделать с новым файлом?
+                </p>
+                <div style="font-size:12px; opacity:0.5;">
+                    💡 «Переименовать» создаст <code>${escapeHtml(conflictName.replace(/(\.[^.]+)$/, '(1)$1'))}</code>
+                </div>
             `,
             buttons: [
-                { text: 'Отмена', cls: 'cancel', onClick: (close) => { close(); resolve(false); } },
-                { text: 'Переименовать новый', cls: 'primary', onClick: async (close) => {
-                        close();
-                        // Здесь нужно реализовать переименование на "file(N).ext".
-                        // Пока — заглушка, добавим отдельным запросом.
-                        showToast('⚠️ Переименование — в разработке');
-                        resolve(false);
-                    }},
-                { text: 'Заменить', cls: 'danger', onClick: async (close) => {
-                        close();
-                        // Нужен отдельный эндпоинт с флагом overwrite=true
-                        showToast('⚠️ Замена — в разработке');
-                        resolve(false);
-                    }}
+                { text: 'Отмена', cls: 'cancel', onClick: (close) => { close(); resolve('cancel'); } },
+                { text: 'Переименовать', cls: 'primary', onClick: (close) => { close(); resolve('rename'); } },
+                { text: 'Заменить', cls: 'danger', onClick: (close) => { close(); resolve('overwrite'); } }
             ]
         });
     });
