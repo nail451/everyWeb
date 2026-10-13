@@ -548,7 +548,7 @@ async function handleToolbarClick(moduleElement, moduleId, action) {
         case 'mkdir':    openCreateModal(moduleElement, moduleId, true); break;
 
         case 'refresh':
-            await loadDirectory(moduleElement, moduleId, path, { skipSidebar: true });
+            await loadDirectory(moduleElement, moduleId, state.currentPath);
             break;
         case 'copy':
             if (state.mode === 'copy') {
