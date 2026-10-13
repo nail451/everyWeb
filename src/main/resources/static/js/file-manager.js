@@ -13,8 +13,8 @@ const FM_ICON_FOLDER = '📁';
 const FM_ICON_SYMLINK = '🔗';
 
 function buildSidebarOpenPaths(currentPath) {
-    // /home/alsa/everyWeb/src → ['/home', '/home/alsa', '/home/alsa/everyWeb', '/home/alsa/everyWeb/src']
     const result = {};
+    result['/'] = true;  // ← корень всегда раскрыт
     if (!currentPath || currentPath === '/') return result;
 
     const parts = currentPath.split('/').filter(Boolean);
@@ -208,7 +208,15 @@ async function buildTreeNode(moduleElement, moduleId, path, name, children, dept
     toggleEl.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!hasChildren) return;
-        state.sidebarOpen[path] = !state.sidebarOpen[path];
+
+        const wasOpen = state.sidebarOpen[path] === true;
+
+        // Сброс до пути currentPath, потом toggle конкретного узла
+        state.sidebarOpen = buildSidebarOpenPaths(state.currentPath);
+        if (!wasOpen) {
+            state.sidebarOpen[path] = true;
+        }
+
         await renderSidebar(moduleElement, moduleId);
     });
 
@@ -291,8 +299,7 @@ async function navigateTo(moduleElement, moduleId, path) {
     state.selected.clear();
     state.mode = 'normal';
 
-    // Раскрыть все родительские узлы
-    Object.assign(state.sidebarOpen, buildSidebarOpenPaths(path));
+    state.sidebarOpen = buildSidebarOpenPaths(path);   // ← не Object.assign!
 
     await loadDirectory(moduleElement, moduleId, path);
     renderSidebar(moduleElement, moduleId);
