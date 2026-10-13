@@ -55,7 +55,8 @@ async function initFileManagerModule(moduleElement, moduleId) {
         sidebarPath: '/home/alsa',   // для дерева
         sidebarOpen: buildSidebarOpenPaths(initialPath), // Set раскрытых путей в дереве
         sortBy: 'name',              // 'name' | 'size' | 'modified'
-        sortAsc: true
+        sortAsc: true,
+        lastScrolledPath: null
     };
 
     moduleElement.dataset.moduleId = numericId;
@@ -179,6 +180,32 @@ async function renderSidebar(moduleElement, moduleId) {
         console.error('[FM] tree load error:', e);
         el.innerHTML = `<div class="fm-tree-error">❌ Ошибка загрузки дерева</div>`;
     }
+    requestAnimationFrame(() => scrollSidebarToCurrent(moduleElement, moduleId));
+}
+
+function scrollSidebarToCurrent(moduleElement, moduleId) {
+    const state = fileManagerState[moduleId];
+    const sidebarEl = moduleElement.querySelector(`#fm-sidebar-${moduleId}`);
+    if (!sidebarEl) return;
+
+    const current = sidebarEl.querySelector('.fm-tree-row.current');
+    if (!current) return;
+
+    // Если currentPath не изменился с прошлой прокрутки — не трогаем scroll
+    if (state.lastScrolledPath === state.currentPath) return;
+    state.lastScrolledPath = state.currentPath;
+
+    const sidebarRect = sidebarEl.getBoundingClientRect();
+    const currentRect = current.getBoundingClientRect();
+    const offsetInSidebar = (currentRect.top - sidebarRect.top) + sidebarEl.scrollTop;
+    const currentHeight = currentRect.height;
+    const sidebarHeight = sidebarEl.clientHeight;
+    const targetScroll = offsetInSidebar - (sidebarHeight - currentHeight) / 2;
+
+    sidebarEl.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth'
+    });
 }
 
 async function buildTreeNode(moduleElement, moduleId, path, name, children, depth) {
