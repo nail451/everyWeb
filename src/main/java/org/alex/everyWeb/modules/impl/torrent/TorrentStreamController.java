@@ -91,8 +91,6 @@ public class TorrentStreamController {
                     .body(Map.of("error", "Недопустимый путь файла"));
         }
 
-        log.info("Стриминг: ищем файл по пути {}", filePath);
-
         File file = filePath.toFile();
         if (!file.exists() || !file.isFile()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
