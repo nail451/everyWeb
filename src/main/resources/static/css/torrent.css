@@ -1091,3 +1091,9 @@
 .torrent-root.layout-normal .torrent-row-meta {
     flex-wrap: nowrap;
 }
+
+avbridge-video.torrent-stream-video {
+    width: 100%;
+    max-height: 80vh;
+    display: block;
+}

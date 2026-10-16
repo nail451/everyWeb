@@ -1217,9 +1217,15 @@ function openStreamModal(moduleId, hash, fileIndex, fileName) {
     document.querySelectorAll('.torrent-modal-overlay').forEach(el => el.remove());
 
     const streamUrl = `/api/torrents/${moduleId}/${hash}/stream?fileIndex=${fileIndex}`;
+    const playable = isBrowserPlayable(fileName);
 
     const overlay = document.createElement('div');
     overlay.className = 'torrent-modal-overlay';
+
+    const playerHtml = playable
+        ? `<video controls autoplay class="torrent-stream-video" src="${streamUrl}"></video>`
+        : `<avbridge-video src="${streamUrl}" autoplay controls playsinline class="torrent-stream-video"></avbridge-video>`;
+
     overlay.innerHTML = `
         <div class="torrent-modal torrent-modal-wide">
             <div class="torrent-modal-header">
@@ -1227,15 +1233,18 @@ function openStreamModal(moduleId, hash, fileIndex, fileName) {
                 <button class="torrent-modal-close">✕</button>
             </div>
             <div class="torrent-modal-body torrent-stream-body">
-                <video controls autoplay class="torrent-stream-video" src="${streamUrl}"></video>
+                ${playerHtml}
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
 
     const close = () => {
-        const v = overlay.querySelector('video');
-        if (v) { v.pause(); v.src = ''; }
+        const v = overlay.querySelector('video, avbridge-video');
+        if (v) {
+            if (v.pause) v.pause();
+            if (v.src) v.src = '';
+        }
         overlay.remove();
     };
 
@@ -1554,6 +1563,12 @@ function initTorrentSettingsEvents(moduleId, container) {
             saveTimer = setTimeout(collectAndSave, 500);
         });
     });
+}
+
+function isBrowserPlayable(name) {
+    if (!name) return false;
+    const lower = name.toLowerCase();
+    return /\.(mp4|m4v|webm|ogv)$/.test(lower);
 }
 
 /**
