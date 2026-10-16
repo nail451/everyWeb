@@ -141,13 +141,14 @@ public class QbittorrentClient {
                     })
                     .block();
 
-            boolean ok = body != null && body.trim().equalsIgnoreCase("Ok.");
+            // qBittorrent 5.x: если cookie установилась — логин прошёл (независимо от тела ответа)
+            boolean ok = sidCookie.get() != null;
             if (ok) {
                 lastFailedLoginAt = 0;
-                log.info("QbittorrentClient: логин успешен");
+                log.info("QbittorrentClient: логин успешен (cookie установлена)");
             } else {
                 lastFailedLoginAt = System.currentTimeMillis();
-                log.warn("QbittorrentClient: логин не удался, ответ='{}'", body);
+                log.warn("QbittorrentClient: логин не удался — cookie не установлена, ответ='{}'", body);
             }
             return ok;
         } catch (Exception e) {

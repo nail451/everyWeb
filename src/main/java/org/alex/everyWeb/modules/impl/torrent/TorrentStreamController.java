@@ -148,7 +148,7 @@ public class TorrentStreamController {
             }
 
             return ResponseEntity.status(status)
-                    .contentType(mediaType)
+                    .header(HttpHeaders.CONTENT_TYPE, mediaType.toString())
                     .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                     .body(region);
         } catch (Exception e) {
