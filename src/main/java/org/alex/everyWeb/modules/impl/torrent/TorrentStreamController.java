@@ -9,9 +9,6 @@ import org.alex.everyWeb.modules.repository.ModuleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
@@ -102,57 +99,53 @@ public class TorrentStreamController {
                     .body(Map.of("error", "Файл ещё не скачан: " + relativeName));
         }
 
-        // 5. Определить Content-Type
-        String contentType = detectContentType(filePath.getFileName().toString());
-        MediaType mediaType;
-        try {
-            mediaType = MediaType.parseMediaType(contentType);
-        } catch (Exception e) {
-            mediaType = MediaType.APPLICATION_OCTET_STREAM;
-        }
-
-        // 6. Отдать файл с Range-поддержкой
-        Resource resource = new FileSystemResource(file);
-        long contentLength;
-        try {
-            contentLength = resource.contentLength();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Не удалось прочитать файл"));
-        }
+        // 5. Отдать файл с Range-поддержкой (ручной расчёт)
+        long contentLength = file.length();
 
         try {
-            ResourceRegion region;
+            long start;
+            long end;
             HttpStatus status;
 
             if (rangeHeader == null || rangeHeader.isBlank()) {
-                // Нет Range — отдаём первый кусок (206), браузер сам дозапросит
-                long end = Math.min(CHUNK_SIZE, contentLength);
-                region = new ResourceRegion(resource, 0, end);
+                start = 0;
+                end = Math.min(CHUNK_SIZE, contentLength) - 1;
                 status = HttpStatus.PARTIAL_CONTENT;
             } else {
                 List<HttpRange> ranges = HttpRange.parseRanges(rangeHeader);
                 HttpRange range = ranges.get(0);
-                long start = range.getRangeStart(contentLength);
-                long end = range.getRangeEnd(contentLength);
-                long length = end - start + 1;
+                start = range.getRangeStart(contentLength);
+                end = range.getRangeEnd(contentLength);
 
-                // Ограничиваем размер куска, но не больше запрошенного
-                if (length > CHUNK_SIZE) {
+                // Ограничиваем кусок
+                if (end - start + 1 > CHUNK_SIZE) {
                     end = start + CHUNK_SIZE - 1;
-                    length = CHUNK_SIZE;
                 }
-
-                region = new ResourceRegion(resource, start, length);
                 status = HttpStatus.PARTIAL_CONTENT;
             }
 
+            long length = end - start + 1;
+
+            // Читаем ровно этот кусок
+            byte[] buffer = new byte[(int) length];
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r")) {
+                raf.seek(start);
+                raf.readFully(buffer);
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
+            headers.set(HttpHeaders.ACCEPT_RANGES, "bytes");
+            headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(length));
+            headers.set(HttpHeaders.CONTENT_RANGE,
+                    "bytes " + start + "-" + end + "/" + contentLength);
+
             return ResponseEntity.status(status)
-                    .header(HttpHeaders.CONTENT_TYPE, mediaType.toString())
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                    .body(region);
+                    .headers(headers)
+                    .body(buffer);
+
         } catch (Exception e) {
-            log.error("Ошибка стриминга {}: {}", filePath, e.getMessage());
+            log.error("Ошибка стриминга {}: {}", filePath, e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Ошибка стриминга: " + e.getMessage()));
         }
