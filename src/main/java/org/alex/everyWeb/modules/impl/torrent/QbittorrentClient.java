@@ -638,17 +638,37 @@ public class QbittorrentClient {
                     new org.springframework.core.io.ByteArrayResource(fileBytes) {
                         @Override
                         public String getFilename() {
-                            return fileName == null ? "file.torrent" : fileName;
+                            // Транслитерируем имя — qBittorrent плохо ест не-ASCII в filename
+                            return fileName == null ? "file.torrent" : sanitizeFilename(fileName);
+                        }
+
+                        @Override
+                        public String toString() {
+                            return "torrent file";
                         }
                     };
 
-            org.springframework.util.MultiValueMap<String, Object> parts =
+            org.springframework.util.MultiValueMap<String, org.springframework.http.HttpEntity<?>> parts =
                     new org.springframework.util.LinkedMultiValueMap<>();
-            parts.add("torrents", fileResource);
-            if (savePath != null && !savePath.isBlank()) parts.add("savepath", savePath);
-            if (category != null && !category.isBlank()) parts.add("category", category);
-            if (Boolean.TRUE.equals(sequential)) parts.add("sequentialDownload", "true");
-            if (Boolean.TRUE.equals(firstLast)) parts.add("firstLastPiecePrio", "true");
+
+            // Файл первым — с явным Content-Type
+            org.springframework.http.HttpHeaders fileHeaders = new org.springframework.http.HttpHeaders();
+            fileHeaders.setContentType(org.springframework.http.MediaType.parseMediaType("application/x-bittorrent"));
+            parts.add("torrents", new org.springframework.http.HttpEntity<>(fileResource, fileHeaders));
+
+            // Остальные поля — как обычный текст
+            if (savePath != null && !savePath.isBlank()) {
+                parts.add("savepath", new org.springframework.http.HttpEntity<>(savePath));
+            }
+            if (category != null && !category.isBlank()) {
+                parts.add("category", new org.springframework.http.HttpEntity<>(category));
+            }
+            if (Boolean.TRUE.equals(sequential)) {
+                parts.add("sequentialDownload", new org.springframework.http.HttpEntity<>("true"));
+            }
+            if (Boolean.TRUE.equals(firstLast)) {
+                parts.add("firstLastPiecePrio", new org.springframework.http.HttpEntity<>("true"));
+            }
 
             Boolean result = client.post()
                     .uri("/api/v2/torrents/add")
@@ -658,8 +678,11 @@ public class QbittorrentClient {
                         int code = response.statusCode().value();
                         if (code == 403) return Mono.just(Boolean.FALSE);
                         if (code >= 200 && code < 300) return Mono.just(Boolean.TRUE);
-                        log.warn("qBittorrent POST /torrents/add (file) → {}", code);
-                        return Mono.just(Boolean.FALSE);
+
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("(empty)")
+                                .doOnNext(body -> log.warn("qBittorrent POST /torrents/add (file) → {} body='{}'", code, body))
+                                .map(body -> Boolean.FALSE);
                     })
                     .timeout(TIMEOUT)
                     .onErrorResume(e -> {
@@ -673,6 +696,18 @@ public class QbittorrentClient {
             log.error("Исключение при загрузке .torrent: {}", e.getMessage());
             return false;
         }
+    }
+
+    private String sanitizeFilename(String name) {
+        if (name == null) return "file.torrent";
+        // Оставляем только ASCII, заменяем остальное на _
+        String result = name.replaceAll("[^\\x20-\\x7E]", "_");
+        // Убираем пробелы и подозрительные символы
+        result = result.replaceAll("[\\r\\n\"]", "");
+        if (!result.toLowerCase().endsWith(".torrent")) {
+            result = "file.torrent";
+        }
+        return result;
     }
 
     // ============================================================

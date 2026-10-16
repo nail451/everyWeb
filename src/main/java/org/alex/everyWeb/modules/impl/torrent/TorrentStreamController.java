@@ -82,14 +82,19 @@ public class TorrentStreamController {
         String savePath = props.getSavePath();
         String relativeName = fileDto.getName();
 
+        // Маппинг: контейнер qBittorrent → путь на хосте
+        String hostSavePath = mapContainerToHostPath(savePath);
+
         // Защита от path traversal
-        Path basePath = Paths.get(savePath).toAbsolutePath().normalize();
+        Path basePath = Paths.get(hostSavePath).toAbsolutePath().normalize();
         Path filePath = basePath.resolve(relativeName).toAbsolutePath().normalize();
         if (!filePath.startsWith(basePath)) {
-            log.warn("Path traversal попытка: {} → {}", savePath, relativeName);
+            log.warn("Path traversal попытка: {} → {}", hostSavePath, relativeName);
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Недопустимый путь файла"));
         }
+
+        log.info("Стриминг: ищем файл по пути {}", filePath);
 
         File file = filePath.toFile();
         if (!file.exists() || !file.isFile()) {
@@ -156,6 +161,21 @@ public class TorrentStreamController {
     // ============================================================
     //  УТИЛИТЫ
     // ============================================================
+
+    /**
+     * Маппинг пути qBittorrent-контейнера в путь на хосте.
+     * qBittorrent видит папку загрузок как /downloads, а на хосте это /home/alsa/torrent.
+     */
+    private String mapContainerToHostPath(String containerPath) {
+        if (containerPath == null) return null;
+        final String CONTAINER_ROOT = "/downloads";
+        final String HOST_ROOT = "/home/alsa/torrent";
+        if (containerPath.equals(CONTAINER_ROOT)) return HOST_ROOT;
+        if (containerPath.startsWith(CONTAINER_ROOT + "/")) {
+            return HOST_ROOT + containerPath.substring(CONTAINER_ROOT.length());
+        }
+        return containerPath;
+    }
 
     private String detectContentType(String fileName) {
         String lower = fileName.toLowerCase();
