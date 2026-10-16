@@ -38,12 +38,22 @@ public class TorrentService {
             return null;
         }
         String key = data.getBaseUrl() + "|" + data.getUsername() + "|" + data.getPassword();
-        return clients.computeIfAbsent(key, k -> {
-            QbittorrentClient client = new QbittorrentClient();
-            client.configure(data.getBaseUrl(), data.getUsername(), data.getPassword());
-            client.login();
+
+        QbittorrentClient existing = clients.get(key);
+        if (existing != null) {
+            return existing;
+        }
+
+        QbittorrentClient client = new QbittorrentClient();
+        client.configure(data.getBaseUrl(), data.getUsername(), data.getPassword());
+        boolean ok = client.login();
+        if (!ok) {
+            // Не кэшируем неудачный клиент — при следующем вызове попробуем снова
+            // (но backoff внутри клиента не даст бана)
             return client;
-        });
+        }
+        clients.put(key, client);
+        return client;
     }
 
     /**
@@ -143,7 +153,7 @@ public class TorrentService {
     }
 
     /**
-     * transfer/info — скорости, лимиты, статус соединения.
+     * Transfer/info — скорости, лимиты, статус соединения.
      */
     public com.fasterxml.jackson.databind.JsonNode transferInfo(TorrentData data) {
         QbittorrentClient client = getClient(data);

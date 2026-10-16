@@ -47,6 +47,10 @@ public class QbittorrentClient {
     /** Текущая cookie-сессия: "SID=..." */
     private final AtomicReference<String> sidCookie = new AtomicReference<>(null);
 
+    // Блокировка после неудачного логина — 60 секунд
+    private volatile long lastFailedLoginAt = 0L;
+    private static final long LOGIN_BACKOFF_MS = 60_000L;
+
     /** Параметры подключения — задаются через configure() */
     private volatile String baseUrl;
     private volatile String username;
@@ -93,6 +97,14 @@ public class QbittorrentClient {
             log.warn("QbittorrentClient не настроен (baseUrl пуст)");
             return false;
         }
+
+        // Backoff: не пытаться логиниться, если недавно была неудача
+        long now = System.currentTimeMillis();
+        if (now - lastFailedLoginAt < LOGIN_BACKOFF_MS) {
+            log.debug("QbittorrentClient: backoff, пропускаем логин");
+            return false;
+        }
+
         try {
             WebClient client = WebClient.builder()
                     .baseUrl(baseUrl)
@@ -131,9 +143,10 @@ public class QbittorrentClient {
 
             boolean ok = body != null && body.trim().equalsIgnoreCase("Ok.");
             if (ok) {
-                log.info("QbittorrentClient: логин успешен, SID={}",
-                        sidCookie.get() == null ? "null" : "***");
+                lastFailedLoginAt = 0;
+                log.info("QbittorrentClient: логин успешен");
             } else {
+                lastFailedLoginAt = System.currentTimeMillis();
                 log.warn("QbittorrentClient: логин не удался, ответ='{}'", body);
             }
             return ok;
