@@ -1,5 +1,7 @@
 package org.alex.everyWeb.modules.impl.torrent;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class TorrentData {
 
     private String baseUrl = "http://127.0.0.1:8050";
@@ -53,6 +55,7 @@ public class TorrentData {
         this.pollInterval = pollInterval;
     }
 
+    @JsonIgnore
     public boolean isConfigured() {
         return baseUrl != null && !baseUrl.isBlank()
                 && username != null && !username.isBlank()

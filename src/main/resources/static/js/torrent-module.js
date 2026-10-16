@@ -1473,7 +1473,8 @@ function renderTorrentSettings(data) {
 
             <label class="ts-label">Пароль</label>
             <input type="password" class="ts-input" id="ts-password"
-                   value="${escapeHtml(s.password || '')}">
+                placeholder="${s.password ? '•••••••• (не менять)' : 'Введите пароль'}"
+                value="">
 
             <label class="ts-label">Папка загрузок (в контейнере)</label>
             <input type="text" class="ts-input" id="ts-downloadPath"
@@ -1495,7 +1496,64 @@ function renderTorrentSettings(data) {
 }
 
 function initTorrentSettingsEvents(moduleId, container) {
-    // Никаких live-событий — всё сохраняется через WidgetSettingsPopup
+    const fields = ['ts-baseUrl', 'ts-username', 'ts-password', 'ts-downloadPath', 'ts-pollInterval'];
+    let saveTimer = null;
+
+    const collectAndSave = async () => {
+        const baseUrl = document.getElementById('ts-baseUrl')?.value.trim() || '';
+        const username = document.getElementById('ts-username')?.value.trim() || '';
+        const passwordInput = document.getElementById('ts-password')?.value || '';
+        const downloadPath = document.getElementById('ts-downloadPath')?.value.trim() || '';
+        const pollInterval = parseInt(document.getElementById('ts-pollInterval')?.value || '3000');
+
+        if (!baseUrl) {
+            showToast('❌ URL qBittorrent не может быть пустым');
+            return;
+        }
+
+        const params = {
+            baseUrl: baseUrl,
+            username: username,
+            downloadPath: downloadPath,
+            pollInterval: pollInterval
+        };
+
+        // Пароль отправляем только если пользователь что-то ввёл
+        if (passwordInput.trim() !== '') {
+            params.password = passwordInput;
+        }
+
+        try {
+            const resp = await fetch(`/api/modules/${moduleId}/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'updateSettings',
+                    params: params
+                })
+            });
+            if (resp.ok) {
+                showToast('✅ Настройки сохранены');
+                const widget = document.querySelector(`.widget[data-widget-id="${moduleId}"]`);
+                if (widget && typeof loadTorrentData === 'function') {
+                    await loadTorrentData(widget, moduleId);
+                }
+            } else {
+                showToast('❌ Ошибка сохранения');
+            }
+        } catch (e) {
+            showToast('❌ ' + e.message);
+        }
+    };
+
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(collectAndSave, 500);
+        });
+    });
 }
 
 /**
