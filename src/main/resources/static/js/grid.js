@@ -47,7 +47,8 @@ function getWidgetIcon(type) {
         'MEMORY': '🧠',
         'DISK': '💾',
         'NETWORK': '🌐',
-        'BATTERY': '🔋'
+        'BATTERY': '🔋',
+        'TORRENT': '🌊'
     };
     return icons[type] || '📦';
 }
@@ -62,7 +63,8 @@ function getWidgetColor(type) {
         'TODO': 'rgba(244, 67, 54, 0.15)',
         'NEXTCLOUD': 'rgba(0, 150, 136, 0.15)',
         'CALENDAR': 'rgba(233, 30, 99, 0.15)',
-        'RSS': 'rgba(255, 87, 34, 0.15)'
+        'RSS': 'rgba(255, 87, 34, 0.15)',
+        'TORRENT': 'rgba(0, 188, 212, 0.15)'
     };
     return colors[type] || 'rgba(255,255,255,0.05)';
 }
@@ -118,6 +120,11 @@ function getWidgetContent(widget) {
             `;
         case 'CALENDAR':
             return `<div class="calendar-container" data-widget-id="${widget.id}"></div>`;
+        case 'TORRENT':
+            return `
+                 <div class="torrent-container" data-widget-id="${widget.id}"
+                    style="width:100%;height:100%;min-height:0;display:flex;flex-direction:column;"></div>
+            `;
         default:
             return `<div style="opacity:0.5;text-align:center;padding:20px;">${widget.type}</div>`;
     }

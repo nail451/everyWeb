@@ -486,6 +486,8 @@ async function loadModuleSettingsInto(widgetElement, container) {
                 contentHtml = window.renderCalendarSettings(data);
             } else if (moduleType === 'NOTES' && typeof window.renderNotesSettings === 'function') {
                 contentHtml = window.renderNotesSettings(data);
+            } else if (moduleType === 'TORRENT' && typeof window.renderTorrentSettings === 'function') {
+                contentHtml = window.renderTorrentSettings(data);
             } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
                 if (typeof window.renderSystemSettings === 'function') {
                     contentHtml = window.renderSystemSettings(data);
@@ -534,6 +536,8 @@ async function loadModuleSettingsInto(widgetElement, container) {
                 window.initCalendarSettingsEvents(numericId, container);
             } else if (moduleType === 'NOTES' && typeof window.initNotesSettingsEvents === 'function') {
                 window.initNotesSettingsEvents(numericId, container);
+            } else if (moduleType === 'TORRENT' && typeof window.initTorrentSettingsEvents === 'function') {
+                window.initTorrentSettingsEvents(numericId, container);
             } else if (['CPU', 'MEMORY', 'DISK', 'NETWORK', 'BATTERY'].includes(moduleType)) {
                 if (typeof window.initSystemSettingsEvents === 'function') {
                     window.initSystemSettingsEvents(numericId, container);
