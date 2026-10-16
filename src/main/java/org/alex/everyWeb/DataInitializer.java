@@ -37,7 +37,8 @@ public class DataInitializer implements CommandLineRunner {
                 { "BATTERY",   "Батарея",    "Состояние батареи и заряд",                 "🔋", true, true,  "battery-module",      "system-modules.js",   1, 1 },
                 { "CONSOLE",   "Консоль",    "Интерактивная bash-консоль",                "⌨️", true, false, "console-module",      "console-module.js",   3, 3 },
                 { "FILES",     "Файлы",      "Файловый менеджер",                         "📁", true, false, "file-manager-module", "file-manager.js",     2, 2 },
-                { "CALENDAR",  "Календарь",  "Месяц с навигацией",                        "📅", true, true,  "calendar-module",     "calendar-module.js",  2, 1 }
+                { "CALENDAR",  "Календарь",  "Месяц с навигацией",                        "📅", true, true,  "calendar-module",     "calendar-module.js",  2, 1 },
+                { "TORRENT",   "Торрент",    "Торрент-клиент qBittorrent",                "🌊", true, true,  "torrent-module",      "torrent-module.js",   2, 2 }
         };
 
         for (Object[] d : defs) {

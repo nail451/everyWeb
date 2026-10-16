@@ -555,13 +555,14 @@ async function loadModuleSettingsInto(widgetElement, container) {
 // ===== ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
 function initializeModules() {
     const initializers = {
-        'CLOCK':     { fn: 'initClockModule',     arg: 'normal' },
-        'WEATHER':   { fn: 'initWeatherModule',   arg: 'normal' },
-        'NEXTCLOUD': { fn: 'initNextcloudModule', arg: 'normal' },
-        'NOTES':     { fn: 'initNotesModule',     arg: 'normal' },
-        'CALENDAR':  { fn: 'initCalendarModule',  arg: 'normal' },
-        'CONSOLE':   { fn: 'initConsoleModule',   arg: 'normal' },
+        'CLOCK':     { fn: 'initClockModule',       arg: 'normal' },
+        'WEATHER':   { fn: 'initWeatherModule',     arg: 'normal' },
+        'NEXTCLOUD': { fn: 'initNextcloudModule',   arg: 'normal' },
+        'NOTES':     { fn: 'initNotesModule',       arg: 'normal' },
+        'CALENDAR':  { fn: 'initCalendarModule',    arg: 'normal' },
+        'CONSOLE':   { fn: 'initConsoleModule',     arg: 'normal' },
         'FILES':     { fn: 'initFileManagerModule', arg: 'normal' },
+        'TORRENT':   { fn: 'initTorrentModule' },
     };
 
     document.querySelectorAll('.widget').forEach(widgetElement => {

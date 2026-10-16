@@ -1,0 +1,1093 @@
+/* ============================================================
+   TORRENT MODULE — виджет торрент-клиента qBittorrent
+   ============================================================ */
+
+.torrent-root {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    gap: 6px;
+}
+
+/* ============================================================
+   ШАПКА
+   ============================================================ */
+.torrent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.torrent-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    opacity: 0.8;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.torrent-conn-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+    flex-shrink: 0;
+}
+.torrent-conn-dot.connected {
+    background: #4CAF50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+}
+.torrent-conn-dot.disconnected {
+    background: #f44336;
+    box-shadow: 0 0 6px rgba(244, 67, 54, 0.6);
+}
+
+.torrent-header-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.torrent-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.torrent-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.torrent-btn.active {
+    background: rgba(255, 152, 0, 0.25);
+    border-color: rgba(255, 152, 0, 0.5);
+}
+
+/* ============================================================
+   ОСНОВНОЙ БЛОК
+   ============================================================ */
+.torrent-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 6px;
+}
+
+.torrent-list-container {
+    flex: 1 1 40%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.torrent-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-right: 4px;
+}
+
+.torrent-list::-webkit-scrollbar { width: 6px; }
+.torrent-list::-webkit-scrollbar-track { background: transparent; }
+.torrent-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+.torrent-list::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+.torrent-loading,
+.torrent-empty,
+.torrent-error {
+    text-align: center;
+    padding: 20px 10px;
+    opacity: 0.6;
+    font-size: 12px;
+}
+
+.torrent-error { color: #ff8a80; }
+
+/* ============================================================
+   СТРОКА ТОРРЕНТА
+   ============================================================ */
+.torrent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.torrent-row:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+.torrent-row.selected {
+    background: rgba(33, 150, 243, 0.15);
+    border-color: rgba(33, 150, 243, 0.4);
+}
+
+.torrent-row-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+
+.torrent-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.torrent-row-name {
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.95;
+}
+
+.torrent-row-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.torrent-row-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2196F3, #4CAF50);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.torrent-row.state-seeding .torrent-row-progress-fill {
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+}
+.torrent-row.state-paused .torrent-row-progress-fill {
+    background: rgba(255, 255, 255, 0.25);
+}
+.torrent-row.state-error .torrent-row-progress-fill {
+    background: #f44336;
+}
+
+.torrent-row-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    opacity: 0.65;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.torrent-row-percent {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    min-width: 40px;
+}
+
+.torrent-row-speed,
+.torrent-row-eta,
+.torrent-row-size {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.torrent-row-actions {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.torrent-row-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    cursor: pointer;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.torrent-row-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+.torrent-row-btn.danger:hover {
+    background: rgba(244, 67, 54, 0.3);
+    color: #ff8a80;
+}
+
+/* ============================================================
+   ПАНЕЛЬ ВКЛАДОК
+   ============================================================ */
+.torrent-tabs-panel {
+    flex: 1 1 60%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.torrent-tabs-nav {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+
+.torrent-tabs-nav::-webkit-scrollbar { height: 0; }
+
+.torrent-tab {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.torrent-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.8);
+}
+.torrent-tab.active {
+    background: rgba(33, 150, 243, 0.2);
+    color: white;
+}
+
+.torrent-tab-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px;
+}
+
+.torrent-tab-content::-webkit-scrollbar { width: 6px; }
+.torrent-tab-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.torrent-empty-tab,
+.torrent-tab-loading {
+    text-align: center;
+    padding: 30px 10px;
+    opacity: 0.5;
+    font-size: 12px;
+}
+
+/* ============================================================
+   ВКЛАДКА «ОСНОВНОЕ»
+   ============================================================ */
+.torrent-main-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.torrent-main-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.95;
+}
+
+.torrent-main-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.torrent-main-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.torrent-main-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2196F3, #4CAF50);
+    transition: width 0.3s;
+}
+
+.torrent-main-progress-text {
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 45px;
+    text-align: right;
+}
+
+.torrent-main-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 12px;
+    font-size: 11px;
+}
+
+.torrent-main-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.torrent-main-item.tm-full {
+    grid-column: 1 / -1;
+}
+
+.tm-key {
+    opacity: 0.5;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tm-val {
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-path,
+.tm-hash {
+    font-family: monospace;
+    font-size: 10px;
+    opacity: 0.7;
+    cursor: help;
+}
+
+.torrent-main-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.torrent-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.85;
+}
+.torrent-toggle:hover { opacity: 1; }
+.torrent-toggle input[type="checkbox"] {
+    accent-color: #4CAF50;
+    cursor: pointer;
+}
+
+/* ============================================================
+   ВКЛАДКА «ФАЙЛЫ»
+   ============================================================ */
+.torrent-files {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+}
+
+.torrent-files-header {
+    display: grid;
+    grid-template-columns: 2fr 70px 90px 100px 60px;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.5;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: sticky;
+    top: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.tf-row {
+    display: grid;
+    grid-template-columns: 2fr 70px 90px 100px 60px;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 4px;
+    align-items: center;
+    transition: background 0.15s;
+}
+.tf-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.tf-row.tf-zero-prio {
+    opacity: 0.4;
+}
+
+.tf-col-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.tf-file-icon { flex-shrink: 0; }
+.tf-file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tf-col-size {
+    text-align: right;
+    opacity: 0.7;
+    font-size: 10px;
+}
+
+.tf-col-progress {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tf-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.tf-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2196F3, #4CAF50);
+    transition: width 0.3s;
+}
+
+.tf-progress-text {
+    font-size: 9px;
+    opacity: 0.7;
+    min-width: 30px;
+    text-align: right;
+}
+
+.tf-prio-select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 3px 4px;
+    cursor: pointer;
+}
+.tf-prio-select:focus { outline: none; border-color: rgba(33, 150, 243, 0.5); }
+.tf-prio-select option {
+    background: #2a2a3e;
+    color: white;
+}
+
+.tf-col-actions {
+    display: flex;
+    gap: 3px;
+    justify-content: flex-end;
+}
+
+.tf-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.tf-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+.tf-btn-del:hover {
+    background: rgba(244, 67, 54, 0.3);
+    color: #ff8a80;
+}
+
+/* ============================================================
+   ВКЛАДКА «ТРЕКЕРЫ»
+   ============================================================ */
+.torrent-trackers {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+}
+
+.torrent-trackers-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 2px 0;
+}
+
+.torrent-tracker-reannounce {
+    background: rgba(33, 150, 243, 0.15);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.torrent-tracker-reannounce:hover {
+    background: rgba(33, 150, 243, 0.3);
+}
+
+.torrent-trackers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tt-header {
+    display: grid;
+    grid-template-columns: 24px 2fr 40px 80px 2fr;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.5;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: sticky;
+    top: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.tt-row {
+    display: grid;
+    grid-template-columns: 24px 2fr 40px 80px 2fr;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 4px;
+    align-items: center;
+    transition: background 0.15s;
+}
+.tt-row:hover { background: rgba(255, 255, 255, 0.05); }
+.tt-row.tt-pseudo { opacity: 0.5; font-style: italic; }
+.tt-row.tt-error .tt-col-url { color: #ff8a80; }
+
+.tt-col-status { text-align: center; font-size: 13px; }
+.tt-col-url {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 10px;
+    opacity: 0.85;
+}
+.tt-col-tier {
+    text-align: center;
+    font-size: 10px;
+    opacity: 0.7;
+}
+.tt-col-peers {
+    text-align: center;
+    font-size: 10px;
+    opacity: 0.85;
+    font-family: monospace;
+}
+.tt-col-msg {
+    font-size: 10px;
+    opacity: 0.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================
+   ВКЛАДКА «ПИРЫ»
+   ============================================================ */
+.torrent-peers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+}
+
+.tp-header {
+    display: grid;
+    grid-template-columns: 130px 1.5fr 80px 110px 70px 1fr;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.5;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: sticky;
+    top: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.tp-row {
+    display: grid;
+    grid-template-columns: 130px 1.5fr 80px 110px 70px 1fr;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 4px;
+    align-items: center;
+    transition: background 0.15s;
+    font-size: 10px;
+}
+.tp-row:hover { background: rgba(255, 255, 255, 0.05); }
+
+.tp-col-ip {
+    font-family: monospace;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tp-col-client {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.85;
+}
+.tp-col-progress {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.tp-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.tp-progress-fill {
+    height: 100%;
+    background: #4CAF50;
+    transition: width 0.3s;
+}
+.tp-progress-text {
+    font-size: 9px;
+    min-width: 28px;
+    text-align: right;
+    opacity: 0.7;
+}
+.tp-col-speed {
+    display: flex;
+    flex-direction: column;
+    font-size: 9px;
+    gap: 1px;
+}
+.tp-dl { color: #4CAF50; }
+.tp-up { color: #2196F3; }
+.tp-col-flags {
+    font-family: monospace;
+    font-size: 10px;
+    opacity: 0.8;
+    cursor: help;
+    text-align: center;
+}
+.tp-col-country {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 10px;
+    opacity: 0.85;
+}
+.tp-country-flag { font-size: 12px; }
+
+/* ============================================================
+   МОДАЛКИ
+   ============================================================ */
+.torrent-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.torrent-modal {
+    background: rgba(30, 30, 50, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    min-width: 340px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+}
+
+.torrent-modal-wide {
+    max-width: 900px;
+}
+
+.torrent-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-weight: 500;
+}
+
+.torrent-modal-close {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+.torrent-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.torrent-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.torrent-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.torrent-modal-label {
+    display: block;
+    font-size: 11px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.torrent-modal-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    box-sizing: border-box;
+    resize: vertical;
+}
+.torrent-modal-input:focus {
+    outline: none;
+    border-color: rgba(33, 150, 243, 0.5);
+}
+
+.torrent-magnet-input {
+    font-family: monospace;
+    font-size: 11px;
+    min-height: 70px;
+}
+
+.torrent-modal-file {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    padding: 12px;
+    font-size: 12px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.torrent-modal-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+.torrent-modal-check input[type="checkbox"] {
+    accent-color: #4CAF50;
+    cursor: pointer;
+}
+
+.torrent-modal-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.torrent-modal-name {
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 12px;
+    word-break: break-word;
+    font-family: monospace;
+}
+
+.torrent-modal-btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s;
+}
+.torrent-modal-btn.cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+}
+.torrent-modal-btn.cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+.torrent-modal-btn.primary {
+    background: #2196F3;
+    color: white;
+}
+.torrent-modal-btn.primary:hover {
+    background: #1976D2;
+}
+.torrent-modal-btn.danger {
+    background: #f44336;
+    color: white;
+}
+.torrent-modal-btn.danger:hover {
+    background: #d32f2f;
+}
+
+/* Стриминг */
+.torrent-stream-body {
+    padding: 0;
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.torrent-stream-video {
+    width: 100%;
+    max-height: 80vh;
+    display: block;
+    background: black;
+}
+
+/* ============================================================
+   НАСТРОЙКИ ВИДЖЕТА
+   ============================================================ */
+.torrent-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ts-label {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 4px;
+    margin-bottom: -4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ts-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: white;
+    padding: 7px 10px;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+.ts-input:focus {
+    outline: none;
+    border-color: rgba(33, 150, 243, 0.5);
+}
+
+.ts-test-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ts-test-btn {
+    background: rgba(33, 150, 243, 0.15);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.ts-test-btn:hover {
+    background: rgba(33, 150, 243, 0.3);
+}
+
+.ts-test-result {
+    font-size: 11px;
+    opacity: 0.8;
+}
+.ts-test-result.success { color: #81c784; }
+.ts-test-result.error { color: #ff8a80; }
+
+/* ============================================================
+   LAYOUT: TALL (2×1, 3×1, 4×1) — узкий и высокий
+   ============================================================ */
+.torrent-root.layout-tall .torrent-body {
+    flex-direction: column;
+}
+
+.torrent-root.layout-tall .torrent-list-container {
+    flex: 1 1 45%;
+}
+
+.torrent-root.layout-tall .torrent-tabs-panel {
+    flex: 1 1 55%;
+}
+
+.torrent-root.layout-tall .torrent-row-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.torrent-root.layout-tall .torrent-row-size {
+    display: none;
+}
+
+/* ============================================================
+   LAYOUT: WIDE (1×2, 1×3, 1×4) — широкий и низкий
+   ============================================================ */
+.torrent-root.layout-wide .torrent-body {
+    flex-direction: row;
+}
+
+.torrent-root.layout-wide .torrent-list-container {
+    flex: 1 1 40%;
+    min-width: 0;
+}
+
+.torrent-root.layout-wide .torrent-tabs-panel {
+    flex: 1 1 60%;
+    min-width: 0;
+}
+
+/* В wide-режиме вкладки — вертикальная колонка справа */
+.torrent-root.layout-wide .torrent-tabs-nav {
+    flex-direction: column;
+    padding: 4px 2px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.torrent-root.layout-wide .torrent-tab {
+    text-align: left;
+    font-size: 10px;
+    padding: 4px 8px;
+}
+
+/* ============================================================
+   LAYOUT: NORMAL (2×2, 3×3)
+   ============================================================ */
+.torrent-root.layout-normal .torrent-body {
+    flex-direction: column;
+}
+
+.torrent-root.layout-normal .torrent-list-container {
+    flex: 1 1 40%;
+}
+
+.torrent-root.layout-normal .torrent-tabs-panel {
+    flex: 1 1 60%;
+}
+
+/* В normal-режиме при маленькой высоте — скрываем часть меты */
+.torrent-root.layout-normal .torrent-row-meta {
+    flex-wrap: nowrap;
+}
