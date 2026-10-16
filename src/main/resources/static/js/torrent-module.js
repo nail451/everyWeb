@@ -1221,6 +1221,18 @@ function openStreamModal(moduleId, hash, fileIndex, fileName) {
 
     const overlay = document.createElement('div');
     overlay.className = 'torrent-modal-overlay';
+
+    const playerHtml = playable
+        ? `<video id="ts-video-${moduleId}" controls autoplay class="torrent-stream-video" src="${streamUrl}"></video>`
+        : `<avbridge-video id="ts-video-${moduleId}" src="${streamUrl}" autoplay class="torrent-stream-video"></avbridge-video>
+           <div class="torrent-stream-controls">
+               <button data-act="play-pause">⏸</button>
+               <input type="range" data-act="seek" min="0" max="100" value="0" step="0.1">
+               <span class="ts-time">00:00 / 00:00</span>
+               <input type="range" data-act="volume" min="0" max="1" value="1" step="0.01" style="width:80px;">
+               <button data-act="fullscreen">⛶</button>
+           </div>`;
+
     overlay.innerHTML = `
         <div class="torrent-modal torrent-modal-wide">
             <div class="torrent-modal-header">
@@ -1228,32 +1240,73 @@ function openStreamModal(moduleId, hash, fileIndex, fileName) {
                 <button class="torrent-modal-close">✕</button>
             </div>
             <div class="torrent-modal-body torrent-stream-body">
-                ${playable
-                    ? `<video id="ts-video-${moduleId}" controls autoplay class="torrent-stream-video" src="${streamUrl}"></video>`
-                    : `<avbridge-video id="ts-video-${moduleId}" src="${streamUrl}" autoplay class="torrent-stream-video"></avbridge-video>
-                       <div class="torrent-stream-controls">
-                           <button data-act="play-pause">⏸</button>
-                           <input type="range" data-act="seek" min="0" max="100" value="0" step="0.1">
-                           <span class="ts-time">00:00 / 00:00</span>
-                           <input type="range" data-act="volume" min="0" max="1" value="1" step="0.01" style="width:80px;">
-                           <button data-act="fullscreen">⛶</button>
-                       </div>`}
+                ${playerHtml}
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
 
+    // === Controls ===
+    const v = overlay.querySelector(`#ts-video-${moduleId}`);
+    const controls = overlay.querySelector('.torrent-stream-controls');
+
+    if (v && controls) {
+        const playBtn = controls.querySelector('[data-act="play-pause"]');
+        const seekEl = controls.querySelector('[data-act="seek"]');
+        const volEl = controls.querySelector('[data-act="volume"]');
+        const timeEl = controls.querySelector('.ts-time');
+        const fsBtn = controls.querySelector('[data-act="fullscreen"]');
+
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (v.paused) v.play();
+            else v.pause();
+        });
+
+        seekEl.addEventListener('input', () => {
+            if (v.duration) v.currentTime = (v.duration * parseFloat(seekEl.value)) / 100;
+        });
+
+        volEl.addEventListener('input', () => {
+            v.volume = parseFloat(volEl.value);
+        });
+
+        fsBtn.addEventListener('click', () => {
+            if (v.requestFullscreen) v.requestFullscreen();
+            else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+        });
+
+        const interval = setInterval(() => {
+            if (!document.body.contains(overlay)) {
+                clearInterval(interval);
+                return;
+            }
+            if (v.duration && !isNaN(v.duration)) {
+                seekEl.value = (v.currentTime / v.duration) * 100;
+                if (timeEl) timeEl.textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration);
+            }
+            playBtn.textContent = v.paused ? '▶' : '⏸';
+        }, 500);
+    }
+
+    // === Close ===
     const close = () => {
-        const v = overlay.querySelector('video, avbridge-video');
-        if (v) {
-            if (v.pause) v.pause();
-            if (v.src) v.src = '';
-        }
+        const vid = overlay.querySelector('video, avbridge-video');
+        if (vid && vid.pause) vid.pause();
         overlay.remove();
     };
 
     overlay.querySelector('.torrent-modal-close').addEventListener('click', close);
     overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close(); });
+}
+
+function fmtTime(s) {
+    if (!s || isNaN(s)) return '00:00';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
 // ============================================================
