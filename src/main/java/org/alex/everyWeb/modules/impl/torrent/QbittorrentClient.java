@@ -639,25 +639,22 @@ public class QbittorrentClient {
                     new org.springframework.core.io.ByteArrayResource(fileBytes) {
                         @Override
                         public String getFilename() {
-                            // Транслитерируем имя — qBittorrent плохо ест не-ASCII в filename
                             return fileName == null ? "file.torrent" : sanitizeFilename(fileName);
-                        }
-
-                        @Override
-                        public String toString() {
-                            return "torrent file";
                         }
                     };
 
             org.springframework.util.MultiValueMap<String, org.springframework.http.HttpEntity<?>> parts =
                     new org.springframework.util.LinkedMultiValueMap<>();
 
-            // Файл первым — с явным Content-Type
-            org.springframework.http.HttpHeaders fileHeaders = new org.springframework.http.HttpHeaders();
-            fileHeaders.setContentType(org.springframework.http.MediaType.parseMediaType("application/x-bittorrent"));
-            parts.add("torrents", new org.springframework.http.HttpEntity<>(fileResource, fileHeaders));
+            // Файл — БЕЗ явного Content-Type (как в WebUI qBittorrent)
+            parts.add("torrents", new org.springframework.http.HttpEntity<>(fileResource));
 
-            // Остальные поля — как обычный текст
+            // Обязательные поля, которые отправляет WebUI qBittorrent
+            parts.add("autoTMM", new org.springframework.http.HttpEntity<>("false"));
+            parts.add("useDownloadPath", new org.springframework.http.HttpEntity<>("false"));
+            parts.add("stopped", new org.springframework.http.HttpEntity<>("false"));
+            parts.add("contentLayout", new org.springframework.http.HttpEntity<>("Original"));
+
             if (savePath != null && !savePath.isBlank()) {
                 parts.add("savepath", new org.springframework.http.HttpEntity<>(savePath));
             }
