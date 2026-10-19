@@ -1578,8 +1578,14 @@ function renderTorrentSettings(data) {
 
             <label class="ts-label">Пароль</label>
             <input type="password" class="ts-input" id="ts-password"
-                placeholder="${s.password ? '•••••••• (не менять)' : 'Введите пароль'}"
-                value="">
+                   placeholder="${s.password ? '•••••••• (сохранён)' : 'Введите пароль'}"
+                   value="">
+            <label class="torrent-modal-check" style="margin-top:6px; font-size:11px;">
+                <input type="checkbox" id="ts-show-password" onclick="
+                       document.getElementById('ts-password').type = this.checked ? 'text' : 'password';
+                ">
+                <span>Показать пароль</span>
+            </label>
 
             <label class="ts-label">Папка загрузок (в контейнере)</label>
             <input type="text" class="ts-input" id="ts-downloadPath"

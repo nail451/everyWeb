@@ -150,6 +150,13 @@ public class TorrentModule extends Module {
             boolean connected = torrentService.ping(torrentData);
             content.put("connected", connected);
 
+            if (!connected) {
+                log.info("TorrentModule: подключение не удалось, пробуем пересоздать клиент");
+                torrentService.forceReconnect(torrentData);
+                connected = torrentService.ping(torrentData);
+            }
+            content.put("connected", connected);
+
             if (connected) {
                 content.put("version", torrentService.getVersion(torrentData));
                 content.put("torrents", torrentService.list(torrentData));

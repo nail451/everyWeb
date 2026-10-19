@@ -56,6 +56,25 @@ public class TorrentService {
         return client;
     }
 
+    public QbittorrentClient forceReconnect(TorrentData data) {
+        if (data == null || !data.isConfigured()) {
+            return null;
+        }
+        String key = data.getBaseUrl() + "|" + data.getUsername() + "|" + data.getPassword();
+
+        // Удаляем старый клиент
+        clients.remove(key);
+
+        // Создаём новый
+        QbittorrentClient client = new QbittorrentClient();
+        client.configure(data.getBaseUrl(), data.getUsername(), data.getPassword());
+        client.login();
+        clients.put(key, client);
+
+        log.info("TorrentService: принудительное пересоздание клиента для {}", data.getBaseUrl());
+        return client;
+    }
+
     /**
      * Сбросить клиент (при смене настроек).
      */

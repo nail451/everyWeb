@@ -633,7 +633,6 @@ public class QbittorrentClient {
             org.apache.hc.client5.http.classic.methods.HttpPost post =
                     new org.apache.hc.client5.http.classic.methods.HttpPost(baseUrl + "/api/v2/torrents/add");
 
-            // Cookie
             if (sidCookie.get() != null) {
                 post.setHeader("Cookie", sidCookie.get());
             }
@@ -641,10 +640,10 @@ public class QbittorrentClient {
             org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder builder =
                     org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder.create();
 
-            // Файл — поле torrents, БЕЗ явного Content-Type (Apache сам поставит octet-stream)
+            // Файл в поле "torrents"
             builder.addBinaryBody("torrents", fileBytes,
                     org.apache.hc.core5.http.ContentType.APPLICATION_OCTET_STREAM,
-                    "upload.torrent"); // ASCII-имя
+                    "upload.torrent");
 
             // Обязательные поля
             builder.addTextBody("autoTMM", "false");
@@ -667,25 +666,23 @@ public class QbittorrentClient {
 
             post.setEntity(builder.build());
 
-            org.apache.hc.core5.http.io.entity.EntityUtils.consume(
-                    httpClient.execute(post, response -> {
-                        int code = response.getCode();
-                        if (code == 403) {
-                            log.warn("qBittorrent add (file) → 403 (auth)");
-                            return null;
-                        }
-                        if (code >= 200 && code < 300) {
-                            return null; // success
-                        }
-                        String body = org.apache.hc.core5.http.io.entity.EntityUtils.toString(response.getEntity());
-                        log.warn("qBittorrent POST /torrents/add (file) → {} body='{}'", code, body);
-                        return null;
-                    })
-            );
+            // Возвращаем результат: true только если 2xx
+            return httpClient.execute(post, response -> {
+                int code = response.getCode();
+                if (code >= 200 && code < 300) {
+                    return true;
+                }
 
-            // Проверяем, был ли успешный ответ
-            // (упрощённо: если не было исключения и не 403/ошибка — считаем успехом)
-            return true; // TODO: нужна более точная проверка
+                // Если ошибка — логируем тело ответа (для qBittorrent 5.x это будет "Conflict", "Fails." и т.п.)
+                String body = "";
+                if (response.getEntity() != null) {
+                    try {
+                        body = org.apache.hc.core5.http.io.entity.EntityUtils.toString(response.getEntity());
+                    } catch (Exception ignored) {}
+                }
+                log.warn("qBittorrent POST /torrents/add (file) → {} body='{}'", code, body);
+                return false;
+            });
 
         } catch (Exception e) {
             log.error("Исключение при загрузке .torrent через Apache HttpClient: {}", e.getMessage(), e);
