@@ -487,13 +487,13 @@ public class QbittorrentClient {
     public boolean pause(String hash) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("hashes", hash);
-        return doPost("/api/v2/torrents/pause", form);
+        return doPost("/api/v2/torrents/stop", form);
     }
 
     public boolean resume(String hash) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("hashes", hash);
-        return doPost("/api/v2/torrents/resume", form);
+        return doPost("/api/v2/torrents/start", form);
     }
 
     public boolean delete(String hash, boolean deleteFiles) {
